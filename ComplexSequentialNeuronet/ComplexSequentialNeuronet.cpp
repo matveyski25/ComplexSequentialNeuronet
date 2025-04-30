@@ -249,10 +249,10 @@ public:
 		this->displacement_CandidateState = displacements_[2];
 		this->displacement_OutputState = displacements_[3];
 	}
-	void SetRandomWeights() {
+	void SetRandomWeights(long double a = -50.0L, long double b = 50.0L) {
 		std::vector <long double> weights_(8);
 		for (short i = 0; i < 8; i++) {
-			auto ran = FunctionsAtivate::random();
+			auto ran = FunctionsAtivate::random(a, b);
 			weights_[i] = ran;
 		}
 		this->weight_ForgetGate_for_HiddenState = weights_[0];
@@ -265,10 +265,10 @@ public:
 		this->weight_CandidateGate_for_InputState = weights_[6];
 		this->weight_OutputGate_for_InputState = weights_[7];
 	}
-	void SetRandomDisplacements() {
+	void SetRandomDisplacements(long double a = -50.0L, long double b = 50.0L) {
 		std::vector <long double> displacements_(4);
 		for (short i = 0; i < 4; i++) {
-			auto ran = FunctionsAtivate::random();
+			auto ran = FunctionsAtivate::random(a, b);
 			displacements_[i] = ran;
 		}
 		this->displacement_ForgetState = displacements_[0];
