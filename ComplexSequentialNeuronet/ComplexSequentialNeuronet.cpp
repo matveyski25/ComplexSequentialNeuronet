@@ -49,11 +49,22 @@ namespace FunctionsAtivate {
 		}
 		return result;
 	}
+	long double random(long double a = (-1 * SIZE_MAX), long double b = SIZE_MAX) {
+		std::random_device rd;
+		std::mt19937_64 gen(rd()); // Используем 64-битный генератор
+
+		// Создание распределения для long double в диапазоне [a, b)
+		std::uniform_real_distribution<long double> dis(a, b + (1 / SIZE_MAX));
+
+		// Генерация случайного числа
+		long double random_value = dis(gen);
+		return random_value;
+	}
 }
 
 class SimpleSNT {
 public:
-	SimpleSNT(size_t NumberNeurons_ = 1, const std::vector <long double> weights = {0, 0, 0, 0, 0, 0, 0, 0}, const std::vector <long double> displacements = { 0, 0, 0, 0}) {
+	SimpleSNT(size_t NumberNeurons_ = 1, const std::vector <long double> weights = {0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1}, const std::vector <long double> displacements = { 0.5, 0.5, 0.5, 0.5}) {
 		if (weights.size() > 0 && displacements.size() > 0) {
 			std::vector <long double> weights_ = weights;
 			if (weights.size() < 8) {
@@ -100,7 +111,7 @@ public:
 			this->Hidden_state.resize(NumberNeurons, 0.0);
 		}
 	}
-	SimpleSNT(const std::vector <long double> InputNeurons_, const std::vector <long double> weights, const std::vector <long double> displacements) {
+	SimpleSNT(const std::vector <long double> InputNeurons_, const std::vector <long double> weights = { 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1 }, const std::vector <long double> displacements = { 0.5, 0.5, 0.5, 0.5 }) {
 		if (weights.size() > 0 && displacements.size() > 0) {
 			std::vector <long double> weights_ = weights;
 			if (weights.size() < 8) {
@@ -147,7 +158,7 @@ public:
 			this->Hidden_state.resize(NumberNeurons, 0.0);
 		}
 	}
-	SimpleSNT(std::vector <long double>&& InputNeurons_, const std::vector <long double> weights, const std::vector <long double> displacements) {
+	SimpleSNT(std::vector <long double>&& InputNeurons_, const std::vector <long double> weights = { 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1 }, const std::vector <long double> displacements = { 0.5, 0.5, 0.5, 0.5 }) {
 		if (weights.size() > 0 && displacements.size() > 0) {
 			std::vector <long double> weights_ = weights;
 			if (weights.size() < 8) {
@@ -238,6 +249,33 @@ public:
 		this->displacement_CandidateState = displacements_[2];
 		this->displacement_OutputState = displacements_[3];
 	}
+	void SetRandomWeights() {
+		std::vector <long double> weights_(8);
+		for (short i = 0; i < 8; i++) {
+			auto ran = FunctionsAtivate::random();
+			weights_[i] = ran;
+		}
+		this->weight_ForgetGate_for_HiddenState = weights_[0];
+		this->weight_InputGate_for_HiddenState = weights_[1];
+		this->weight_CandidateGate_for_HiddenState = weights_[2];
+		this->weight_OutputGate_for_HiddenState = weights_[3];
+
+		this->weight_ForgetGate_for_InputState = weights_[4];
+		this->weight_InputGate_for_InputState = weights_[5];
+		this->weight_CandidateGate_for_InputState = weights_[6];
+		this->weight_OutputGate_for_InputState = weights_[7];
+	}
+	void SetRandomDisplacements() {
+		std::vector <long double> displacements_(4);
+		for (short i = 0; i < 4; i++) {
+			auto ran = FunctionsAtivate::random();
+			displacements_[i] = ran;
+		}
+		this->displacement_ForgetState = displacements_[0];
+		this->displacement_InputState = displacements_[1];
+		this->displacement_CandidateState = displacements_[2];
+		this->displacement_OutputState = displacements_[3];
+	}
 	void SetAll(const std::vector <long double> InputNeurons_, const std::vector <long double> weights, const std::vector <long double> displacements) {
 		SetInputNeurons(InputNeurons_);
 		SetWeights(weights);
@@ -313,8 +351,9 @@ private:
 	}
 };
 
-void main() {
+int main() {
 	SimpleSNT a(3);
+	a.SetRandomWeights();
 	a.CalculationAllNeurons();
 	auto b = a.GetOutputNeurons();
 	for (int i = 0; i < b.size(); i++) {
@@ -326,4 +365,5 @@ void main() {
 	for (int i = 0; i < b.size(); i++) {
 		std::cout << b[i] << "\t";
 	}
+	return 0;
 }
