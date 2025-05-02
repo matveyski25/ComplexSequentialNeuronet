@@ -3,3 +3,7 @@
 #include <iostream>
 #include <vector>
 #include <random>
+#include <fstream>
+#include <stdexcept>
+#include <string> 
+#include <sstream>
