@@ -762,52 +762,56 @@ private:
 	}
 
 	void n_state_Сalculation(size_t timestep) {
-		// Получаем текущий вход как матрицу 1xInput_size
+		// Увеличиваем размеры матриц состояний при необходимости
+		while (timestep >= Input_states.getRows()) {
+			Input_states.pushback(std::vector<long double>(Input_size, 0.0L));
+		}
+		while (timestep >= Hidden_states.getRows()) {
+			Hidden_states.pushback(std::vector<long double>(Hidden_size, 0.0L));
+		}
+		while (timestep >= Output_states.getRows()) {
+			Output_states.pushback(std::vector<long double>(Hidden_size, 0.0L));
+		}
+
+		// Получаем текущий вход
 		Matrix input = Input_states.get_row(timestep);
 
 		// Получаем предыдущие состояния
-		Matrix hidden = (timestep == 0) ?
-			Matrix(1, Hidden_size) : Hidden_states.get_row(timestep - 1);
-		Matrix cell_state = (timestep == 0) ?
-			Matrix(1, Hidden_size) : Output_states.get_row(timestep - 1);
+		Matrix hidden = (timestep == 0)
+			? Matrix(1, Hidden_size)
+			: Hidden_states.get_row(timestep - 1);
 
+		Matrix cell_state = (timestep == 0)
+			? Matrix(1, Hidden_size)
+			: Output_states.get_row(timestep - 1);
+
+		// Вычисляем новые состояния
 		auto results = StepСalculation(hidden, cell_state, input);
-		if (timestep >= this->Output_states.size()) {
-			this->Input_states.pushback({ {} });
-			this->Hidden_states.pushback({ {} });
-			this->Output_states.pushback({ {} });
+
+		// Сохраняем состояния
+		Output_states.set_row(timestep, results[0]);  // Cell state
+		Hidden_states.set_row(timestep, results[1]);  // Hidden state
+
+		// Обновляем временные параметры гейтов
+		if (timestep >= FG_states.size()) {
+			FG_states.resize(timestep + 1);
 		}
-		// Сохраняем новые состояния
-		Output_states.set_row(timestep, results[0]); // Cell state
-		Hidden_states.set_row(timestep, results[1]); // Hidden state
-		if (timestep == this->Output_states.size() - 1) {
-			this->Input_states.pushback({ {} });
-			Input_states.set_row(timestep + 1, results[0]);
+		FG_states[timestep] = results[2];
+
+		if (timestep >= IG_states.size()) {
+			IG_states.resize(timestep + 1);
 		}
-		if (timestep >= this->FG_states.size()) {
-			this->FG_states.push_back(results[2]);
+		IG_states[timestep] = results[3];
+
+		if (timestep >= CT_states.size()) {
+			CT_states.resize(timestep + 1);
 		}
-		else {
-			this->FG_states[timestep] = results[2];
+		CT_states[timestep] = results[4];
+
+		if (timestep >= OG_states.size()) {
+			OG_states.resize(timestep + 1);
 		}
-		if (timestep >= this->IG_states.size()) {
-			this->IG_states.push_back(results[3]);
-		}
-		else {
-			this->IG_states[timestep] = results[3];
-		}
-		if (timestep >= this->CT_states.size()) {
-			this->CT_states.push_back(results[4]);
-		}
-		else {
-			this->CT_states[timestep] = results[4];
-		}
-		if (timestep >= this->OG_states.size()) {
-			this->OG_states.push_back(results[5]);
-		}
-		else {
-			this->OG_states[timestep] = results[5];
-		}
+		OG_states[timestep] = results[5];
 	}
 
 	LSTMGradients Backward(const Matrix& error /*error = выходы(Output_states) - ожидаемые значения(просто Matrix)*/) {
