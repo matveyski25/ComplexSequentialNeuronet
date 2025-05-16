@@ -97,6 +97,29 @@ public:
 		}
 		data = input;
 	}
+	Matrix(std::initializer_list<std::initializer_list<long double>> il) {
+		if (il.size() == 0) {
+			rows = 0;
+			cols = 0;
+			return;
+		}
+
+		rows = il.size();
+		cols = il.begin()->size();
+
+		// Проверка одинаковой длины строк
+		for (const auto& row : il) {
+			if (row.size() != cols) {
+				throw std::invalid_argument("All rows must have the same length");
+			}
+		}
+
+		// Заполнение данных матрицы
+		data.reserve(rows);
+		for (const auto& row_il : il) {
+			data.emplace_back(row_il.begin(), row_il.end());
+		}
+	}
 
 	Matrix sum_rows() const {
 		Matrix result(1, cols);
@@ -553,36 +576,37 @@ namespace ActivationFunctions {
 	}
 }
 
-class SimpleSNT {
+class SimpleLSTM {
 public:
 	
-	SimpleSNT(size_t Output_size, size_t Number_states = 1, size_t lenght_states = 1, size_t Hidden_size = 10){
+	SimpleLSTM(size_t Output_size, size_t Number_states = 1, size_t lenght_states = 1, size_t Hidden_size_ = 10){
 		if (Hidden_size == 0 || Output_size == 0)
 			throw std::invalid_argument("Размеры слоев должны быть больше 0");
 
-		// Исправление опечатки в параметре:
 		this->Input_size = lenght_states;
-		this->Hidden_size = Hidden_size;
+		this->Hidden_size = Hidden_size_;
 		// Инициализация весов
 		SetRandomWeights(-0.5L, 0.5L); // Инициализация весов LSTM
-		output_weights = ActivationFunctions::matrix_random(Output_size, Hidden_size, -0.5L, 0.5L);
+		output_weights = ActivationFunctions::matrix_random(Output_size, Hidden_size_, -0.5L, 0.5L);
 		output_bias = ActivationFunctions::matrix_random(1, Output_size, -0.5L, 0.5L);
 
 		// Инициализация смещений (1xHidden_size)
-		Displacement_for_FG = ActivationFunctions::matrix_random(1, Hidden_size);
-		Displacement_for_IG = ActivationFunctions::matrix_random(1, Hidden_size);
-		Displacement_for_CT = ActivationFunctions::matrix_random(1, Hidden_size);
-		Displacement_for_OG = ActivationFunctions::matrix_random(1, Hidden_size);
+		Displacement_for_FG = ActivationFunctions::matrix_random(1, Hidden_size_);
+		Displacement_for_IG = ActivationFunctions::matrix_random(1, Hidden_size_);
+		Displacement_for_CT = ActivationFunctions::matrix_random(1, Hidden_size_);
+		Displacement_for_OG = ActivationFunctions::matrix_random(1, Hidden_size_);
 
 		// Инициализация состояний
 		Output_states = Matrix(Number_states, Output_size);
-		Input_states = Matrix(Number_states, Input_size);
-		Cell_states = Matrix(Number_states, Hidden_size);
-		Hidden_states = Matrix(Number_states, Hidden_size);
+		Input_states = Matrix(Number_states, this->Input_size);
+		Cell_states = Matrix(Number_states, Hidden_size_);
+		Hidden_states = Matrix(Number_states, Hidden_size_);
 	}
-	~SimpleSNT() {
+	SimpleLSTM() = default;
+	~SimpleLSTM() {
 		save("LSTM_state.txt");
 	}
+
 	void SetInput_states(const Matrix& Input_states_) {
 		if (Input_states_.getRows() == 0 || Input_states_.getCols() != Input_size) {
 			throw std::invalid_argument("Invalid input matrix dimensions");
@@ -679,9 +703,21 @@ public:
 		return false;
 	}
 
+	void CalculationAll_states(long double limit, long double precision = 0.0001) {
+		size_t i = 0;
+		while (true) {
+			n_state_Сalculation(i);
+			auto a = GetOutput_states();
+			if (std::abs(a(a.getRows() - 1, 0) - limit) <= precision) {
+				break;
+			}
+		}
+	}
+
 	Matrix GetOutput_states() const {
 		return this->Output_states;
 	}
+
 	std::vector<Matrix> GetWeightsAndDisplacement() {
 		return {
 			this->Weights_for_FG_HS, this->Weights_for_FG_IS, this->Displacement_for_FG,
@@ -710,6 +746,7 @@ public:
 			UpdateWeights(grads, learning_rate);
 		}
 	}
+
 	void vector_Train(std::vector<Matrix> vec_, size_t epochs, long double learning_rate, long double precision = 0.001) {
 		for(size_t epoch_ = 0; epoch_ < vec_.size() / 2; ++epoch_){
 			auto inputs = vec_[2*epoch_];
@@ -740,49 +777,109 @@ public:
 			}
 		}
 	}
+
+	static Matrix normalize(const std::vector<std::vector<char>>& c) {
+		if (c.empty()) {
+			return Matrix(); // Возвращаем пустую матрицу
+		}
+
+		const size_t rows = c.size();
+		const size_t cols = c[0].size();
+
+		// Проверка согласованности размеров
+		for (const auto& row : c) {
+			if (row.size() != cols) {
+				throw std::invalid_argument("All rows must have the same length");
+			}
+		}
+
+		Matrix result(rows, cols);
+
+		for (size_t i = 0; i < rows; ++i) {
+			for (size_t j = 0; j < cols; ++j) {
+				// Преобразование char -> long double и нормализация
+				const long double value = static_cast<long double>(c[i][j]);
+				result(i, j) = value / 127.5L - 1.0L;
+			}
+		}
+
+		return result;
+	}
+
 	static long double normalize(char c) {
 		return static_cast<long double>(c) / 127.5L - 1.0L;
 	}
-	char denormalize(long double val) {
+
+	static char denormalize(long double val) {
 		return static_cast<char>((val + 1.0L) * 127.5L);
 	}
+
+	static std::vector<std::vector<char>> denormalize(const Matrix& val) {
+		if (val.getRows() == 0 || val.getCols() == 0) {
+			return {};
+		}
+
+		const size_t rows = val.getRows();
+		const size_t cols = val.getCols();
+		std::vector<std::vector<char>> result(rows, std::vector<char>(cols));
+
+		for (size_t i = 0; i < rows; ++i) {
+			for (size_t j = 0; j < cols; ++j) {
+				// Выполняем обратное преобразование с контролем диапазона
+				const long double normalized_value = val(i, j);
+				long double denorm_value = (normalized_value + 1.0L) * 127.5L;
+
+				// Ограничиваем значение в диапазоне [CHAR_MIN, CHAR_MAX]
+				denorm_value = std::max<long double>(
+					denorm_value,
+					static_cast<long double>(std::numeric_limits<char>::min())
+				);
+				denorm_value = std::min<long double>(
+					denorm_value,
+					static_cast<long double>(std::numeric_limits<char>::max())
+				);
+
+				result[i][j] = static_cast<char>(std::round(denorm_value));
+			}
+		}
+
+		return result;
+	}
+
 	void save(const std::string& filename) const {
-		std::ofstream file(filename, std::ios::trunc);
+		std::ofstream file(filename, std::ios::trunc); // Используйте trunc для перезаписи
 		if (!file) throw std::runtime_error("Cannot open file for writing");
 
-		// Добавьте сохранение всех полей:
+		// Сохраняем только актуальные параметры
 		file << this->Input_size << "\n" << this->Hidden_size << "\n";
 
-		// Сохраните все матрицы и векторы:
+		// Сохраняем текущие состояния (без истории)
 		save_matrix(file, Input_states);
 		save_matrix(file, Hidden_states);
 		save_matrix(file, Cell_states);
 		save_matrix(file, Output_states);
 
+		// Сохраняем веса и смещения
 		save_matrix(file, this->output_bias);
 		save_matrix(file, this->output_weights);
-
 		save_matrix(file, this->Weights_for_FG_HS);
 		save_matrix(file, this->Weights_for_IG_HS);
 		save_matrix(file, this->Weights_for_CT_HS);
 		save_matrix(file, this->Weights_for_OG_HS);
-
 		save_matrix(file, this->Weights_for_FG_IS);
 		save_matrix(file, this->Weights_for_IG_IS);
 		save_matrix(file, this->Weights_for_CT_IS);
 		save_matrix(file, this->Weights_for_OG_IS);
-
 		save_matrix(file, this->Displacement_for_FG);
 		save_matrix(file, this->Displacement_for_IG);
 		save_matrix(file, this->Displacement_for_CT);
 		save_matrix(file, this->Displacement_for_OG);
 
-		// Сохраняем векторы состояний
+		// Пустые векторы состояний
 		save_vector(file, FG_states);
 		save_vector(file, IG_states);
 		save_vector(file, CT_states);
 		save_vector(file, OG_states);
-
 	}
 
 	// Загрузить модель из файла
@@ -822,7 +919,11 @@ public:
 		load_vector(file, CT_states);
 		load_vector(file, OG_states);
 	}
-private:
+
+//private:
+
+
+protected:
 	struct LSTMGradients {
 		Matrix db_output;
 		Matrix dW_output;
@@ -877,10 +978,7 @@ private:
 	std::vector<Matrix> CT_states;
 	std::vector<Matrix> OG_states;
 
-	std::vector<Matrix> StepСalculation(const Matrix& Hidden_State,
-		const Matrix& Last_State,
-		const Matrix& Input_State)
-	{
+	std::vector<Matrix> StepСalculation(const Matrix& Hidden_State, const Matrix& Last_State, const Matrix& Input_State){
 		// Проверка размерностей
 		if (Hidden_State.getCols() != Hidden_size || Hidden_State.getRows() != 1 ||
 			Last_State.getCols() != Hidden_size || Last_State.getRows() != 1 ||
@@ -926,7 +1024,7 @@ private:
 		return { new_cell_state, new_hidden_state, forget_gate, input_gate, ct_candidate, output_gate};
 	}
 
-	void n_state_Сalculation(size_t timestep) {
+	void n_state_Сalculation (size_t timestep) {
 		// Увеличиваем размеры матриц состояний при необходимости
 		while (timestep >= Input_states.getRows()) {
 			Input_states.pushback(std::vector<long double>(Input_size, 0.0L));
@@ -981,6 +1079,7 @@ private:
 			OG_states.resize(timestep + 1);
 		}
 		OG_states[timestep] = results[5];
+		
 	}
 
 	LSTMGradients Backward(const Matrix& error /*error = выходы(Output_states) - ожидаемые значения(просто Matrix)*/) {
@@ -1173,40 +1272,148 @@ private:
 
 };
 
+class dependent_past_values_SimpleLSTM : public SimpleLSTM {
+public:
+	dependent_past_values_SimpleLSTM(size_t Number_states = 1, size_t Hidden_size_ = 10, Matrix start_token) {
+		if (Hidden_size == 0){
+			throw std::invalid_argument("Размеры слоев должны быть больше 0");
+		}
+
+		// Исправление опечатки в параметре:
+		this->Input_size = 1;
+		this->Hidden_size = Hidden_size_;
+		// Инициализация весов
+		SetRandomWeights(-0.5L, 0.5L); // Инициализация весов LSTM
+		output_weights = ActivationFunctions::matrix_random(Output_size, Hidden_size, -0.5L, 0.5L);
+		output_bias = ActivationFunctions::matrix_random(1, Output_size, -0.5L, 0.5L);
+
+		// Инициализация смещений (1xHidden_size)
+		Displacement_for_FG = ActivationFunctions::matrix_random(1, Hidden_size);
+		Displacement_for_IG = ActivationFunctions::matrix_random(1, Hidden_size);
+		Displacement_for_CT = ActivationFunctions::matrix_random(1, Hidden_size);
+		Displacement_for_OG = ActivationFunctions::matrix_random(1, Hidden_size);
+
+		// Инициализация состояний
+		Output_states = Matrix(Number_states, Output_size);
+		Input_states = Matrix(Number_states, Input_size);
+		Cell_states = Matrix(Number_states, Hidden_size);
+		Hidden_states = Matrix(Number_states, Hidden_size);
+	}
+	dependent_past_values_SimpleLSTM() = default;
+	~dependent_past_values_SimpleLSTM() {
+		save("dependent_past_values_LSTM_state.txt");
+	}
+private:
+
+	void n_state_Сalculation (size_t timestep) {
+		// Увеличиваем размеры матриц состояний при необходимости
+		while (timestep >= this->Input_states.getRows()) {
+			Input_states.pushback(std::vector<long double>(Input_size, 0.0L));
+		}
+		while (timestep >= Hidden_states.getRows()) {
+			Hidden_states.pushback(std::vector<long double>(Hidden_size, 0.0L));
+		}
+		while (timestep >= Cell_states.getRows()) {
+			Cell_states.pushback(std::vector<long double>(Hidden_size, 0.0L));
+		}
+
+		// Получаем текущий вход
+		Matrix input = Input_states.get_row(timestep);
+
+		// Получаем предыдущие состояния
+		Matrix hidden = (timestep == 0)
+			? Matrix(1, Hidden_size)
+			: Hidden_states.get_row(timestep - 1);
+
+		Matrix cell_state = (timestep == 0)
+			? Matrix(1, Hidden_size)
+			: Cell_states.get_row(timestep - 1);
+
+		// Вычисляем новые состояния
+		auto results = StepСalculation(hidden, cell_state, input);
+
+		// Сохраняем состояния
+		Cell_states.set_row(timestep, results[0]);
+		Hidden_states.set_row(timestep, results[1]);
+
+		// Вычисляем выходное состояние
+		Matrix output = (Hidden_states.get_row(timestep) * output_weights.transpose()) + output_bias;
+		Output_states.set_row(timestep, output);;
+
+		// Обновляем временные параметры гейтов
+		if (timestep >= FG_states.size()) {
+			FG_states.resize(timestep + 1);
+		}
+		FG_states[timestep] = results[2];
+
+		if (timestep >= IG_states.size()) {
+			IG_states.resize(timestep + 1);
+		}
+		IG_states[timestep] = results[3];
+
+		if (timestep >= CT_states.size()) {
+			CT_states.resize(timestep + 1);
+		}
+		CT_states[timestep] = results[4];
+
+		if (timestep >= OG_states.size()) {
+			OG_states.resize(timestep + 1);
+		}
+		OG_states[timestep] = results[5];
+
+	}
+};
+
 int main() {
 	setlocale(LC_ALL, "Russian");
-	SimpleSNT lstm(1, 2, 1, 64); // Output_size = 1, чтобы соответствовать targets
-
+	/*SimpleLSTM test;
+	test.load("LSTM_state.txt");
+	std::vector<std::vector<char>> inp(2);
+	inp[0].push_back('М');
+	inp[1].push_back('Д');
+	std::cout << SimpleLSTM::normalize(inp) << std::endl;
+	test.SetInput_states(SimpleLSTM::normalize(inp));
+	test.CalculationAll_states(;
+	auto res = SimpleLSTM::denormalize(test.GetOutput_states());
+	for (auto i = 0; i < res.size(); i++) {
+		std::cout << res[i][0] << std::endl;
+	}*/
+	SimpleLSTM lstm(1, 2, 1, 64); // Output_size = 1, чтобы соответствовать targets
+	lstm.load("LSTM_state.txt");
 	// Генерируем входные данные размером 10x5
 	Matrix inputs1(2, 1);
-	inputs1.set_row(0, { { SimpleSNT::normalize('М') } });
-	inputs1.set_row(1, { {SimpleSNT::normalize('Д')} });
+	inputs1.set_row(0, { { SimpleLSTM::normalize('М') } });
+	inputs1.set_row(1, { {SimpleLSTM::normalize('Д')} });
 
 	Matrix inputs2(2, 1);
-	inputs2.set_row(0, { {SimpleSNT::normalize('м')} });
-	inputs2.set_row(1, { {SimpleSNT::normalize('д')} });
+	inputs2.set_row(0, { {SimpleLSTM::normalize('м')} });
+	inputs2.set_row(1, { {SimpleLSTM::normalize('д')} });
 
 	Matrix inputs3(2, 1);
-	inputs3.set_row(0, { {SimpleSNT::normalize('М')} });
-	inputs3.set_row(1, { {SimpleSNT::normalize('д')} });
+	inputs3.set_row(0, { {SimpleLSTM::normalize('М')} });
+	inputs3.set_row(1, { {SimpleLSTM::normalize('д')} });
 
 	Matrix inputs4(2, 1);
-	inputs4.set_row(0, { {SimpleSNT::normalize('Д')} });
-	inputs4.set_row(1, { {SimpleSNT::normalize('м')} });
+	inputs4.set_row(0, { {SimpleLSTM::normalize('Д')} });
+	inputs4.set_row(1, { {SimpleLSTM::normalize('м')} });
 
 	Matrix inputs5(2, 1);
-	inputs5.set_row(0, { {SimpleSNT::normalize('Д')} });
-	inputs5.set_row(1, { {SimpleSNT::normalize('М')} });
+	inputs5.set_row(0, { {SimpleLSTM::normalize('Д')} });
+	inputs5.set_row(1, { {SimpleLSTM::normalize('М')} });
 
 	Matrix targets1(2, 1);
-	targets1.set_row(0, { {SimpleSNT::normalize('М')} });
+	targets1.set_row(0, { {SimpleLSTM::normalize('М')} });
 	targets1.set_row(1, { {0.0} });
 
-	lstm.vector_Train({inputs1, targets1, inputs2, targets1, inputs3, targets1, inputs4, targets1, inputs5, targets1 }, 100000000, 0.001,0.0005L);
-	
+	for (size_t i = 0; i < std::numeric_limits<size_t>::max(); i ++) {
+		lstm.vector_Train({ inputs1, targets1, inputs2, targets1, inputs3, targets1, inputs4, targets1, inputs5, targets1 }, 100000000, 0.001, 0.00000001L);
 
-	lstm.CalculationAll_states(targets1, 2);
 
-	std::cout << lstm.GetOutput_states() << std::endl;
+		lstm.CalculationAll_states(targets1, 2);
+
+		std::cout << lstm.GetOutput_states() << std::endl;
+		lstm.save("LSTM_state.txt");
+	}
+
 	return 0;
 }
