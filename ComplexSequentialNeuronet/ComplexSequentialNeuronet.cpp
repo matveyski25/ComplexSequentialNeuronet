@@ -1,427 +1,4 @@
 #include "HeaderLib_ComplexSequentialNeuronet.h"
-/*
-class Matrix {
-private:
-	size_t rows;
-	size_t cols;
-	std::vector<std::vector<long double>> data;
-
-	class RowProxy {
-		std::vector<long double>& row_ref;
-		size_t max_col;
-	public:
-		RowProxy(std::vector<long double>& row, size_t max_cols)
-			: row_ref(row), max_col(max_cols) {
-		}
-
-		long double& operator[](size_t col) {
-			if (col >= max_col)
-				throw std::out_of_range("Column index out of range");
-			return row_ref[col];
-		}
-	};
-
-	// Прокси-класс для строки (константный доступ)
-	class ConstRowProxy {
-		const std::vector<long double>& row_ref;
-		size_t max_col;
-	public:
-		ConstRowProxy(const std::vector<long double>& row, size_t max_cols)
-			: row_ref(row), max_col(max_cols) {
-		}
-
-		const long double& operator[](size_t col) const {
-			if (col >= max_col)
-				throw std::out_of_range("Column index out of range");
-			return row_ref[col];
-		}
-	};
-
-public:
-	// Конструкторы
-	Matrix() : rows(0), cols(0) {}
-
-	Matrix(size_t rows_, size_t cols_){
-		this->rows = rows_; 
-		this->cols = cols_;
-		data.resize(rows, std::vector<long double>(cols, 0.0));
-	}
-
-	Matrix(const std::vector<std::vector<long double>>& input) {
-		if (input.empty()) {
-			rows = 0;
-			cols = 0;
-			return;
-		}
-
-		rows = input.size();
-		cols = input[0].size();
-		for (const auto& row : input) {
-			if (row.size() != cols) {
-				throw std::invalid_argument("All rows must have the same length");
-			}
-		}
-		data = input;
-	}
-	Matrix(const std::vector<long double>& input_) {
-		auto input = std::vector<std::vector<long double>>(1, input_);
-		if (input.empty()) {
-			rows = 0;
-			cols = 0;
-			return;
-		}
-
-		rows = input.size();
-		cols = input[0].size();
-		for (const auto& row : input) {
-			if (row.size() != cols) {
-				throw std::invalid_argument("All rows must have the same length");
-			}
-		}
-		data = input;
-	}
-	Matrix(std::vector<long double>&& input_) {
-		auto input = std::vector<std::vector<long double>>(1, input_);
-		if (input.empty()) {
-			rows = 0;
-			cols = 0;
-			return;
-		}
-
-		rows = input.size();
-		cols = input[0].size();
-		for (const auto& row : input) {
-			if (row.size() != cols) {
-				throw std::invalid_argument("All rows must have the same length");
-			}
-		}
-		data = input;
-	}
-	Matrix(std::initializer_list<std::initializer_list<long double>> il) {
-		if (il.size() == 0) {
-			rows = 0;
-			cols = 0;
-			return;
-		}
-
-		rows = il.size();
-		cols = il.begin()->size();
-
-		// Проверка одинаковой длины строк
-		for (const auto& row : il) {
-			if (row.size() != cols) {
-				throw std::invalid_argument("All rows must have the same length");
-			}
-		}
-
-		// Заполнение данных матрицы
-		data.reserve(rows);
-		for (const auto& row_il : il) {
-			data.emplace_back(row_il.begin(), row_il.end());
-		}
-	}
-
-	Matrix sum_rows() const {
-		Matrix result(1, cols);
-		for (size_t j = 0; j < cols; ++j) {
-			long double sum = 0.0L;
-			for (size_t i = 0; i < rows; ++i) {
-				sum += data[i][j];
-			}
-			result(0, j) = sum;
-		}
-		return result;
-	}
-
-	RowProxy operator[](size_t row) {
-		if (row >= rows)
-			throw std::out_of_range("Row index out of range");
-		return RowProxy(data[row], cols);
-	}
-
-	const ConstRowProxy operator[](size_t row) const {
-		if (row >= rows)
-			throw std::out_of_range("Row index out of range");
-		return ConstRowProxy(data[row], cols);
-	}
-
-	static Matrix from_scalar(long double val, size_t rows, size_t cols) {
-		Matrix result(rows, cols);
-		for (size_t i = 0; i < rows; ++i) {
-			for (size_t j = 0; j < cols; ++j) {
-				result(i, j) = val;
-			}
-		}
-		return result;
-	}
-
-	// Методы доступа
-	size_t getRows() const { return rows; }
-	size_t getCols() const { return cols; }
-
-	// Операторы доступа к элементам
-	long double& operator()(size_t row, size_t col) {
-		if (row >= rows || col >= cols)
-		{
-			throw std::out_of_range("Matrix indices out of range");
-		}
-		return data[row][col];
-	}
-
-	const long double& operator()(size_t row, size_t col) const {
-		if (row >= rows || col >= cols)
-		{
-			throw std::out_of_range("Matrix indices out of range");
-		}
-		return data[row][col];
-	}
-
-	const Matrix& operator()(size_t row) const {
-		if (row >= rows)
-		{
-			throw std::out_of_range("Matrix indices out of range");
-		}
-		return { data[row] };
-	}
-	Matrix& operator()( size_t row) {
-		if (row >= rows)
-		{
-			throw std::out_of_range("Matrix indices out of range");
-		}
-		auto result = Matrix(data[row]);
-		return result;
-	}
-
-	// Арифметические операции
-	Matrix operator+(const Matrix& other) const {
-		if (rows != other.rows || cols != other.cols)
-		{
-			throw std::invalid_argument("Matrix dimensions must agree");
-		}
-
-		Matrix result(rows, cols);
-		for (size_t i = 0; i < rows; ++i) {
-			for (size_t j = 0; j < cols; ++j) {
-				result(i, j) = data[i][j] + other(i, j);
-			}
-		}
-		return result;
-	}
-
-	Matrix operator-() const {
-		Matrix result(rows, cols);
-		for (size_t i = 0; i < rows; ++i) {
-			for (size_t j = 0; j < cols; ++j) {
-				result(i, j) = -data[i][j];
-			}
-		}
-		return result;
-	}
-
-	// Оператор вычитания матриц
-	Matrix operator-(const Matrix& other) const {
-		if (rows != other.rows || cols != other.cols) {
-			throw std::invalid_argument("Matrix dimensions must agree");
-		}
-		Matrix result(rows, cols);
-		for (size_t i = 0; i < rows; ++i) {
-			for (size_t j = 0; j < cols; ++j) {
-				result(i, j) = data[i][j] - other(i, j);
-			}
-		}
-		return result;
-	}
-
-	// Оператор вычитания с присваиванием
-	Matrix& operator-=(const Matrix& other) {
-		*this = *this - other;
-		return *this;
-	}
-
-	Matrix operator*(const Matrix& other) const {
-		if (cols != other.rows)
-		{
-			throw std::invalid_argument("Matrix dimensions must agree");
-		}
-
-		Matrix result(rows, other.cols);
-		for (size_t i = 0; i < rows; ++i) {
-			for (size_t j = 0; j < other.cols; ++j) {
-				for (size_t k = 0; k < cols; ++k) {
-					result(i, j) += data[i][k] * other(k, j);
-				}
-			}
-		}
-		return result;
-	}
-
-
-	Matrix operator*(long double scalar) const {
-		Matrix result(rows, cols);
-		for (size_t i = 0; i < rows; ++i) {
-			for (size_t j = 0; j < cols; ++j) {
-				result(i, j) = data[i][j] * scalar;
-			}
-		}
-		return result;
-	}
-
-	friend Matrix operator*(double scalar, const Matrix& matrix) {
-		return matrix * scalar;
-	}
-
-	Matrix operator%(const Matrix & other) {
-		if (this->cols != other.cols || this->rows != other.rows) {
-			throw std::invalid_argument("Matrix dimensions must agree");
-		}
-		Matrix result(this->rows, this->cols);
-		for (size_t i = 0; i < result.rows; i++) {
-			for (size_t j = 0; j < result.cols; j++) {
-				result.data[i][j] = this->data[i][j] * other.data[i][j];
-			}
-		}
-		return result;
-	}
-	size_t size() {
-		return this->data.size();
-	}
-	bool empty() {
-		if (size() == 0) {
-			return 1;
-		}
-		else {
-			return 0;
-		}
-	}
-	// Составные присваивания
-	Matrix& operator+=(const Matrix& other) {
-		*this = *this + other;
-		return *this;
-	}
-
-	Matrix& operator*=(const Matrix& other) {
-		*this = *this * other;
-		return *this;
-	}
-
-	Matrix& operator*=(double scalar) {
-		*this = *this * scalar;
-		return *this;
-	}
-
-	// Транспонирование
-	Matrix transpose() const {
-		Matrix result(cols, rows);
-		for (size_t i = 0; i < rows; ++i) {
-			for (size_t j = 0; j < cols; ++j) {
-				result(j, i) = data[i][j];
-			}
-		}
-		return result;
-	}
-	Matrix get_row(size_t row) const {
-		//if (row >= rows) throw std::out_of_range("Row index out of range");
-		Matrix result(1, cols);
-		for (size_t j = 0; j < cols; ++j) {
-			result(0, j) = data[row][j];
-		}
-		return result;
-	}
-
-	// Метод для установки строки из другой матрицы
-	void set_row(size_t row, const Matrix& source) {
-		if (row >= rows) throw std::out_of_range("Row index out of range");
-		if (source.cols() != cols) throw std::invalid_argument("Column count mismatch");
-		for (size_t j = 0; j < cols; ++j) {
-			data[row][j] = source(0, j);
-		}
-	}
-
-	// Вывод матрицы
-	friend std::ostream& operator<<(std::ostream& os, const Matrix& matrix) {
-		for (size_t i = 0; i < matrix.rows; ++i) {
-			for (size_t j = 0; j < matrix.cols; ++j) {
-				os << matrix(i, j) << "\t";
-			}
-			os << "\n";
-		}
-		return os;
-	}
-	void pushback(const std::vector<long double>& vec_) {
-		if (cols != 0 && vec_.size() != cols)
-			throw std::invalid_argument("Row size mismatch");
-		data.push_back(vec_);
-		rows++;
-	}
-	void operator=(const Matrix other) {
-		this->data = other.data;
-		this->cols = other.cols;
-		this->rows = other.rows;
-	}
-	void operator=(const std::vector<std::vector<long double>> other) {
-		this->data = other;
-		this->cols = data[0].size();
-		this->rows = other.size();
-	}
-	// Сериализация в текстовый файл
-	void save_to_text(const std::string& filename) const {
-		std::ofstream file(filename, std::ios::trunc); // Перезапись файла
-		if (!file) throw std::runtime_error("Cannot open file for writing");
-
-		file << rows << " " << cols << "\n";
-		for (const auto& row : data) {
-			for (long double val : row) {
-				file << val << " ";
-			}
-			file << "\n";
-		}
-	}
-
-	// Десериализация из текстового файла
-	void load_from_text(const std::string& filename) {
-		std::ifstream file(filename);
-		if (!file) throw std::runtime_error("Cannot open file for reading");
-
-		file >> rows >> cols;
-		data.resize(rows, std::vector<long double>(cols));
-
-		for (size_t i = 0; i < rows; ++i) {
-			for (size_t j = 0; j < cols; ++j) {
-				if (!(file >> data[i][j])) {
-					throw std::runtime_error("Error reading matrix data");
-				}
-			}
-		}
-	}
-
-	static Matrix Zero(size_t rows, size_t cols) {
-		return Matrix(rows, cols);
-	}
-
-	// Добавить метод добавления строки
-	Matrix append_row(const Matrix& row) const {
-		if (row.rows() != 1 || (getCols() != 0 && row.cols() != getCols())) {
-			throw std::invalid_argument("Invalid row dimensions");
-		}
-		Matrix new_matrix = *this;
-		if (row.rows() == 1) {
-			new_matrix.data.push_back(row.data[0]);
-		}
-		else {
-			throw std::invalid_argument("Row must have exactly 1 row");
-		}
-		new_matrix.rows++;
-		if (new_matrix.cols == 0) new_matrix.cols = row.cols();
-		return new_matrix;
-	}
-	void clear() {
-		data.clear();
-		rows = 0;
-		cols = 0;
-	}
-};
-*/
-
 
 using MatrixXld = Eigen::Matrix<long double, Eigen::Dynamic, Eigen::Dynamic>;
 using RowVectorXld = Eigen::Matrix<long double, 1, Eigen::Dynamic>; // Вектор-строка
@@ -449,13 +26,11 @@ namespace ActivationFunctions {
 		return 1.0L / (1.0L + std::exp(-value));
 	}
 	MatrixXld Sigmoid(const MatrixXld& matx) {
-		MatrixXld result(matx.rows(), matx.cols());
-		for (Eigen::Index i = 0; i < matx.rows(); ++i) {
-			for (Eigen::Index j = 0; j < matx.cols(); ++j) {
-				result(i, j) = 1.0L / (1.0L + std::exp(-matx(i, j)));
-			}
-		}
-		return result;
+		return matx.unaryExpr([](long double x) {
+			x = std::fmax(x, -700.0L);  // Предотвращаем underflow
+			x = std::fmin(x, 700.0L);   // Предотвращаем overflow
+			return 1.0L / (1.0L + std::exp(-x));
+			});
 	}
 	long double Tanh(long double value) {
 		return std::tanhl(value);
@@ -606,8 +181,8 @@ public:
 
 		// Инициализация состояний
 		Input_states = MatrixXld(0, this->Input_size); // Пустая матрица
-		Cell_states = MatrixXld::Zero(0, Hidden_size_); // Пустая матрица
-		Hidden_states = MatrixXld::Zero(0, Hidden_size_);
+		Cell_states = MatrixXld::Zero(1, Hidden_size_);
+		Hidden_states = MatrixXld::Zero(1, Hidden_size_);
 	}
 
 	SimpleLSTM() = default;
@@ -750,16 +325,20 @@ public:
 		};
 	}
 
-	void Train(const MatrixXld& inputs, const MatrixXld& targets, size_t epochs, long double learning_rate) {
+	void Train(const MatrixXld& inputs, const MatrixXld& targets, size_t epochs = 10000, long double learning_rate = 0.01, bool Enable_debugging_messages = false) {
 		for (size_t epoch = 0; epoch < epochs; ++epoch) {
 			SetInput_states(inputs);
 			// Прямой проход
 			for (Eigen::Index t = 0; t < inputs.rows(); ++t) {
 				n_state_Сalculation(t);
 			}
-
 			// Обратный проход и обновление весов
 			MatrixXld error = this->Hidden_states - targets;
+			if (epoch / 100 == 0 && Enable_debugging_messages == true) {
+				for(Eigen::Index t = 0; t < inputs.rows(); ++t){
+					std::cout << "epoch:\t" << epoch << "\ttarget:\t" << targets(t) << "\toutput:\t" << this->Hidden_states(t) << "\terror:\t" << error(t) << std::endl;
+				}
+			}
 			LSTMGradients grads = Backward(error);
 			UpdateWeights(grads, learning_rate);
 		}
@@ -825,7 +404,8 @@ public:
 	}
 
 	static long double normalize(char c) {
-		return static_cast<long double>(c) / 127.5L - 1.0L;
+		auto uc = static_cast<unsigned char>(c);
+		return (static_cast<long double>(uc) - 127.5L) / 127.5L;
 	}
 
 	static char denormalize(long double val) {
@@ -1037,11 +617,11 @@ protected:
 
 		MatrixXld input = Input_states.row(timestep);
 		MatrixXld prev_hidden;
-		if (timestep == 0) {
-			prev_hidden = MatrixXld::Zero(1, Hidden_size);
+		if (timestep > 0) {
+			prev_hidden = Hidden_states.row(timestep - 1);
 		}
 		else {
-			prev_hidden = Hidden_states.middleRows(timestep - 1, 1).eval();
+			prev_hidden = MatrixXld::Zero(1, Hidden_size);
 		}
 
 		// Для prev_cell:
@@ -1076,6 +656,11 @@ protected:
 		
 		LSTMGradients grads;
 		Eigen::Index T = Input_states.rows();  // Количество временных шагов
+
+		if (FG_states.size() != static_cast<size_t>(T) ||
+			IG_states.size() != static_cast<size_t>(T)) {
+			throw std::runtime_error("Несоответствие количества состояний");
+		}
 
 		// Инициализация градиентов нулями
 		grads.dW_fg_hs = MatrixXld(Hidden_size, Hidden_size);
@@ -1264,43 +849,11 @@ protected:
 
 int main() {
 	setlocale(LC_ALL, "Russian");
-	
-	/*SimpleLSTM lstm(2, 1, 64);
-	lstm.load("LSTM_state.txt");
-	// Генерируем входные данные размером 10x5
-	MatrixXld inputs1(2, 1);
-	inputs1.set_row(0, { { SimpleLSTM::normalize('М') } });
-	inputs1.set_row(1, { {SimpleLSTM::normalize('Д')} });
 
-	MatrixXld inputs2(2, 1);
-	inputs2.set_row(0, { {SimpleLSTM::normalize('м')} });
-	inputs2.set_row(1, { {SimpleLSTM::normalize('д')} });
+	SimpleLSTM test(1, 2, 64);
+	MatrixXld input({ {SimpleLSTM::normalize('М')}, {SimpleLSTM::normalize('Д')} });
+	MatrixXld target({ {SimpleLSTM::normalize('М')}, {SimpleLSTM::normalize(' ')} });
+	test.Train(input, target, 100000, 0.01);
 
-	MatrixXld inputs3(2, 1);
-	inputs3.set_row(0, { {SimpleLSTM::normalize('М')} });
-	inputs3.set_row(1, { {SimpleLSTM::normalize('д')} });
-
-	MatrixXld inputs4(2, 1);
-	inputs4.set_row(0, { {SimpleLSTM::normalize('Д')} });
-	inputs4.set_row(1, { {SimpleLSTM::normalize('м')} });
-
-	MatrixXld inputs5(2, 1);
-	inputs5.set_row(0, { {SimpleLSTM::normalize('Д')} });
-	inputs5.set_row(1, { {SimpleLSTM::normalize('М')} });
-
-	MatrixXld targets1(2, 1);
-	targets1.set_row(0, { {SimpleLSTM::normalize('М')} });
-	targets1.set_row(1, { {0.0} });
-
-	for (size_t i = 0; i < std::numeric_limits<size_t>::max(); i ++) {
-		lstm.vector_Train({ inputs1, targets1, inputs2, targets1, inputs3, targets1, inputs4, targets1, inputs5, targets1 }, 100000000, 0.001, 0.00000001L);
-
-
-		lstm.CalculationAll_states(targets1, 2);
-
-		std::cout << lstm.GetOutput_states() << std::endl;
-		lstm.save("LSTM_state.txt");
-	}
-
-	return 0;*/
+	return 0;
 }
