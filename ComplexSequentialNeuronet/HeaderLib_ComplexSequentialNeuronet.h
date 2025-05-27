@@ -1,10 +1,13 @@
 #pragma once
-#include <cmath>
+
 #include <iostream>
-#include <vector>
-#include <random>
+
 #include <fstream>
 #include <stdexcept>
 #include <string> 
 #include <sstream>
+#include <algorithm>
+
 #include <Eigen/Dense>
+
+#include <ActivateFunctionsForNN/HeaderActivateFunctionsForNN.h>

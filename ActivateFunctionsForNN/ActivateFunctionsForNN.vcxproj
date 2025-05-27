@@ -21,8 +21,8 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{51a97d64-a3ea-464d-a95d-f3059dc605f9}</ProjectGuid>
-    <RootNamespace>ComplexSequentialNeuronet</RootNamespace>
+    <ProjectGuid>{4538c3f6-97f9-459a-bd62-9c0d4a4be587}</ProjectGuid>
+    <RootNamespace>ActivateFunctionsForNN</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -46,7 +46,7 @@
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -118,28 +118,20 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\Users\matve\Desktop\program_code\myprojects\ComplexSequentialNeuronet;C:\Users\matve\Desktop\program_code\myprojects\ComplexSequentialNeuronet\Lib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalIncludeDirectories>C:\Users\matve\Desktop\program_code\myprojects\ComplexSequentialNeuronet\Lib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>ActivateFunctionsForNN.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>C:\Users\matve\Desktop\program_code\myprojects\ComplexSequentialNeuronet\x64\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="ComplexSequentialNeuronet.cpp" />
+    <ClInclude Include="HeaderActivateFunctionsForNN.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="HeaderLib_ComplexSequentialNeuronet.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\ActivateFunctionsForNN\ActivateFunctionsForNN.vcxproj">
-      <Project>{4538c3f6-97f9-459a-bd62-9c0d4a4be587}</Project>
-    </ProjectReference>
+    <ClCompile Include="ActivateFunctionsForNN.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
