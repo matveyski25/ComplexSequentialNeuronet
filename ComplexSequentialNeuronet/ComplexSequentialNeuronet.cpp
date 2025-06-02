@@ -1,59 +1,55 @@
-#include "HeaderLib_ComplexSequentialNeuronet.h"
+п»ї#include "HeaderLib_ComplexSequentialNeuronet.h"
  
 using MatrixXld = Eigen::Matrix<long double, Eigen::Dynamic, Eigen::Dynamic>;
-using RowVectorXld = Eigen::Matrix<long double, 1, Eigen::Dynamic>; // Вектор-строка
-using VectorXld = Eigen::Matrix<long double, Eigen::Dynamic, 1>;    // Вектор-столбец
+using RowVectorXld = Eigen::Matrix<long double, 1, Eigen::Dynamic>; // Р’РµРєС‚РѕСЂ-СЃС‚СЂРѕРєР°
+using VectorXld = Eigen::Matrix<long double, Eigen::Dynamic, 1>;    // Р’РµРєС‚РѕСЂ-СЃС‚РѕР»Р±РµС†
 
 class SimpleLSTM {
+	friend class BiLSTM;
 public:
 	
-	SimpleLSTM(Eigen::Index Batch, size_t Number_states = 1, size_t Hidden_size_ = 10){
-		if (Hidden_size_ == 0){
-			throw std::invalid_argument("Размеры слоев должны быть больше 0");
+	SimpleLSTM(Eigen::Index Number_states = 1, Eigen::Index Hidden_size_ = 10){
+		if (Hidden_size_ <= 0){
+			throw std::invalid_argument("Р Р°Р·РјРµСЂС‹ СЃР»РѕРµРІ РґРѕР»Р¶РЅС‹ Р±С‹С‚СЊ Р±РѕР»СЊС€Рµ 0");
 		}
-
+		
 		this->Input_size = Number_states;
 		this->Hidden_size = Hidden_size_;
-		// Инициализация весов
-		SetRandomWeights(-0.5L, 0.5L); // Инициализация весов LSTM
 
-		// Инициализация смещений (1xHidden_size)
+		// РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ РІРµСЃРѕРІ
+		SetRandomWeights(-0.5L, 0.5L); // РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ РІРµСЃРѕРІ LSTM
+
+		// РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ СЃРјРµС‰РµРЅРёР№ (1xHidden_size)
 		SetRandomDisplacements(-1.5L, 1.5L);
 
-		// Инициализация состояний
-		Input_states = MatrixXld(0, this->Input_size); // Пустая матрица
-		Cell_states = MatrixXld::Zero(1, Hidden_size_);
-		Hidden_states = MatrixXld::Zero(1, Hidden_size_);
+		// РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ СЃРѕСЃС‚РѕСЏРЅРёР№
+		//Input_states = MatrixXld(0, this->Input_size); // РџСѓСЃС‚Р°СЏ РјР°С‚СЂРёС†Р°
+		//Cell_states = MatrixXld::Zero(1, Hidden_size_);
+		//Hidden_states = MatrixXld::Zero(1, Hidden_size_);
 	}
-
-	SimpleLSTM() = default;
-
+	//SimpleLSTM() = delete;
 	~SimpleLSTM() {
 		save("LSTM_state.txt");
 	}
 
-	void SetInput_states(const MatrixXld& Input_states_) {
-		if (Input_states_.rows() == 0 || Input_states_.cols() != Input_size) {
-			throw std::invalid_argument("Invalid input matrix dimensions");
+	void SetInput_states(const std::vector<MatrixXld>& Input_states_) {
+		for(const auto & b : Input_states_){
+			if (b.rows() == 0 || b.cols() != Input_size) {
+				throw std::invalid_argument("Invalid input matrix dimensions");
+			}
 		}
 
-		// Очищаем историю состояний
-		FG_states.clear();
-		IG_states.clear();
-		CT_states.clear();
-		OG_states.clear();
-
 		Input_states = Input_states_;
-		size_t steps = Input_states.rows();
+		//size_t steps = Input_states.rows();
 
-		// Корректная инициализация размеров
-		Cell_states = MatrixXld::Zero(steps + 1, Hidden_size);
-		Hidden_states = MatrixXld::Zero(steps + 1, Hidden_size);
+		// РљРѕСЂСЂРµРєС‚РЅР°СЏ РёРЅРёС†РёР°Р»РёР·Р°С†РёСЏ СЂР°Р·РјРµСЂРѕРІ
+		//Cell_states = MatrixXld::Zero(steps + 1, Hidden_size);
+		//Hidden_states = MatrixXld::Zero(steps + 1, Hidden_size);
 	}
 
 	void SetWeights(const MatrixXld& weights_I_F, const MatrixXld& weights_I_I, const MatrixXld& weights_I_C, const MatrixXld& weights_I_O, const MatrixXld& weights_H_F, const MatrixXld& weights_H_I, const MatrixXld& weights_H_C, const MatrixXld& weights_H_O)
 	{
-		// Проверка размеров весов
+		// РџСЂРѕРІРµСЂРєР° СЂР°Р·РјРµСЂРѕРІ РІРµСЃРѕРІ
 		auto check_weights = [&](const MatrixXld& W, size_t rows, size_t cols) {
 			return W.rows() == rows && W.cols() == cols;
 			};
@@ -70,15 +66,15 @@ public:
 			throw std::invalid_argument("Invalid weights dimensions");
 		}
 
-		Weights_for_FG_IS = weights_I_F;
-		Weights_for_IG_IS = weights_I_I;
-		Weights_for_CT_IS = weights_I_C;
-		Weights_for_OG_IS = weights_I_O;
+		this->W_F_I = weights_I_F;
+		this->W_I_I = weights_I_I;
+		this->W_C_I = weights_I_C;
+		this->W_O_I = weights_I_O;
 
-		Weights_for_FG_HS = weights_H_F;
-		Weights_for_IG_HS = weights_H_I;
-		Weights_for_CT_HS = weights_H_C;
-		Weights_for_OG_HS = weights_H_O;
+		this->W_F_H = weights_H_F;
+		this->W_I_H = weights_H_I;
+		this->W_C_H = weights_H_C;
+		this->W_O_H = weights_H_O;
 	}
 
 	void SetDisplacements(const MatrixXld& displacements_FG, const MatrixXld& displacements_IG, const MatrixXld& displacements_CT, const MatrixXld& displacements_OG){
@@ -94,10 +90,10 @@ public:
 			throw std::invalid_argument("Displacements must be 1xHidden_size matrices");
 		}
 
-		Displacements_for_FG = displacements_FG;
-		Displacements_for_IG = displacements_IG;
-		Displacements_for_CT = displacements_CT;
-		Displacements_for_OG = displacements_OG;
+		B_F = displacements_FG;
+		B_I = displacements_IG;
+		B_C = displacements_CT;
+		B_O = displacements_OG;
 	}
 
 	void SetRandomWeights(long double a = -0.2L, long double b = 0.2L) {
@@ -114,197 +110,95 @@ public:
 		auto random_init = [](size_t rows, size_t cols, long double a_, long double b_) { return ActivationFunctions::matrix_random(rows, cols, a_, b_); };
 		auto init_h = orthogonal_init;
 		auto init_i = xavier_init;
-		this->Weights_for_FG_HS = init_h(Hidden_size, Hidden_size);
-		this->Weights_for_IG_HS = init_h(Hidden_size, Hidden_size);
-		this->Weights_for_CT_HS = init_h(Hidden_size, Hidden_size);
-		this->Weights_for_OG_HS = init_h(Hidden_size, Hidden_size);
- 								 
-		this->Weights_for_FG_IS = init_i(Hidden_size, Input_size);
-		this->Weights_for_IG_IS = init_i(Hidden_size, Input_size);
-		this->Weights_for_CT_IS = init_i(Hidden_size, Input_size);
-		this->Weights_for_OG_IS = init_i(Hidden_size, Input_size);
+		this->W_F_H = init_h(Hidden_size, Hidden_size);
+		this->W_I_H = init_h(Hidden_size, Hidden_size);
+		this->W_C_H = init_h(Hidden_size, Hidden_size);
+		this->W_O_H = init_h(Hidden_size, Hidden_size);
+ 				
+		this->W_F_I = init_i(Hidden_size, Input_size);
+		this->W_I_I = init_i(Hidden_size, Input_size);
+		this->W_C_I = init_i(Hidden_size, Input_size);
+		this->W_O_I = init_i(Hidden_size, Input_size);
 
 		Output_weights = ActivationFunctions::matrix_random(Hidden_size, 1, -0.1L, 0.1L);
 	}
 
 	void SetRandomDisplacements(long double a = -0.5L, long double b = 0.5L) {
-		this->Displacements_for_FG = MatrixXld::Constant(1, Hidden_size, 1.0L);
-		this->Displacements_for_IG = ActivationFunctions::matrix_random(1, Hidden_size, a, b);
-		this->Displacements_for_CT = ActivationFunctions::matrix_random(1, Hidden_size, a, b);
-		this->Displacements_for_OG = ActivationFunctions::matrix_random(1, Hidden_size, a, b);
+		this->B_F = MatrixXld::Constant(1, Hidden_size, 1.0L);
+		this->B_I = ActivationFunctions::matrix_random(1, Hidden_size, a, b);
+		this->B_C = ActivationFunctions::matrix_random(1, Hidden_size, a, b);
+		this->B_O = ActivationFunctions::matrix_random(1, Hidden_size, a, b);
 
 		Output_bias = MatrixXld::Zero(1, 1);
 	}
 
-	bool CalculationAll_states(const MatrixXld& targets, size_t max_steps, long double precision = 0.1) {
-		for (size_t t = 0; t < max_steps; ++t) {
-			n_state_Сalculation(t);
-			MatrixXld predictions = GetOutput_states();
-			MatrixXld error = predictions - targets;
+	void All_state_РЎalculation() {
+		// РџРѕРґРіРѕС‚РѕРІРєР° РІРµСЃРѕРІ РІРЅРµ С†РёРєР»Р°
+		MatrixXld W_x(this->Input_size, 4 * this->Hidden_size);
+		W_x << this->W_F_I, this->W_I_I, this->W_C_I, this->W_O_I;
 
-			// Проверка ошибки
-			bool all_match = true;
-			for (Eigen::Index i = 0; i < error.rows(); ++i) {
-				for (Eigen::Index j = 0; j < error.cols(); ++j) {
-					auto err = std::abs(error(i, j));
-					//std::cout << targets(1, 0) << std::endl;
-					//std::cout << predictions(1, 0) << std::endl ;
-					if (err > precision) {
-						all_match = false;
-						break;
-					}
+		MatrixXld W_h(this->Hidden_size, 4 * this->Hidden_size);
+		W_h << this->W_F_H, this->W_I_H, this->W_C_H, this->W_O_H;
+
+		RowVectorXld b(4 * this->Hidden_size);
+		b << this->B_F, this->B_I, this->B_C, this->B_O;
+
+		// РџРѕРґРіРѕС‚РѕРІРєР° С…СЂР°РЅРёР»РёС‰
+		this->Hidden_states.resize(this->Input_states.size());
+		this->Cell_states.resize(this->Input_states.size());
+
+		for (size_t nstep = 0; nstep < this->Input_states.size(); ++nstep) {
+			size_t sequence_length = this->Input_states[nstep].rows();
+
+			this->Hidden_states[nstep] = MatrixXld::Zero(sequence_length, this->Hidden_size);
+			this->Cell_states[nstep] = MatrixXld::Zero(sequence_length, this->Hidden_size);
+
+			for (size_t timestep = 0; timestep < sequence_length; ++timestep) {
+				RowVectorXld x_t = this->Input_states[nstep].row(timestep);
+				RowVectorXld h_t_l = RowVectorXld::Zero(this->Hidden_size);
+				RowVectorXld c_t_l = RowVectorXld::Zero(this->Hidden_size);
+
+				if (timestep > 0) {
+					h_t_l = this->Hidden_states[nstep].row(timestep - 1);
+					c_t_l = this->Cell_states[nstep].row(timestep - 1);
 				}
-				if (!all_match) break;
+
+				RowVectorXld Z_t = x_t * W_x + h_t_l * W_h;
+				Z_t += b;
+
+				RowVectorXld f_t = ActivationFunctions::Sigmoid(Z_t.leftCols(this->Hidden_size));
+				RowVectorXld i_t = ActivationFunctions::Sigmoid(Z_t.middleCols(this->Hidden_size, this->Hidden_size));
+				RowVectorXld c_t_bar = ActivationFunctions::Tanh(Z_t.middleCols(2 * this->Hidden_size, this->Hidden_size));
+				RowVectorXld o_t = ActivationFunctions::Sigmoid(Z_t.rightCols(this->Hidden_size));
+
+				RowVectorXld new_c_t = f_t.array() * c_t_l.array() + i_t.array() * c_t_bar.array();
+				RowVectorXld new_h_t = o_t.array() * ActivationFunctions::Tanh(new_c_t).array();
+
+				this->Hidden_states[nstep].row(timestep) = new_h_t;
+				this->Cell_states[nstep].row(timestep) = new_c_t;
 			}
-			if (all_match) return true; // Остановка при достижении точности
 		}
-		return false;
 	}
 
-	void CalculationAll_states(long double limit, long double precision = 0.0001) {
-		size_t i = 0;
-		while (true) {
-			n_state_Сalculation(i);
-			auto a = GetOutput_states();
-			if (std::abs(a(a.rows() - 1, 0) - limit) <= precision) {
-				break;
+	std::vector<RowVectorXld> GetLastOutputs() const {
+		std::vector<RowVectorXld> outputs;
+		for (const auto& state : this->Hidden_states) {
+			if (state.rows() > 0) {
+				outputs.push_back(state.row(state.rows() - 1));
 			}
 		}
+		return outputs;
 	}
 
-	void CalculationAll_states() {
-		for (Eigen::Index i = 0; i < this->Input_states.rows(); ++i) {
-			n_state_Сalculation(i);
-		}
-	}
 
-	MatrixXld GetOutput_states() const {
-		return ActivationFunctions::Tanh(Hidden_states * Output_weights + Output_bias);
-	}
-
-	std::vector<MatrixXld> GetWeightsAndDisplacement() {
+	/*std::vector<MatrixXld> GetWeightsAndDisplacement() {
 		return {
-			this->Weights_for_FG_HS, this->Weights_for_FG_IS, this->Displacements_for_FG,
-			this->Weights_for_IG_HS, this->Weights_for_IG_IS, this->Displacements_for_IG,
-			this->Weights_for_CT_HS, this->Weights_for_CT_IS, this->Displacements_for_CT,
-			this->Weights_for_OG_HS, this->Weights_for_OG_IS, this->Displacements_for_OG
+			this->W_F_H, this->W_F_I, this->B_F,
+			this->W_I_H, this->W_I_I, this->B_I,
+			this->W_C_H, this->W_C_I, this->B_C,
+			this->W_O_H, this->W_O_I, this->B_O
 		};
-	}
-
-	void Train(const MatrixXld& inputs, const MatrixXld& targets, size_t epochs = 10000, long double learning_rate = 0.01, bool Enable_debugging_messages = false, bool decrease_learning_rate = false, int patience_ = 6000) {
-		if (inputs.rows() != targets.rows())
-			throw std::invalid_argument("Input and target row mismatch");
-		SetInput_states(inputs);
-		long double best_error = std::numeric_limits<long double>::max();
-		int patience = patience_;
-		int wait = 0;
-		for (size_t epoch = 0; epoch < epochs; ++epoch) {
-			// Очищаем состояния гейтов перед каждой эпохой
-			FG_states.clear();
-			IG_states.clear();
-			CT_states.clear();
-			OG_states.clear();
-
-			Cell_states.setZero();
-			Hidden_states.setZero();
-			// Прямой проход
-			for (Eigen::Index t = 0; t < inputs.rows(); ++t) {
-				n_state_Сalculation(t);
-			}
-			// Обратный проход и обновление весов
-			MatrixXld predictions = ActivationFunctions::Sigmoid(GetOutput_states());
-			MatrixXld error = (predictions - targets).cwiseQuotient(
-				predictions.unaryExpr([](long double x) { return x * (1 - x) + 1e-8L; })
-			);
-
-			long double current_error = error.norm();
-
-			if (current_error < best_error) {
-				best_error = current_error;
-				wait = 0;
-			}
-			else {
-				if (++wait >= patience) {
-					std::cout << "Early stopping at epoch " << epoch << std::endl;
-					break;
-				}
-			}
-			auto has_nan = [](const MatrixXld& m) {
-				return !((m.array() == m.array()).all()); // NaN != NaN
-				};
-
-			if (has_nan(predictions) || has_nan(error)) {
-				std::cerr << "NaN detected at epoch " << epoch << std::endl;
-				break;
-			}
-			if (!Hidden_states.allFinite()) {
-				std::cerr << "Hidden_states contains NaN or Inf!" << std::endl;
-			}
-			if (decrease_learning_rate) {
-				learning_rate = 0.001L * std::pow(0.95L, epoch / 100.0L); // Используйте 100.0L для плавающего деления
-			}
-			if (epoch % 100 == 0 && Enable_debugging_messages == true) {
-				MatrixXld current_pred = GetOutput_states();
-				auto denorm = SimpleLSTM::denormalize(current_pred);
-				std::cout << "Intermediate prediction (numeric):\n" << current_pred << std::endl;
-				std::cout << "Denormalized: ";
-				for (Eigen::Index i = 0; i < current_pred.rows(); ++i) {
-					for (Eigen::Index j = 0; j < current_pred.cols(); ++j) {
-						std::cout << static_cast<int>(denorm[i][j]) << " : " << denorm[i][j]; // Вывод ASCII кодов
-					}
-				}
-				std::cout << std::endl;
-				std::cout << "Epoch: " << epoch
-					<< " Error: " << current_error
-					<< " LR: " << learning_rate << "\n";
-				LSTMGradients grads = Backward(error);
-				std::cout << "Gradient norms: "
-					<< grads.dW_fg_hs.norm() << " "
-					<< grads.dW_ig_hs.norm() << " "
-					<< grads.dW_og_hs.norm() << std::endl;
-			}
-
-			LSTMGradients grads = Backward(error);
-			for (auto* mat : grads.GetAll()) {
-				if (!mat->allFinite()) {
-					std::cerr << "NaN detected in gradient before UpdateWeights at epoch " << epoch << std::endl;
-					return;
-				}
-			}
-			UpdateWeights(grads, learning_rate, epoch, targets);
-		}
-	}
-
-	void vector_Train(std::vector<MatrixXld> vec_, size_t epochs, long double learning_rate, long double precision = 0.001) {
-		for(size_t epoch_ = 0; epoch_ < vec_.size() / 2; ++epoch_){
-			auto inputs = vec_[2*epoch_];
-			auto targets = vec_[2 * epoch_ + 1];
-			SetInput_states(inputs);
-			for (size_t epoch = 0; epoch < epochs; ++epoch) {
-				if (CalculationAll_states(targets, targets.rows(), precision)) {
-					break;
-				}
-				MatrixXld predictions = GetOutput_states();
-				MatrixXld error = predictions - targets;
-				//std::cout << targets(1, 0) << std::endl;
-				//std::cout << predictions(1, 0) << std::endl;
-				// Отладочный вывод
-				if (epoch % 100 == 0) {
-					for (Eigen::Index i = 0; i < predictions.rows(); i++) {
-						for (Eigen::Index j = 0; j < predictions.cols(); j++) {
-							std::cout << "Epoch " << epoch
-								<< ", Prediction: " << predictions(i, j)
-								<< ", Target: " << targets(i, j)
-								<< ", Error: " << error(i, j) << std::endl;
-						}
-					}
-				}
-
-				LSTMGradients grads = Backward(error);
-				UpdateWeights(grads, learning_rate);
-			}
-		}
-	}
+	}*/
 
 	static long double normalize(char c) {
 		return static_cast<long double>(static_cast<unsigned char>(c)) / 127.5L - 1.0L;
@@ -342,36 +236,27 @@ public:
 	}
 
 	void save(const std::string& filename) const {
-		std::ofstream file(filename, std::ios::trunc); // Используйте trunc для перезаписи
+		std::ofstream file(filename, std::ios::trunc); // РСЃРїРѕР»СЊР·СѓР№С‚Рµ trunc РґР»СЏ РїРµСЂРµР·Р°РїРёСЃРё
 		if (!file) throw std::runtime_error("Cannot open file for writing");
 
-		// Сохраняем только актуальные параметры
+		// РЎРѕС…СЂР°РЅСЏРµРј С‚РѕР»СЊРєРѕ Р°РєС‚СѓР°Р»СЊРЅС‹Рµ РїР°СЂР°РјРµС‚СЂС‹
 		file << this->Input_size << "\n" << this->Hidden_size << "\n";
 
-		// Сохраняем текущие состояния (без истории)
-		save_matrix(file, this->Input_states);
-		save_matrix(file, this->Hidden_states);
-		save_matrix(file, this->Cell_states);
+		// РЎРѕС…СЂР°РЅСЏРµРј РІРµСЃР° Рё СЃРјРµС‰РµРЅРёСЏ
+		save_matrix(file, this->W_F_H);
+		save_matrix(file, this->W_I_H);
+		save_matrix(file, this->W_C_H);
+		save_matrix(file, this->W_O_H);
 
-		// Сохраняем веса и смещения
-		save_matrix(file, this->Weights_for_FG_HS);
-		save_matrix(file, this->Weights_for_IG_HS);
-		save_matrix(file, this->Weights_for_CT_HS);
-		save_matrix(file, this->Weights_for_OG_HS);
-		save_matrix(file, this->Weights_for_FG_IS);
-		save_matrix(file, this->Weights_for_IG_IS);
-		save_matrix(file, this->Weights_for_CT_IS);
-		save_matrix(file, this->Weights_for_OG_IS);
-		save_matrix(file, this->Displacements_for_FG);
-		save_matrix(file, this->Displacements_for_IG);
-		save_matrix(file, this->Displacements_for_CT);
-		save_matrix(file, this->Displacements_for_OG);
+		save_matrix(file, this->W_F_I);
+		save_matrix(file, this->W_I_I);
+		save_matrix(file, this->W_C_I);
+		save_matrix(file, this->W_O_I);
 
-		// Пустые векторы состояний
-		save_vector(file, this->FG_states);
-		save_vector(file, this->IG_states);
-		save_vector(file, this->CT_states);
-		save_vector(file, this->OG_states);
+		save_matrix(file, this->B_F);
+		save_matrix(file, this->B_I);
+		save_matrix(file, this->B_C);
+		save_matrix(file, this->B_O);
 	}
 
 	void load(const std::string& filename) {
@@ -380,496 +265,20 @@ public:
 
 		file >> this->Input_size >> this->Hidden_size;
 
-		// Сохраните все матрицы и векторы:
-		load_matrix(file, this->Input_states);
-		load_matrix(file, this->Hidden_states);
-		load_matrix(file, this->Cell_states);
-
-		load_matrix(file, this->Weights_for_FG_HS);
-		load_matrix(file, this->Weights_for_IG_HS);
-		load_matrix(file, this->Weights_for_CT_HS);
-		load_matrix(file, this->Weights_for_OG_HS);
-
-		load_matrix(file, this->Weights_for_FG_IS);
-		load_matrix(file, this->Weights_for_IG_IS);
-		load_matrix(file, this->Weights_for_CT_IS);
-		load_matrix(file, this->Weights_for_OG_IS);
-
-		load_matrix(file, this->Displacements_for_FG);
-		load_matrix(file, this->Displacements_for_IG);
-		load_matrix(file, this->Displacements_for_CT);
-		load_matrix(file, this->Displacements_for_OG);
-
-		// Сохраняем векторы состояний
-		load_vector(file, this->FG_states);
-		load_vector(file, this->IG_states);
-		load_vector(file, this->CT_states);
-		load_vector(file, this->OG_states);
-	}
-
-//private:
-
-protected:
-	struct LSTMGradients {
-		// Градиенты для Forget Gate
-		MatrixXld dW_fg_hs;  // по весам hidden-state
-		MatrixXld dW_fg_is;  // по весам input
-		MatrixXld db_fg;     // по смещению
-
-		// Градиенты для Input Gate
-		MatrixXld dW_ig_hs;
-		MatrixXld dW_ig_is;
-		MatrixXld db_ig;
-
-		// Градиенты для Cell State
-		MatrixXld dW_ct_hs;
-		MatrixXld dW_ct_is;
-		MatrixXld db_ct;
-
-		// Градиенты для Output Gate
-		MatrixXld dW_og_hs;
-		MatrixXld dW_og_is;
-		MatrixXld db_og;
-		std::vector<MatrixXld*> GetAll() {
-			return {
-				&dW_fg_hs, &dW_fg_is, &db_fg,
-				&dW_ig_hs, &dW_ig_is, &db_ig,
-				&dW_ct_hs, &dW_ct_is, &db_ct,
-				&dW_og_hs, &dW_og_is, &db_og
-			};
-		}
-	};
-
-	size_t Input_size;
-	size_t Hidden_size;
-	MatrixXld Input_states;
-	MatrixXld Hidden_states;
-	MatrixXld Cell_states;
-
-	MatrixXld Weights_for_FG_HS;  // Forget gate hidden state weights
-	MatrixXld Weights_for_IG_HS;  // Input gate hidden state weights
-	MatrixXld Weights_for_CT_HS;  // Cell state hidden state weights
-	MatrixXld Weights_for_OG_HS;  // Output gate hidden state weights
-
-	MatrixXld Weights_for_FG_IS;  // Forget gate input weights
-	MatrixXld Weights_for_IG_IS;  // Input gate input weights
-	MatrixXld Weights_for_CT_IS;  // Cell state input weights
-	MatrixXld Weights_for_OG_IS;  // Output gate input weights
-
-	MatrixXld Displacements_for_FG;  // Матрица 1xHidden_size
-	MatrixXld Displacements_for_IG;  // Матрица 1xHidden_size
-	MatrixXld Displacements_for_CT;  // Матрица 1xHidden_size
-	MatrixXld Displacements_for_OG;  // Матрица 1xHidden_size
-
-	std::vector<MatrixXld> FG_states;
-	std::vector<MatrixXld> IG_states;
-	std::vector<MatrixXld> CT_states;
-	std::vector<MatrixXld> OG_states;
-
-	MatrixXld Output_weights; // (Hidden_size x 1)
-	MatrixXld Output_bias;    // (1 x 1)
-
-
-	std::vector<MatrixXld> StepСalculation(const MatrixXld& Hidden_State, const MatrixXld& Last_State, const MatrixXld& Input_State){
-		// Проверка размерностей
-		if (Hidden_State.cols() != static_cast<Eigen::Index>(Hidden_size) ||
-			Hidden_State.rows() != 1 ||
-			Last_State.cols() != static_cast<Eigen::Index>(Hidden_size) ||
-			Last_State.rows() != 1 ||
-			Input_State.cols() != static_cast<Eigen::Index>(Input_size) ||
-			Input_State.rows() != 1)
-		{
-			throw std::invalid_argument("Invalid state dimensions in StepCalculation");
-		}
-
-
-		// Forget Gate (1xHidden_size)
-		MatrixXld forget_gate = ActivationFunctions::Sigmoid(
-			(Weights_for_FG_HS * Hidden_State.transpose()).transpose() +
-			(Weights_for_FG_IS * Input_State.transpose()).transpose() +
-			Displacements_for_FG
-		);
-
-		// Input Gate (1xHidden_size)
-		MatrixXld input_gate = ActivationFunctions::Sigmoid(
-			(Weights_for_IG_HS * Hidden_State.transpose()).transpose() +
-			(Weights_for_IG_IS * Input_State.transpose()).transpose() +
-			Displacements_for_IG
-		);
-
-		// Cell State Candidate (1xHidden_size)
-		MatrixXld ct_candidate = ActivationFunctions::Tanh(
-			(Weights_for_CT_HS * Hidden_State.transpose()).transpose() +
-			(Weights_for_CT_IS * Input_State.transpose()).transpose() +
-			Displacements_for_CT
-		);
-
-		// New Cell State (1xHidden_size)
-		MatrixXld new_cell_state = forget_gate.cwiseProduct(Last_State) + input_gate.cwiseProduct(ct_candidate);
-
-		// Output Gate (1xHidden_size)
-		MatrixXld output_gate = ActivationFunctions::Sigmoid(
-			(Weights_for_OG_HS * Hidden_State.transpose()).transpose() +
-			(Weights_for_OG_IS * Input_State.transpose()).transpose() +
-			Displacements_for_OG
-		);
-		
-		// New Hidden State (1xHidden_size)
-		MatrixXld new_hidden_state = output_gate.cwiseProduct(ActivationFunctions::Tanh(new_cell_state));
-
-		new_hidden_state = new_hidden_state.unaryExpr([](long double x) {
-			return std::max(-5.0L, std::min(5.0L, x)); // Расширяем диапазон
-			});
-
-		if (!new_cell_state.allFinite() || !new_hidden_state.allFinite()) {
-			throw std::runtime_error("NaN/Inf in states c or h");
-		}
-		return { new_cell_state, new_hidden_state, forget_gate, input_gate, ct_candidate, output_gate };
-		new_cell_state = new_cell_state.unaryExpr([](long double x) {
-			return std::max(-5.0L, std::min(5.0L, x));
-			});
-		new_hidden_state = new_hidden_state.unaryExpr([](long double x) {
-			return std::max(-1.0L, std::min(1.0L, x));
-			});
-		return { new_cell_state, new_hidden_state, forget_gate, input_gate, ct_candidate, output_gate };
-	}
-
-	void n_state_Сalculation(size_t timestep) {
-		if (timestep >= static_cast<size_t>(Input_states.rows())) {
-			throw std::out_of_range("Invalid timestep");
-		}
-
-		MatrixXld input = Input_states.row(timestep);
-		MatrixXld prev_hidden = Hidden_states.row(timestep);
-		MatrixXld prev_cell = Cell_states.row(timestep);
-
-		auto results = StepСalculation(prev_hidden, prev_cell, input);
-
-		// Обновляем состояния напрямую в предварительно выделенной матрице
-		Cell_states.row(timestep + 1) = results[0];
-		Hidden_states.row(timestep + 1) = results[1];
-
-		FG_states.push_back(results[2]);
-		IG_states.push_back(results[3]);
-		CT_states.push_back(results[4]);
-		OG_states.push_back(results[5]);
-	}
-
-	LSTMGradients Backward(const MatrixXld& error) {
-    LSTMGradients grads;
-
-    MatrixXld dC_next = MatrixXld::Zero(1, Hidden_size);
-    MatrixXld dh_next = MatrixXld::Zero(1, Hidden_size);
-
-	Eigen::Index T = Input_states.rows(); // Используем количество входных шагов
-
-    auto clamp = [](MatrixXld& m, long double low = -0.95L, long double high = 0.95L) {
-        m = m.unaryExpr([&](long double x) {
-            return std::max(low, std::min(high, x));
-        });
-    };
-
-    for (Eigen::Index t = T - 2; t >= 0; --t) {
-		if (FG_states.size() != T - 1 || IG_states.size() != T - 1 || CT_states.size() != T - 1 || OG_states.size() != T - 1) {
-			throw std::runtime_error("Vector states size mismatch in Backward");
-		}
-
-        const MatrixXld& hs_t = Hidden_states.row(t);
-        const MatrixXld& x_t = Input_states.row(t);
-        const MatrixXld& f_t = FG_states[t];
-        const MatrixXld& i_t = IG_states[t];
-        const MatrixXld& TC_t = CT_states[t];
-        const MatrixXld& o_t = OG_states[t];
-		MatrixXld C_prev;
-		if (t > 0)
-			C_prev = Cell_states.row(t - 1);
-		else
-			C_prev = MatrixXld::Zero(1, Hidden_size);
-        const MatrixXld& C_t = Cell_states.row(t);
-
-        MatrixXld f = f_t;
-        MatrixXld i = i_t;
-        MatrixXld TC = TC_t;
-        MatrixXld o = o_t;
-
-        // Укреплённый clamp
-        clamp(TC);
-        clamp(i, 0.05L, 0.95L);
-        clamp(f, 0.05L, 0.95L);
-        clamp(o, 0.05L, 0.95L);
-
-        // Стабилизированный tanh(C_t)
-        MatrixXld tanh_Ct = ActivationFunctions::Tanh(C_t);
-        tanh_Ct = tanh_Ct.unaryExpr([](long double x) {
-            return std::max(-0.999999L, std::min(0.999999L, x));
-        });
-
-        MatrixXld dh = error.row(t) + dh_next;
-
-        // Clip dh
-        dh = dh.unaryExpr([](long double x) {
-            return std::max(std::min(x, 5.0L), -5.0L);
-        });
-
-        MatrixXld dC = dh.cwiseProduct(o.cwiseProduct((1.0L - tanh_Ct.array().square()).matrix())) + dC_next;
-
-        // Clip dC
-        dC = dC.unaryExpr([](long double x) {
-            return std::max(std::min(x, 5.0L), -5.0L);
-        });
-
-		MatrixXld f_term = f.array() * (1.0L - f.array());
-		MatrixXld df = dC.cwiseProduct(C_prev).cwiseProduct(f_term.matrix());
-
-		MatrixXld i_term = i.array() * (1.0L - i.array());
-		MatrixXld di = dC.cwiseProduct(TC).cwiseProduct(i_term.matrix());
-
-		MatrixXld TC_term = (1.0L - TC.array().square());
-		MatrixXld dTC = dC.cwiseProduct(i).cwiseProduct(TC_term.matrix());
-
-		MatrixXld o_term = o.array() * (1.0L - o.array());
-		MatrixXld do_gate = dh.cwiseProduct(tanh_Ct).cwiseProduct(o_term.matrix());
-
-        // Debug: check for NaNs
-        if (!df.allFinite() || !di.allFinite() || !do_gate.allFinite()) {
-            std::cerr << "NaN detected in gradient at timestep backprop. Zeroing gradients.\n";
-            for (auto* g : grads.GetAll()) {
-                *g = MatrixXld::Zero(g->rows(), g->cols());
-            }
-            break;
-        }
-
-        // Обновление градиентов
-        grads.dW_fg_hs += hs_t.transpose() * df;
-        grads.dW_fg_is += x_t.transpose() * df;
-        grads.db_fg += df;
-
-        grads.dW_ig_hs += hs_t.transpose() * di;
-        grads.dW_ig_is += x_t.transpose() * di;
-        grads.db_ig += di;
-
-        grads.dW_ct_hs += hs_t.transpose() * dTC;
-        grads.dW_ct_is += x_t.transpose() * dTC;
-        grads.db_ct += dTC;
-
-        grads.dW_og_hs += hs_t.transpose() * do_gate;
-        grads.dW_og_is += x_t.transpose() * do_gate;
-        grads.db_og += do_gate;
-
-        // Градиенты для следующего шага назад
-        dh_next = df * Weights_for_FG_HS.transpose()
-                + di * Weights_for_IG_HS.transpose()
-                + dTC * Weights_for_CT_HS.transpose()
-                + do_gate * Weights_for_OG_HS.transpose();
-
-        dC_next = dC.cwiseProduct(f);
-    }
-
-    // Итоговый клиппинг
-    for (auto* g : grads.GetAll()) {
-        *g = g->unaryExpr([](long double x) {
-            return std::max(std::min(x, 0.5L), -0.5L);
-        });
-    }
-
-    return grads;
-}
-
-	void UpdateWeights(LSTMGradients& gradients, long double learning_rate) {
-		auto l2_reg = [](MatrixXld& weights, long double lambda) {
-			weights -= lambda * weights;
-			};
-		auto clip_gradients = [](MatrixXld& grad, long double max_norm = 1.0L) {
-			long double norm = grad.norm();
-			if (std::isnan(norm)) {
-				grad = MatrixXld::Zero(grad.rows(), grad.cols());
-			}
-			else if (norm > max_norm) {
-				grad *= (max_norm / norm);
-			}
-		};
-
-		clip_gradients(gradients.dW_fg_hs, 0.5L);
-		clip_gradients(gradients.dW_fg_is, 0.5L);
-		clip_gradients(gradients.db_fg, 0.5L);
-
-		clip_gradients(gradients.dW_ig_hs, 0.5L);
-		clip_gradients(gradients.dW_ig_is, 0.5L);
-		clip_gradients(gradients.db_ig, 0.5L);
-
-		clip_gradients(gradients.dW_ct_hs, 0.5L);
-		clip_gradients(gradients.dW_ct_is, 0.5L);
-		clip_gradients(gradients.db_ct, 0.5L);
-
-		clip_gradients(gradients.dW_og_hs, 0.5L);
-		clip_gradients(gradients.dW_og_is, 0.5L);
-		clip_gradients(gradients.db_og, 0.5L);
-
-		auto check_nan = [](const MatrixXld& m, const std::string& name) {
-			for (Eigen::Index i = 0; i < m.rows(); ++i) {
-				for (Eigen::Index j = 0; j < m.cols(); ++j) {
-					if (std::isnan(m(i, j)) || std::isinf(m(i, j))) {
-						throw std::runtime_error(name + " содержит NaN/Inf");
-					}
-				}
-			}
-			};
-		
-		check_nan(gradients.dW_fg_hs, "dW_fg_hs");
-		check_nan(gradients.dW_fg_is, "dW_fg_is");
-		check_nan(gradients.db_fg, "db_fg");
-
-		check_nan(gradients.dW_ig_hs, "dW_ig_hs");
-		check_nan(gradients.dW_ig_is, "dW_ig_is");
-		check_nan(gradients.db_ig, "db_ig");
-
-		check_nan(gradients.dW_ct_hs, "dW_ct_hs");
-		check_nan(gradients.dW_ct_is, "dW_ct_is");
-		check_nan(gradients.db_ct, "db_ct");
-
-		check_nan(gradients.dW_og_hs, "dW_og_hs");
-		check_nan(gradients.dW_og_is, "dW_og_is");
-		check_nan(gradients.db_og, "db_og");
-
-		auto safe_update = [learning_rate](MatrixXld& weights, const MatrixXld& grad) {
-			for (Eigen::Index i = 0; i < grad.rows(); ++i) {
-				for (Eigen::Index j = 0; j < grad.cols(); ++j) {
-					if (std::isnan(grad(i, j))) {
-						weights(i, j) -= 0;  // Игнорируем NaN
-					}
-					else {
-						weights(i, j) -= learning_rate * grad(i, j);
-					}
-				}
-			}
-			};
-
-		safe_update(Weights_for_FG_HS, gradients.dW_fg_hs);
-		safe_update(Weights_for_FG_IS, gradients.dW_fg_is);
-		safe_update(Displacements_for_FG, gradients.db_fg);
-
-		safe_update(Weights_for_IG_HS, gradients.dW_ig_hs);
-		safe_update(Weights_for_IG_IS, gradients.dW_ig_is);
-		safe_update(Displacements_for_IG, gradients.db_ig);
-
-		safe_update(Weights_for_CT_HS, gradients.dW_ct_hs);
-		safe_update(Weights_for_CT_IS, gradients.dW_ct_is);
-		safe_update(Displacements_for_CT, gradients.db_ct);
-
-		safe_update(Weights_for_OG_HS, gradients.dW_og_hs);
-		safe_update(Weights_for_OG_IS, gradients.dW_og_is);
-		safe_update(Displacements_for_OG, gradients.db_og);
-
-		/*Weights_for_FG_HS -= gradients.dW_fg_hs * learning_rate;
-		Weights_for_FG_IS -= gradients.dW_fg_is * learning_rate;
-		Displacements_for_FG -= gradients.db_fg * learning_rate;
-
-		Weights_for_IG_HS -= gradients.dW_ig_hs * learning_rate;
-		Weights_for_IG_IS -= gradients.dW_ig_is * learning_rate;
-		Displacements_for_IG -= gradients.db_ig * learning_rate;
-
-		Weights_for_CT_HS -= gradients.dW_ct_hs * learning_rate;
-		Weights_for_CT_IS -= gradients.dW_ct_is * learning_rate;
-		Displacements_for_CT -= gradients.db_ct * learning_rate;
-
-		Weights_for_OG_HS -= gradients.dW_og_hs * learning_rate;
-		Weights_for_OG_IS -= gradients.dW_og_is * learning_rate;
-		Displacements_for_OG -= gradients.db_og * learning_rate;*/
-	}
-
-	void UpdateWeights(LSTMGradients& gradients, long double learning_rate, size_t epoch, const MatrixXld& targets) {
-		const long double beta1 = 0.95L;  // Было 0.9
-		const long double beta2 = 0.9999L; // Было 0.999
-		const long double epsilon = 1e-8L; // Было 1e-6
-		const long double lambda = 0.001L; // L2 регуляризация
-
-		std::vector<MatrixXld*> params = {
-			&Weights_for_FG_HS, &Weights_for_FG_IS, &Displacements_for_FG,
-			&Weights_for_IG_HS, &Weights_for_IG_IS, &Displacements_for_IG,
-			&Weights_for_CT_HS, &Weights_for_CT_IS, &Displacements_for_CT,
-			&Weights_for_OG_HS, &Weights_for_OG_IS, &Displacements_for_OG
-		};
-
-		std::vector<MatrixXld*> grads = gradients.GetAll();
-
-		// Инициализация моментов
-		static std::vector<MatrixXld> m, v;
-		if (m.empty()) {
-			for (const auto* g : grads) {
-				m.emplace_back(MatrixXld::Zero(g->rows(), g->cols()));
-				v.emplace_back(MatrixXld::Zero(g->rows(), g->cols()));
-			}
-		}
-
-		for (size_t i = 0; i < grads.size(); ++i) {
-			auto& grad = *grads[i];
-			auto& weight = *params[i];
-
-			// Градиентный клиппинг
-			long double norm = grad.norm();
-			if (std::isnan(norm)) grad.setZero();
-			else if (norm > 0.5L) grad *= (0.5L / norm);
-
-			// Обновление моментов
-			m[i] = beta1 * m[i] + (1.0L - beta1) * grad;
-			v[i] = beta2 * v[i] + (1.0L - beta2) * grad.cwiseProduct(grad);
-
-			// Коррекция смещений
-			long double b1_corr = 1.0L - std::pow(beta1, epoch + 1);
-			long double b2_corr = 1.0L - std::pow(beta2, epoch + 1);
-			b1_corr = std::max(b1_corr, 1e-8L);
-			b2_corr = std::max(b2_corr, 1e-8L);
-			//if (b2_corr < 1e-5L) b2_corr = 1e-5L;
-
-			MatrixXld m_hat = m[i] / b1_corr;
-			MatrixXld v_hat = v[i] / b2_corr;
-
-			// Безопасное деление
-			MatrixXld denom = (v_hat.array().sqrt() + epsilon).matrix();
-			denom = denom.unaryExpr([](long double x) {
-				return std::max(1e-6L, std::min(1e+2L, x));
-				});
-
-			MatrixXld update = m_hat.array() / denom.array();
-			update = update.unaryExpr([](long double x) {
-				return std::max(-10.0L, std::min(10.0L, x));
-				});
-
-			if (!update.allFinite()) {
-				std::cerr << "NaN or Inf in update at param " << i << " epoch " << epoch << "\n";
-				continue;
-			}
-
-			// Обновление веса
-			weight -= learning_rate * update.matrix();
-
-			// L2-регуляризация
-			weight *= (1.0L - lambda * learning_rate);
-		}
-
-		MatrixXld predictions = this->GetOutput_states();
-		MatrixXld output_error = predictions - targets;
-		MatrixXld grad_out_w = Hidden_states.transpose() * output_error / Hidden_states.rows();
-		MatrixXld grad_out_b = output_error.colwise().mean();
-
-		// 2. Отсечение градиентов для стабильности
-		auto clip_gradients = [](MatrixXld& grad, long double max_norm = 1.0L) {
-			long double norm = grad.norm();
-			if (norm > max_norm) {
-				grad *= (max_norm / norm);
-			}
-			};
-		clip_gradients(grad_out_w);  // Применяем к весам
-		clip_gradients(grad_out_b);  // Применяем к смещениям
-
-		// 3. Обновляем веса и смещения выходного слоя
-		Output_weights -= learning_rate * grad_out_w;
-		Output_bias -= learning_rate * grad_out_b;
-
-		// 4. L2-регуляризация (после обновления!)
-		const long double output_lambda = 0.001L;
-		Output_weights *= (1.0L - output_lambda * learning_rate);
-		Output_bias *= (1.0L - output_lambda * learning_rate);
+		load_matrix(file, this->W_F_H);
+		load_matrix(file, this->W_I_H);
+		load_matrix(file, this->W_C_H);
+		load_matrix(file, this->W_O_H);
+
+		load_matrix(file, this->W_F_I);
+		load_matrix(file, this->W_I_I);
+		load_matrix(file, this->W_C_I);
+		load_matrix(file, this->W_O_I);
+
+		load_matrix(file, this->B_F);
+		load_matrix(file, this->B_I);
+		load_matrix(file, this->B_C);
+		load_matrix(file, this->B_O);
 	}
 
 	void save_matrix(std::ofstream& file, const MatrixXld& m) const {
@@ -893,61 +302,783 @@ protected:
 		}
 	}
 
-	void save_vector(std::ofstream& file, const std::vector<MatrixXld>& vec) const {
-		file << vec.size() << "\n";
-		for (const auto& m : vec) {
-			save_matrix(file, m);
+protected:
+	/*struct LSTMGradients {
+		// Р“СЂР°РґРёРµРЅС‚С‹ РґР»СЏ Forget Gate
+		MatrixXld dW_fg_hs;  // РїРѕ РІРµСЃР°Рј hidden-state
+		MatrixXld dW_fg_is;  // РїРѕ РІРµСЃР°Рј input
+		MatrixXld db_fg;     // РїРѕ СЃРјРµС‰РµРЅРёСЋ
+
+		// Р“СЂР°РґРёРµРЅС‚С‹ РґР»СЏ Input Gate
+		MatrixXld dW_ig_hs;
+		MatrixXld dW_ig_is;
+		MatrixXld db_ig;
+
+		// Р“СЂР°РґРёРµРЅС‚С‹ РґР»СЏ Cell State
+		MatrixXld dW_ct_hs;
+		MatrixXld dW_ct_is;
+		MatrixXld db_ct;
+
+		// Р“СЂР°РґРёРµРЅС‚С‹ РґР»СЏ Output Gate
+		MatrixXld dW_og_hs;
+		MatrixXld dW_og_is;
+		MatrixXld db_og;
+		std::vector<MatrixXld*> GetAll() {
+			return {
+				&dW_fg_hs, &dW_fg_is, &db_fg,
+				&dW_ig_hs, &dW_ig_is, &db_ig,
+				&dW_ct_hs, &dW_ct_is, &db_ct,
+				&dW_og_hs, &dW_og_is, &db_og
+			};
+		}
+	};*/
+
+	Eigen::Index Input_size;
+	Eigen::Index Hidden_size;
+	std::vector<MatrixXld> Input_states;
+	std::vector<MatrixXld> Hidden_states;
+	std::vector<MatrixXld> Cell_states;
+
+	MatrixXld W_F_H;  // Forget gate hidden state weights
+	MatrixXld W_I_H;  // Input gate hidden state weights
+	MatrixXld W_C_H;  // Cell state hidden state weights
+	MatrixXld W_O_H;  // Output gate hidden state weights
+
+	MatrixXld W_F_I;  // Forget gate input weights
+	MatrixXld W_I_I;  // Input gate input weights
+	MatrixXld W_C_I;  // Cell state input weights
+	MatrixXld W_O_I;  // Output gate input weights
+
+	MatrixXld B_F;  // РњР°С‚СЂРёС†Р° 1xHidden_size
+	MatrixXld B_I;  // РњР°С‚СЂРёС†Р° 1xHidden_size
+	MatrixXld B_C;  // РњР°С‚СЂРёС†Р° 1xHidden_size
+	MatrixXld B_O;  // РњР°С‚СЂРёС†Р° 1xHidden_size
+
+	MatrixXld Output_weights; // (Hidden_size x 1)
+	MatrixXld Output_bias;    // (1 x 1)
+
+	void n_state_РЎalculation(size_t timestep, size_t nstep) {
+		RowVectorXld x_t(this->Input_size);
+		RowVectorXld h_t_l = RowVectorXld::Zero(this->Hidden_size);
+		RowVectorXld c_t_l = RowVectorXld::Zero(this->Hidden_size);
+
+		// РџРѕР»СѓС‡РµРЅРёРµ РІС…РѕРґР°
+		x_t = this->Input_states[nstep].row(timestep);
+
+		// Р•СЃР»Рё timestep > 0, Р±РµСЂС‘Рј РїСЂРµРґС‹РґСѓС‰РёРµ СЃРѕСЃС‚РѕСЏРЅРёСЏ
+		if (timestep > 0) {
+			h_t_l = this->Hidden_states[nstep].row(timestep - 1);
+			c_t_l = this->Cell_states[nstep].row(timestep - 1);
+		}
+
+		// РћР±СЉРµРґРёРЅРµРЅРЅС‹Рµ РІРµСЃР° Рё СЃРјРµС‰РµРЅРёСЏ
+		MatrixXld W_x(this->Input_size, 4 * this->Hidden_size);
+		W_x << this->W_F_I, this->W_I_I, this->W_C_I, this->W_O_I;
+
+		MatrixXld W_h(this->Hidden_size, 4 * this->Hidden_size);
+		W_h << this->W_F_H, this->W_I_H, this->W_C_H, this->W_O_H;
+
+		RowVectorXld b(4 * this->Hidden_size);
+		b << this->B_F, this->B_I, this->B_C, this->B_O;
+
+		// Р Р°СЃС‡С‘С‚ РІС‹С…РѕРґР°
+		RowVectorXld Z_t = x_t * W_x + h_t_l * W_h;
+		Z_t += b;
+
+		RowVectorXld f_t = ActivationFunctions::Sigmoid(Z_t.leftCols(this->Hidden_size));
+		RowVectorXld i_t = ActivationFunctions::Sigmoid(Z_t.middleCols(this->Hidden_size, this->Hidden_size));
+		RowVectorXld c_t_bar = ActivationFunctions::Tanh(Z_t.middleCols(2 * this->Hidden_size, this->Hidden_size));
+		RowVectorXld o_t = ActivationFunctions::Sigmoid(Z_t.rightCols(this->Hidden_size));
+
+		RowVectorXld new_c_t = f_t.array() * c_t_l.array() + i_t.array() * c_t_bar.array();
+		RowVectorXld new_h_t = o_t.array() * ActivationFunctions::Tanh(new_c_t).array();
+
+		// РћР±РµСЃРїРµС‡РµРЅРёРµ СЂР°Р·РјРµСЂРѕРІ
+		size_t total_sequences = this->Input_states.size();
+		this->Hidden_states.resize(total_sequences);
+		this->Cell_states.resize(total_sequences);
+
+		for (size_t i = 0; i < total_sequences; ++i) {
+			size_t T = timestep + 1;
+			if (this->Hidden_states[i].rows() < T) {
+				this->Hidden_states[i].conservativeResize(T, this->Hidden_size);
+				this->Hidden_states[i].row(T - 1).setZero();
+			}
+			if (this->Cell_states[i].rows() < T) {
+				this->Cell_states[i].conservativeResize(T, this->Hidden_size);
+				this->Cell_states[i].row(T - 1).setZero();
+			}
+		}
+
+		// Р—Р°РїРёСЃСЊ РЅРѕРІС‹С… СЃРѕСЃС‚РѕСЏРЅРёР№
+		this->Hidden_states[nstep].row(timestep) = new_h_t;
+		this->Cell_states[nstep].row(timestep) = new_c_t;
+	}
+
+};
+
+class SimpleLSTM_ForTrain : public SimpleLSTM{
+	friend class BiLSTM_ForTrain;
+public:
+	SimpleLSTM_ForTrain(size_t Batch_size_ = 32, Eigen::Index Number_states = 1, Eigen::Index Hidden_size_ = 10) {
+		if (Hidden_size_ <= 0) {
+			throw std::invalid_argument("Р Р°Р·РјРµСЂС‹ СЃР»РѕРµРІ РґРѕР»Р¶РЅС‹ Р±С‹С‚СЊ Р±РѕР»СЊС€Рµ 0");
+		}
+		if (Batch_size_ <= 0) {
+			throw std::invalid_argument("Р Р°Р·РјРµСЂС‹ Р±Р°С‚С‡РµР№ РґРѕР»Р¶РЅС‹ Р±С‹С‚СЊ Р±РѕР»СЊС€Рµ 0");
+		}
+
+		this->Batch_size = Batch_size_;
+		this->Input_size = Number_states;
+		this->Hidden_size = Hidden_size_;
+
+		// РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ РІРµСЃРѕРІ
+		SetRandomWeights(-0.5L, 0.5L); // РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ РІРµСЃРѕРІ LSTM
+
+		// РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ СЃРјРµС‰РµРЅРёР№ (1xHidden_size)
+		SetRandomDisplacements(-1.5L, 1.5L);
+
+		// РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ СЃРѕСЃС‚РѕСЏРЅРёР№
+		//Input_states = MatrixXld(0, this->Input_size); // РџСѓСЃС‚Р°СЏ РјР°С‚СЂРёС†Р°
+		//Cell_states = MatrixXld::Zero(1, Hidden_size_);
+		//Hidden_states = MatrixXld::Zero(1, Hidden_size_);
+	}
+	SimpleLSTM_ForTrain() = default;
+	~SimpleLSTM_ForTrain() {
+		save("LSTM_state_ForTrain.txt");
+	}
+
+	void SetInput_states(const std::vector<MatrixXld>& Input_states_) {
+		for (const auto& b : Input_states_) {
+			if (b.rows() == 0 || b.cols() != Input_size) {
+				throw std::invalid_argument("Invalid input matrix dimensions");
+			}
+		}
+
+		// РћС‡РёС‰Р°РµРј РёСЃС‚РѕСЂРёСЋ СЃРѕСЃС‚РѕСЏРЅРёР№
+		FG_states.clear();
+		IG_states.clear();
+		CT_states.clear();
+		OG_states.clear();
+
+		Input_states = Input_states_;
+		//size_t steps = Input_states.rows();
+
+		// РљРѕСЂСЂРµРєС‚РЅР°СЏ РёРЅРёС†РёР°Р»РёР·Р°С†РёСЏ СЂР°Р·РјРµСЂРѕРІ
+		//Cell_states = MatrixXld::Zero(steps + 1, Hidden_size);
+		//Hidden_states = MatrixXld::Zero(steps + 1, Hidden_size);
+	}
+
+	void Train(const MatrixXld& inputs, const MatrixXld& targets, size_t epochs = 10000, long double learning_rate = 0.01, bool Enable_debugging_messages = false, bool decrease_learning_rate = false, int patience_ = 6000) {
+
+	}
+
+protected:
+	size_t Batch_size;
+
+	std::vector<MatrixXld> FG_states;
+	std::vector<MatrixXld> IG_states;
+	std::vector<MatrixXld> CT_states;
+	std::vector<MatrixXld> OG_states;
+
+	void Batch_n_state_РЎalculation(size_t timestep, size_t Batchstep) {
+		// РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ РІС…РѕРґРѕРІ, СЃРєСЂС‹С‚С‹С… Рё СЏС‡РµРµС‡РЅС‹С… СЃРѕСЃС‚РѕСЏРЅРёР№
+		MatrixXld x_t(this->Batch_size, this->Input_size);
+		MatrixXld h_t_l = MatrixXld::Zero(this->Batch_size, this->Hidden_size);
+		MatrixXld c_t_l = MatrixXld::Zero(this->Batch_size, this->Hidden_size);
+
+		// Р—Р°РїРѕР»РЅРµРЅРёРµ РІС…РѕРґРЅС‹С… РґР°РЅРЅС‹С… РЅР° С€Р°РіРµ t
+		for (size_t i = 0; i < this->Batch_size; ++i) {
+			size_t idx = Batchstep * this->Batch_size + i;
+			if (idx < this->Input_states.size()) {
+				x_t.row(i) = this->Input_states[idx].row(timestep);
+			}
+		}
+
+		// Р•СЃР»Рё timestep > 0, Р·Р°РїРѕР»РЅСЏРµРј РїСЂРµРґС‹РґСѓС‰РёРµ СЃРѕСЃС‚РѕСЏРЅРёСЏ
+		if (timestep > 0) {
+			for (size_t i = 0; i < this->Batch_size; ++i) {
+				size_t idx = Batchstep * this->Batch_size + i;
+				if (idx < this->Hidden_states.size()) {
+					h_t_l.row(i) = this->Hidden_states[idx].row(timestep - 1);
+					c_t_l.row(i) = this->Cell_states[idx].row(timestep - 1);
+				}
+			}
+		}
+
+		// РћР±СЉРµРґРёРЅС‘РЅРЅС‹Рµ РІРµСЃР° Рё СЃРјРµС‰РµРЅРёСЏ
+		MatrixXld W_x(this->Input_size, 4 * this->Hidden_size);
+		W_x << this->W_F_I, this->W_I_I, this->W_C_I, this->W_O_I;
+
+		MatrixXld W_h(this->Hidden_size, 4 * this->Hidden_size);
+		W_h << this->W_F_H, this->W_I_H, this->W_C_H, this->W_O_H;
+
+		RowVectorXld b(4 * this->Hidden_size);
+		b << this->B_F, this->B_I, this->B_C, this->B_O;
+
+		// Р Р°СЃС‡РµС‚ Z Рё СЂР°Р·РґРµР»РµРЅРёРµ РЅР° РІРѕСЂРѕС‚Р°
+		MatrixXld Z_t = x_t * W_x + h_t_l * W_h;
+		Z_t.rowwise() += b;
+
+		MatrixXld f_t = ActivationFunctions::Sigmoid(Z_t.leftCols(this->Hidden_size));
+		MatrixXld i_t = ActivationFunctions::Sigmoid(Z_t.middleCols(this->Hidden_size, this->Hidden_size));
+		MatrixXld c_t_bar = ActivationFunctions::Tanh(Z_t.middleCols(2 * this->Hidden_size, this->Hidden_size));
+		MatrixXld o_t = ActivationFunctions::Sigmoid(Z_t.rightCols(this->Hidden_size));
+
+		MatrixXld new_c_t = f_t.array() * c_t_l.array() + i_t.array() * c_t_bar.array();
+		MatrixXld new_h_t = o_t.array() * ActivationFunctions::Tanh(new_c_t).array();
+
+		// РЈР±РµРґРёРјСЃСЏ, С‡С‚Рѕ СЃРѕСЃС‚РѕСЏРЅРёРµ РґРѕСЃС‚Р°С‚РѕС‡РЅРѕ СЂР°СЃС€РёСЂРµРЅРѕ
+		size_t total_sequences = this->Input_states.size();
+		this->Hidden_states.resize(total_sequences);
+		this->Cell_states.resize(total_sequences);
+		this->FG_states.resize(total_sequences);
+		this->IG_states.resize(total_sequences);
+		this->CT_states.resize(total_sequences);
+		this->OG_states.resize(total_sequences);
+
+		for (size_t i = 0; i < total_sequences; ++i) {
+			size_t T = timestep + 1;
+			if (this->Hidden_states[i].rows() < T) this->Hidden_states[i].conservativeResize(T, this->Hidden_size);
+			if (this->Cell_states[i].rows() < T) this->Cell_states[i].conservativeResize(T, this->Hidden_size);
+			if (this->FG_states[i].rows() < T) this->FG_states[i].conservativeResize(T, this->Hidden_size);
+			if (this->IG_states[i].rows() < T) this->IG_states[i].conservativeResize(T, this->Hidden_size);
+			if (this->CT_states[i].rows() < T) this->CT_states[i].conservativeResize(T, this->Hidden_size);
+			if (this->OG_states[i].rows() < T) this->OG_states[i].conservativeResize(T, this->Hidden_size);
+		}
+
+		// РЎРѕС…СЂР°РЅРµРЅРёРµ СЃРѕСЃС‚РѕСЏРЅРёР№
+		for (size_t i = 0; i < this->Batch_size; ++i) {
+			size_t idx = Batchstep * this->Batch_size + i;
+			if (idx < total_sequences) {
+				this->Hidden_states[idx].row(timestep) = new_h_t.row(i);
+				this->Cell_states[idx].row(timestep) = new_c_t.row(i);
+				this->FG_states[idx].row(timestep) = f_t.row(i);
+				this->IG_states[idx].row(timestep) = i_t.row(i);
+				this->CT_states[idx].row(timestep) = c_t_bar.row(i);
+				this->OG_states[idx].row(timestep) = o_t.row(i);
+			}
 		}
 	}
 
-	void load_vector(std::ifstream& file, std::vector<MatrixXld>& vec) {
-		size_t size;
-		file >> size;
-		vec.resize(size);
-		for (auto& m : vec) {
-			load_matrix(file, m);
+	void Batch_All_state_РЎalculation() {
+		size_t total_sequences = this->Input_states.size();
+		if (total_sequences == 0) return;
+
+		size_t sequence_length = this->Input_states[0].rows(); // РїСЂР°РІРёР»СЊРЅР°СЏ РґР»РёРЅР° РїРѕСЃР»РµРґРѕРІР°С‚РµР»СЊРЅРѕСЃС‚Рё
+
+		// РџРѕРґРіРѕС‚РѕРІРєР° РІРµСЃРѕРІ Рё СЃРјРµС‰РµРЅРёР№
+		MatrixXld W_x(this->Input_size, 4 * this->Hidden_size);
+		W_x << this->W_F_I, this->W_I_I, this->W_C_I, this->W_O_I;
+
+		MatrixXld W_h(this->Hidden_size, 4 * this->Hidden_size);
+		W_h << this->W_F_H, this->W_I_H, this->W_C_H, this->W_O_H;
+
+		RowVectorXld b(4 * this->Hidden_size);
+		b << this->B_F, this->B_I, this->B_C, this->B_O;
+
+		// РџРѕРґРіРѕС‚РѕРІРєР° С…СЂР°РЅРёР»РёС‰ СЃРѕСЃС‚РѕСЏРЅРёР№
+		this->Hidden_states.resize(total_sequences);
+		this->Cell_states.resize(total_sequences);
+		this->FG_states.resize(total_sequences);
+		this->IG_states.resize(total_sequences);
+		this->CT_states.resize(total_sequences);
+		this->OG_states.resize(total_sequences);
+
+		for (size_t i = 0; i < total_sequences; ++i) {
+			this->Hidden_states[i] = MatrixXld::Zero(sequence_length, this->Hidden_size);
+			this->Cell_states[i] = MatrixXld::Zero(sequence_length, this->Hidden_size);
+			this->FG_states[i] = MatrixXld::Zero(sequence_length, this->Hidden_size);
+			this->IG_states[i] = MatrixXld::Zero(sequence_length, this->Hidden_size);
+			this->CT_states[i] = MatrixXld::Zero(sequence_length, this->Hidden_size);
+			this->OG_states[i] = MatrixXld::Zero(sequence_length, this->Hidden_size);
 		}
+
+		size_t num_batches = (total_sequences + this->Batch_size - 1) / this->Batch_size;
+
+		// РћСЃРЅРѕРІРЅРѕР№ С†РёРєР»: РїРѕ Р±Р°С‚С‡Р°Рј Рё С€Р°РіР°Рј
+		for (size_t Batchstep = 0; Batchstep < num_batches; ++Batchstep) {
+			for (size_t timestep = 0; timestep < sequence_length; ++timestep) {
+				MatrixXld x_t(this->Batch_size, this->Input_size);
+				MatrixXld h_t_l = MatrixXld::Zero(this->Batch_size, this->Hidden_size);
+				MatrixXld c_t_l = MatrixXld::Zero(this->Batch_size, this->Hidden_size);
+
+				// РџРѕРґРіРѕС‚РѕРІРєР° РІС…РѕРґРѕРІ
+				for (size_t i = 0; i < this->Batch_size; ++i) {
+					size_t idx = Batchstep * this->Batch_size + i;
+					if (idx < total_sequences) {
+						x_t.row(i) = this->Input_states[idx].row(timestep);
+						if (timestep > 0) {
+							h_t_l.row(i) = this->Hidden_states[idx].row(timestep - 1);
+							c_t_l.row(i) = this->Cell_states[idx].row(timestep - 1);
+						}
+					}
+				}
+
+				// РџСЂСЏРјРѕР№ РїСЂРѕС…РѕРґ С‡РµСЂРµР· СЃР»РѕР№
+				MatrixXld Z_t = x_t * W_x + h_t_l * W_h;
+				Z_t.rowwise() += b;
+
+				MatrixXld f_t = ActivationFunctions::Sigmoid(Z_t.leftCols(this->Hidden_size));
+				MatrixXld i_t = ActivationFunctions::Sigmoid(Z_t.middleCols(this->Hidden_size, this->Hidden_size));
+				MatrixXld c_t_bar = ActivationFunctions::Tanh(Z_t.middleCols(2 * this->Hidden_size, this->Hidden_size));
+				MatrixXld o_t = ActivationFunctions::Sigmoid(Z_t.rightCols(this->Hidden_size));
+
+				MatrixXld new_c_t = f_t.array() * c_t_l.array() + i_t.array() * c_t_bar.array();
+				MatrixXld new_h_t = o_t.array() * ActivationFunctions::Tanh(new_c_t).array();
+
+				// Р—Р°РїРёСЃСЊ СЃРѕСЃС‚РѕСЏРЅРёР№
+				for (size_t i = 0; i < this->Batch_size; ++i) {
+					size_t idx = Batchstep * this->Batch_size + i;
+					if (idx < total_sequences) {
+						this->Hidden_states[idx].row(timestep) = new_h_t.row(i);
+						this->Cell_states[idx].row(timestep) = new_c_t.row(i);
+						this->FG_states[idx].row(timestep) = f_t.row(i);
+						this->IG_states[idx].row(timestep) = i_t.row(i);
+						this->CT_states[idx].row(timestep) = c_t_bar.row(i);
+						this->OG_states[idx].row(timestep) = o_t.row(i);
+					}
+				}
+			}
+		}
+	}
+};
+
+class BiLSTM {
+	
+public:
+	BiLSTM(Eigen::Index Number_states = 1, Eigen::Index Hidden_size_ = 10) {
+		if (Hidden_size_ <= 0) {
+			throw std::invalid_argument("Р Р°Р·РјРµСЂС‹ СЃР»РѕРµРІ РґРѕР»Р¶РЅС‹ Р±С‹С‚СЊ Р±РѕР»СЊС€Рµ 0");
+		}
+		this->Common_Input_size = Number_states;
+		this->Common_Hidden_size = Hidden_size_;
+
+		// РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ РІРµСЃРѕРІ
+		//SetRandomWeights(-0.5L, 0.5L); // РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ РІРµСЃРѕРІ LSTM
+
+		// РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ СЃРјРµС‰РµРЅРёР№ (1xHidden_size)
+		//SetRandomDisplacements(-1.5L, 1.5L);
+
+		// РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ СЃРѕСЃС‚РѕСЏРЅРёР№
+		//Input_states = MatrixXld(0, this->Input_size); // РџСѓСЃС‚Р°СЏ РјР°С‚СЂРёС†Р°
+		//Cell_states = MatrixXld::Zero(1, Hidden_size_);
+		//Hidden_states = MatrixXld::Zero(1, Hidden_size_);
+	}
+
+	//BiLSTM() = default;
+
+	~BiLSTM() {
+		this->Save("BiLSTM_state.txt");
+	}
+
+	void All_state_РЎalculation() {
+		this->Forward.All_state_РЎalculation();
+		this->Backward.All_state_РЎalculation();
+
+		this->Common_Hidden_states.clear();
+		this->Common_Hidden_states.resize(this->Common_Input_states.size());
+
+		for (size_t i = 0; i < this->Common_Input_states.size(); ++i) {
+			const MatrixXld& Hf = this->Forward.Hidden_states[i];
+			const MatrixXld& Hb = this->Backward.Hidden_states[i];
+			size_t T = Hf.rows();
+
+			MatrixXld concat(T, 2 * this->Common_Hidden_size);
+			for (size_t t = 0; t < T; ++t) {
+				concat.row(t) << Hf.row(t), Hb.row(T - 1 - t); // СЃРєР»РµРёРІР°РЅРёРµ forward Рё backward
+			}
+			this->Common_Hidden_states[i] = concat;
+		}
+	}
+
+	void SetInput_states(const std::vector<MatrixXld>& inputs) {
+		this->Common_Input_states = inputs;
+		this->Forward.SetInput_states(inputs);
+
+		std::vector<MatrixXld> reversed_inputs(inputs.size());
+		for (size_t i = 0; i < inputs.size(); ++i) {
+			MatrixXld reversed = inputs[i].colwise().reverse().eval(); // РѕР±СЂР°С‚РЅС‹Р№ РїРѕСЂСЏРґРѕРє РІСЂРµРјРµРЅРЅС‹С… С€Р°РіРѕРІ
+			reversed_inputs[i] = reversed;
+		}
+		this->Backward.SetInput_states(reversed_inputs);
+	}
+
+	std::vector<RowVectorXld> GetFinalHidden_ForwardBackward() const {
+		std::vector<RowVectorXld> out;
+		for (const auto& H : this->Common_Hidden_states) {
+			if (H.rows() > 0) {
+				out.push_back(H.row(H.rows() - 1)); // РїРѕСЃР»РµРґРЅРёР№ С€Р°Рі
+			}
+		}
+		return out;
+	}
+
+	void Save(const std::string& filename) {
+		this->Forward.save(filename);
+		this->Backward.save(filename);
+	}
+
+	void Load(const std::string& filename) {
+		this->Forward.load(filename);
+		this->Backward.load(filename);
+	}
+protected:
+	SimpleLSTM Forward;
+	SimpleLSTM Backward;
+	Eigen::Index Common_Input_size;
+	Eigen::Index Common_Hidden_size;
+	std::vector<MatrixXld> Common_Input_states;
+	std::vector<MatrixXld> Common_Hidden_states;
+
+};
+
+class BiLSTM_ForTrain : public BiLSTM {
+public:
+	BiLSTM_ForTrain(size_t Batch_size_ = 32, Eigen::Index Number_states = 1, Eigen::Index Hidden_size_ = 10) {
+		if (Hidden_size_ <= 0) {
+			throw std::invalid_argument("Р Р°Р·РјРµСЂС‹ СЃР»РѕРµРІ РґРѕР»Р¶РЅС‹ Р±С‹С‚СЊ Р±РѕР»СЊС€Рµ 0");
+		}
+		if (Batch_size_ <= 0) {
+			throw std::invalid_argument("Р Р°Р·РјРµСЂС‹ Р±Р°С‚С‡РµР№ РґРѕР»Р¶РЅС‹ Р±С‹С‚СЊ Р±РѕР»СЊС€Рµ 0");
+		}
+
+		this->Common_Batch_size = Batch_size_;
+		this->Common_Input_size = Number_states;
+		this->Common_Hidden_size = Hidden_size_;
+
+		// РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ РІРµСЃРѕРІ
+		//SetRandomWeights(-0.5L, 0.5L); // РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ РІРµСЃРѕРІ LSTM
+
+		// РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ СЃРјРµС‰РµРЅРёР№ (1xHidden_size)
+		//SetRandomDisplacements(-1.5L, 1.5L);
+
+		// РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ СЃРѕСЃС‚РѕСЏРЅРёР№
+		//Input_states = MatrixXld(0, this->Input_size); // РџСѓСЃС‚Р°СЏ РјР°С‚СЂРёС†Р°
+		//Cell_states = MatrixXld::Zero(1, Hidden_size_);
+		//Hidden_states = MatrixXld::Zero(1, Hidden_size_);
+	}
+
+	//BiLSTM_ForTrain() = default;
+
+	~BiLSTM_ForTrain() {
+		this->Save("BiLSTM_state_ForTrain.txt");
+	}
+
+	void Batch_All_state_РЎalculation() {
+		//this->Forward.Batch_All_state_РЎalculation();
+		//this->Backward.Batch_All_state_РЎalculation();
+	}
+
+
+	void Train() {
+
+	}
+
+protected:
+	size_t Common_Batch_size;
+};
+
+class Attention {
+public:
+	virtual ~Attention() = default;
+
+	// РђР±СЃС‚СЂР°РєС‚РЅС‹Р№ РјРµС‚РѕРґ: РІС‹С‡РёСЃР»СЏРµС‚ РєРѕРЅС‚РµРєСЃС‚ РїРѕ С€Р°РіСѓ
+	virtual RowVectorXld ComputeContext(const MatrixXld& encoder_outputs,
+		const RowVectorXld& decoder_prev_hidden) = 0;
+
+	// РћС‡РёСЃС‚РєР° РЅР°РєРѕРїР»РµРЅРЅС‹С… Р·РЅР°С‡РµРЅРёР№
+	virtual void ClearCache() {
+		all_attention_weights_.clear();
+		all_scores_.clear();
+	}
+
+	// РџРѕР»СѓС‡РµРЅРёРµ attention-РІРµСЃРѕРІ РїРѕ РІСЃРµРј РІСЂРµРјРµРЅРЅС‹Рј С€Р°РіР°Рј
+	const std::vector<VectorXld>& GetAllAttentionWeights() const { return all_attention_weights_; }
+
+	// РџРѕР»СѓС‡РµРЅРёРµ СЃС‹СЂС‹С… score-РІРµРєС‚РѕСЂРѕРІ (РґРѕ softmax)
+	const std::vector<VectorXld>& GetAllScores() const { return all_scores_; }
+
+protected:
+	// Р’СЃРїРѕРјРѕРіР°С‚РµР»СЊРЅС‹Рµ Р±СѓС„РµСЂС‹ РґР»СЏ РЅР°РєРѕРїР»РµРЅРёСЏ РёСЃС‚РѕСЂРёРё attention РїРѕ РІСЃРµРј С€Р°РіР°Рј
+	std::vector<VectorXld> all_attention_weights_;  // О±_t РґР»СЏ РІСЃРµС… t
+	std::vector<VectorXld> all_scores_;             // e_{t,i} РґР»СЏ РІСЃРµС… t
+};
+
+class BahdanauAttention : public Attention {
+public:
+	BahdanauAttention(Eigen::Index encoder_hidden_size, Eigen::Index decoder_hidden_size, Eigen::Index attention_size)
+		: encoder_hidden_size_(encoder_hidden_size),
+		decoder_hidden_size_(decoder_hidden_size),
+		attention_size_(attention_size)
+	{
+		// РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ РІРµСЃРѕРІ (Xavier)
+		W_encoder_ = ActivationFunctions::matrix_random(attention_size_, encoder_hidden_size_, -1.0L, 1.0L); // [A x 2H]
+		W_decoder_ = ActivationFunctions::matrix_random(attention_size_, decoder_hidden_size_, -1.0L, 1.0L); // [A x H_dec]
+		attention_vector_ = ActivationFunctions::matrix_random(attention_size_, 1, -1.0L, 1.0L);              // [A x 1]
+	}
+
+	// Р’С‹С‡РёСЃР»СЏРµС‚ РєРѕРЅС‚РµРєСЃС‚РЅС‹Р№ РІРµРєС‚РѕСЂ Рё СЃРѕС…СЂР°РЅСЏРµС‚ РІРЅСѓС‚СЂРµРЅРЅРёРµ РІРµСЃР°
+	RowVectorXld ComputeContext(const MatrixXld& encoder_outputs,
+		const RowVectorXld& decoder_prev_hidden) override
+	{
+		const size_t time_steps_enc = encoder_outputs.rows();   // Tx
+		const size_t hidden_size_enc = encoder_outputs.cols();  // 2H
+
+		VectorXld scores(time_steps_enc);  // e_{t,i}
+
+		for (size_t i = 0; i < time_steps_enc; ++i) {
+			RowVectorXld h_i = encoder_outputs.row(i);  // [1 x 2H]
+
+			RowVectorXld combined_input =
+				(W_encoder_ * h_i.transpose() + W_decoder_ * decoder_prev_hidden.transpose()).transpose(); // [1 x A]
+
+			scores(i) = (combined_input.array().tanh().matrix() * attention_vector_).value();  // scalar
+		}
+
+		// Softmax РґР»СЏ e в†’ О±
+		VectorXld attention_weights = scores.array().exp();
+		long double sum_exp = attention_weights.sum() + 1e-8L;
+		attention_weights /= sum_exp;
+
+		// РЎРѕС…СЂР°РЅСЏРµРј РёСЃС‚РѕСЂРёСЋ РЅР° РєР°Р¶РґРѕРј С€Р°РіРµ
+		this->all_attention_weights_.push_back(attention_weights);
+		this->all_scores_.push_back(scores);
+
+		// РљРѕРЅС‚РµРєСЃС‚: sum_i О±_i * h_i
+		RowVectorXld context = RowVectorXld::Zero(hidden_size_enc);
+		for (size_t i = 0; i < time_steps_enc; ++i) {
+			context += attention_weights(i) * encoder_outputs.row(i);
+		}
+
+		return context;
+	}
+
+private:
+	Eigen::Index encoder_hidden_size_;    // 2H
+	Eigen::Index decoder_hidden_size_;    // H_dec
+	Eigen::Index attention_size_;         // A
+
+	MatrixXld W_encoder_;       // [A x 2H]
+	MatrixXld W_decoder_;       // [A x H_dec]
+	MatrixXld attention_vector_; // [A x 1]
+};
+
+// ==== Р‘РђР—РћР’Р«Р™ Р­РќРљРћР”Р•Р  ====
+class EncoderForSeq2Seq : public BiLSTM {
+public:
+	EncoderForSeq2Seq(Eigen::Index input_size, Eigen::Index hidden_size)
+		: BiLSTM(input_size, hidden_size) {
+	}
+
+	void Encode(const std::vector<MatrixXld>& input_sequence_batch) {
+		SetInput_states(input_sequence_batch);
+		All_state_РЎalculation();
+	}
+
+	const std::vector<MatrixXld>& GetEncodedHiddenStates() const {
+		return this->Common_Hidden_states;
+	}
+	virtual ~EncoderForSeq2Seq() = default;
+};
+
+
+// ==== РўР Р•РќРР РћР’РћР§РќР«Р™ Р­РќРљРћР”Р•Р  ====
+class EncoderForSeq2Seq_ForTrain : public BiLSTM_ForTrain {
+public:
+	EncoderForSeq2Seq_ForTrain(size_t batch_size, Eigen::Index input_size, Eigen::Index hidden_size)
+		: BiLSTM_ForTrain(batch_size, input_size, hidden_size) {
+	}
+
+	void Encode(const std::vector<MatrixXld>& input_sequence_batch) {
+		this->SetInput_states(input_sequence_batch);
+		this->Batch_All_state_РЎalculation();
+	}
+
+	const std::vector<MatrixXld>& GetEncodedHiddenStates() const {
+		return this->Common_Hidden_states;
 	}
 
 };
 
 
+class DecoderForSeq2SeqWithAttention : public SimpleLSTM {
+public:
+	DecoderForSeq2SeqWithAttention(std::shared_ptr<Attention> attention_module)
+		: attention_(std::move(attention_module)) {
+	}
+
+	virtual ~DecoderForSeq2SeqWithAttention() = default;
+
+	void SetEncoderOutputs(const std::vector<MatrixXld>& encoder_outputs) {
+		this->encoder_outputs_ = encoder_outputs;
+	}
+
+	void All_state_Calculation() {
+		if (Input_states.empty() || encoder_outputs_.empty()) return;
+
+		Output_state.clear();
+		context_vectors.clear();
+		attention_->ClearCache();
+
+		size_t batch_size = Input_states.size();
+		size_t T_dec = Input_states[0].rows();
+		size_t T_enc = encoder_outputs_[0].rows();
+		size_t encoder_hidden_dim = encoder_outputs_[0].cols();
+
+		// РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ РІС‹С…РѕРґРѕРІ Рё РєРѕРЅС‚РµРєСЃС‚РѕРІ
+		Output_state.resize(batch_size);
+		context_vectors.resize(batch_size);
+
+		Hidden_states.resize(batch_size);
+		Cell_states.resize(batch_size);
+		for (size_t i = 0; i < batch_size; ++i) {
+			Hidden_states[i] = MatrixXld::Zero(T_dec, Hidden_size);
+			Cell_states[i] = MatrixXld::Zero(T_dec, Hidden_size);
+			Output_state[i] = MatrixXld::Zero(T_dec, Hidden_size);
+			context_vectors[i] = MatrixXld::Zero(T_dec, encoder_hidden_dim);
+		}
+
+		for (size_t n = 0; n < batch_size; ++n) {
+			RowVectorXld h_prev = RowVectorXld::Zero(Hidden_size);
+			RowVectorXld c_prev = RowVectorXld::Zero(Hidden_size);
+
+			for (size_t t = 0; t < T_dec; ++t) {
+				RowVectorXld y_prev = Input_states[n].row(t); // y_{t-1}
+				const MatrixXld& H_enc = encoder_outputs_[n]; // [T_enc x 2H]
+
+				RowVectorXld context = attention_->ComputeContext(H_enc, h_prev); // [1 x 2H]
+
+				// РЎРѕС…СЂР°РЅСЏРµРј
+				context_vectors[n].row(t) = context;
+
+				// РљРѕРЅРєР°С‚РµРЅРёСЂСѓРµРј y_prev Рё context
+				RowVectorXld decoder_input(y_prev.cols() + context.cols());
+				decoder_input << y_prev, context;
+
+				// Р Р°СЃС‡С‘С‚ РІРµСЃР°
+				MatrixXld W_x(Input_size, 4 * Hidden_size);
+				W_x << W_F_I, W_I_I, W_C_I, W_O_I;
+
+				MatrixXld W_h(Hidden_size, 4 * Hidden_size);
+				W_h << W_F_H, W_I_H, W_C_H, W_O_H;
+
+				RowVectorXld b(4 * Hidden_size);
+				b << B_F, B_I, B_C, B_O;
+
+				// РџРѕРґР°РµРј decoder_input РІРјРµСЃС‚Рѕ y_t РЅР°РїСЂСЏРјСѓСЋ
+				RowVectorXld Z_t = decoder_input * W_x + h_prev * W_h;
+				Z_t += b;
+
+				RowVectorXld f_t = ActivationFunctions::Sigmoid(Z_t.leftCols(Hidden_size));
+				RowVectorXld i_t = ActivationFunctions::Sigmoid(Z_t.middleCols(Hidden_size, Hidden_size));
+				RowVectorXld c_t_bar = ActivationFunctions::Tanh(Z_t.middleCols(2 * Hidden_size, Hidden_size));
+				RowVectorXld o_t = ActivationFunctions::Sigmoid(Z_t.rightCols(Hidden_size));
+
+				RowVectorXld c_t = f_t.array() * c_prev.array() + i_t.array() * c_t_bar.array();
+				RowVectorXld h_t = o_t.array() * ActivationFunctions::Tanh(c_t).array();
+
+				Hidden_states[n].row(t) = h_t;
+				Cell_states[n].row(t) = c_t;
+				Output_state[n].row(t) = h_t;
+
+				// РѕР±РЅРѕРІР»СЏРµРј h_prev Рё c_prev
+				h_prev = h_t;
+				c_prev = c_t;
+			}
+		}
+	}
+
+	const std::vector<MatrixXld>& GetContextVectors() const { return context_vectors; }
+	const std::vector<MatrixXld>& GetOutputStates() const { return Output_state; }
+
+private:
+	std::shared_ptr<Attention> attention_;
+	std::vector<MatrixXld> encoder_outputs_; // [B][T_enc x 2H]
+	std::vector<MatrixXld> context_vectors;  // [B][T_dec x 2H]
+	std::vector<MatrixXld> Output_state;     // [B][T_dec x Hidden_size]
+};
+
+// ==== РўР Р•РќРР РћР’РћР§РќР«Р™ Р”Р•РљРћР”Р•Р  ====
+class DecoderForSeq2SeqWithAttention_ForTrain : public DecoderForSeq2SeqWithAttention {
+public:
+	DecoderForSeq2SeqWithAttention_ForTrain(std::shared_ptr<Attention> attention_module)
+		: DecoderForSeq2SeqWithAttention(attention_module) {
+	}
+
+	void SetTargets(const std::vector<MatrixXld>& targets) {
+		target_outputs_ = targets;
+	}
+
+	const std::vector<MatrixXld>& GetTargets() const {
+		return target_outputs_;
+	}
+
+private:
+	std::vector<MatrixXld> target_outputs_;  // [B][T_dec x Output_dim]
+	MatrixXld W_output; // [output_size x hidden_size + context_size]
+	RowVectorXld b_output; // [1 x output_size]
+	std::vector<MatrixXld> logits; // [B][T x output_size]
+};
+
+
+// ==== Р‘РђР—РћР’РђРЇ Seq2Seq + Attention ====
+class Seq2SeqWithAttention {
+public:
+	template<typename EncoderT, typename DecoderT>
+	Seq2SeqWithAttention(
+		std::unique_ptr<EncoderT> encoder,
+		std::unique_ptr<DecoderT> decoder)
+		: encoder_(std::move(encoder)), decoder_(std::move(decoder)) {
+	}
+
+	void Inference(const std::vector<MatrixXld>& input_sequence_batch,
+		const std::vector<MatrixXld>& decoder_inputs)
+	{
+		encoder_->Encode(input_sequence_batch);
+		decoder_->SetEncoderOutputs(encoder_->GetEncodedHiddenStates());
+		decoder_->SetInput_states(decoder_inputs);
+		decoder_->All_state_Calculation();
+	}
+
+	const std::vector<MatrixXld>& GetDecoderOutputs() const {
+		return decoder_->GetOutputStates();
+	}
+
+protected:
+	std::unique_ptr<EncoderForSeq2Seq> encoder_;
+	std::unique_ptr<DecoderForSeq2SeqWithAttention> decoder_;
+};
+
+
+// ==== РўР Р•РќРР РћР’РћР§РќРђРЇ Seq2Seq + Attention ====
+class Seq2SeqWithAttention_ForTrain : public Seq2SeqWithAttention {
+public:
+	Seq2SeqWithAttention_ForTrain( std::unique_ptr<EncoderForSeq2Seq_ForTrain> encoder_train, std::unique_ptr<DecoderForSeq2SeqWithAttention_ForTrain> decoder_train)
+		: Seq2SeqWithAttention(std::move(encoder_train), std::move(decoder_train)) {
+
+	}
+
+	void TrainStep(const std::vector<MatrixXld>& input_batch,
+		const std::vector<MatrixXld>& decoder_inputs,
+		const std::vector<MatrixXld>& decoder_targets)
+	{
+		auto* encoder_train = dynamic_cast<EncoderForSeq2Seq_ForTrain*>(encoder_.get());
+		auto* decoder_train = dynamic_cast<DecoderForSeq2SeqWithAttention_ForTrain*>(decoder_.get());
+
+		encoder_train->Encode(input_batch);
+		decoder_train->SetEncoderOutputs(encoder_train->GetEncodedHiddenStates());
+		decoder_train->SetInput_states(decoder_inputs);
+		decoder_train->SetTargets(decoder_targets);
+		decoder_train->All_state_Calculation();
+
+		// TODO: СЂРµР°Р»РёР·РѕРІР°С‚СЊ backpropagation
+	}
+};
+
+
 int main() {
 	setlocale(LC_ALL, "Russian");
-	try {
-		SimpleLSTM test(1, 32);
-		MatrixXld input(2, 1);
-		input << SimpleLSTM::normalize('М'),
-			SimpleLSTM::normalize('Д');
 
-		MatrixXld target(2, 1);
-		target << SimpleLSTM::normalize('М'),
-			SimpleLSTM::normalize(' ');
-		//std::cout << static_cast<int>(' '); // = 32
-		// Уменьшаем количество эпох для теста
-		test.CalculationAll_states();
-		auto a = test.GetOutput_states();
-		test.Train(input, target,
-			10000,    // Увеличиваем количество эпох
-			0.001L,     
-			true,
-			true,
-			500       // Увеличиваем терпение для ранней остановки
-		);
-		test.SetInput_states(input);
-		test.CalculationAll_states();
-
-		MatrixXld predictions = test.GetOutput_states();
-		auto denorm = SimpleLSTM::denormalize(predictions);
-		std::cout << "\nFinal Result: ";
-		for (auto& row : denorm) {
-			for (auto c : row) std::cout << c;
-		}
-		std::cout << "Normalized space: "
-			<< SimpleLSTM::normalize(' ') << std::endl;
-	}
-	catch (const std::exception& e) {
-		std::cerr << "Error: " << e.what() << std::endl;
-	}
 	return 0;
 }
