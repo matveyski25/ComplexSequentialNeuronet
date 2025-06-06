@@ -29,7 +29,8 @@ namespace ActivationFunctions {
 	MatrixXld Swish(const MatrixXld& matx, const MatrixXld& b);
 	MatrixXld Swish(const MatrixXld& matx, long double b);
 	std::vector<long double> Softmax(const std::vector<long double>& values);
+	VectorXld Softmax(const VectorXld& values);
 	long double random(long double a, long double b);
-	MatrixXld matrix_random(size_t rows, size_t cols, long double a, long double b);
+	MatrixXld matrix_random(size_t rows, size_t cols, long double a = 0.0L, long double b = 1.0L);
 	MatrixXld matrix_random(const MatrixXld& matrix, long double, long double);
 }

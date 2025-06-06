@@ -133,6 +133,26 @@ namespace ActivationFunctions {
 		}
 		return result;
 	}
+	VectorXld Softmax(const VectorXld& values) {
+		if (values.size() == 0) {
+			throw std::invalid_argument("Input vector is empty");
+		}
+
+		// Вычитаем максимум для численной устойчивости
+		long double max_val = values.maxCoeff();
+		VectorXld shifted = values.array() - max_val;
+
+		// Возводим в экспоненту
+		VectorXld exps = shifted.array().exp();
+
+		long double sum = exps.sum();
+		if (sum == 0.0L) {
+			throw std::runtime_error("Sum of exponentials is zero in Softmax");
+		}
+
+		// Нормализация
+		return exps / sum;
+	}
 	long double random(long double a = 0.0L, long double b = 1.0L) {
 		if (a >= b) {
 			throw std::invalid_argument("a must be less than b");
@@ -142,7 +162,7 @@ namespace ActivationFunctions {
 		std::uniform_real_distribution<long double> distribution(a, b);
 		return distribution(generator);
 	}
-	MatrixXld matrix_random(size_t rows, size_t cols, long double a = 0.0L, long double b = 1.0L) {
+	MatrixXld matrix_random(size_t rows, size_t cols, long double a, long double b ) {
 		return MatrixXld::Random(rows, cols) * (b - a) + MatrixXld::Constant(rows, cols, a);
 	}
 	MatrixXld matrix_random(const MatrixXld& matrix, long double a = 0.0L, long double b = 1.0L) {
