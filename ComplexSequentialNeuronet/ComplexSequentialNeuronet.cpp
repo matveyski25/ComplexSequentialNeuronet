@@ -400,7 +400,7 @@ protected:
 			this->Cell_states.resize(total_sequences);
 
 			for (size_t i = 0; i < total_sequences; ++i) {
-				size_t T = timestep + 1;
+				Eigen::Index T = timestep + 1;
 				if (this->Hidden_states[i].rows() < T) {
 					this->Hidden_states[i].conservativeResize(T, this->Hidden_size);
 					this->Hidden_states[i].row(T - 1).setZero();
@@ -538,6 +538,7 @@ class Seq2SeqWithAttention {
 public:
 	class BahdanauAttention : public Attention {
 	public:
+		friend class Seq2SeqWithAttention_ForTrain;
 		BahdanauAttention(Eigen::Index encoder_hidden_size, Eigen::Index decoder_hidden_size, Eigen::Index attention_size)
 			: encoder_hidden_size_(encoder_hidden_size),
 			decoder_hidden_size_(decoder_hidden_size),
@@ -548,7 +549,6 @@ public:
 			W_decoder_ = ActivationFunctions::matrix_random(attention_size_, decoder_hidden_size_, -1.0L, 1.0L); // [A x H_dec]
 			attention_vector_ = ActivationFunctions::matrix_random(attention_size_, 1, -1.0L, 1.0L);              // [A x 1]
 		}
-
 		// Вычисляет контекстный вектор и сохраняет внутренние веса
 		RowVectorXld ComputeContext(const MatrixXld& encoder_outputs,
 			const RowVectorXld& decoder_prev_hidden) override
@@ -585,7 +585,7 @@ public:
 			return context;
 		}
 
-	private:
+	protected:
 		Eigen::Index encoder_hidden_size_;    // 2H
 		Eigen::Index decoder_hidden_size_;    // H_dec
 		Eigen::Index attention_size_;         // A
@@ -596,6 +596,7 @@ public:
 	};
 	class Encoder : public BiLSTM {
 	public:
+		friend class Seq2SeqWithAttention_ForTrain;
 		Encoder(Eigen::Index input_size, Eigen::Index hidden_size)
 			: BiLSTM(input_size, hidden_size) {
 		}
@@ -613,11 +614,21 @@ public:
 	};
 	class Decoder : public SimpleLSTM {
 	public:
-		Decoder(std::shared_ptr<Attention> attention_module,
+		friend class Seq2SeqWithAttention_ForTrain;
+		Decoder(std::shared_ptr</*Attention*/BahdanauAttention> attention_module,
 			Eigen::Index Number_states /*= H_emb + 2H_enc*/,
-			Eigen::Index Hidden_size_)
+			Eigen::Index Hidden_size_, Eigen::Index embedding_dim_)
 			: SimpleLSTM(Number_states, Hidden_size_), attention_(std::move(attention_module))
 		{
+			this->output_size = embedding_dim_;
+			// 2)  размер контекста = 2 * Hidden_size_encoder = Number_states - embedding_dim
+			//    (вариант: вы можете вынести его как аргумент, чтобы не «изобретать велосипед»)
+			size_t context_size = Number_states - embedding_dim_;
+			//    (предположим, что вы заранее сохранили embedding_dim в поле этого класса)
+			// 3)  инициализируем W_output и b_output
+			W_output = ActivationFunctions::matrix_random(output_size, Hidden_size_ + context_size);
+			b_output = RowVectorXld::Zero(output_size);
+
 			this->layernorm_gamma = RowVectorXld::Ones(Input_size);
 			this->layernorm_beta = RowVectorXld::Zero(Input_size);
 			// теперь SimpleLSTM::Input_size = Number_states, Hidden_size = Hidden_size_
@@ -702,7 +713,6 @@ public:
 					RowVectorXld decoder_input(Input_size);
 					assert(Input_size == y_prev.cols() + context.cols());
 					decoder_input << y_prev, context;
-					layer_norm(decoder_input);
 
 					RowVectorXld Z_t = decoder_input * W_x + h_prev * W_h;
 					Z_t += b;
@@ -717,21 +727,39 @@ public:
 
 					Hidden_states[n].row(t) = h_t;
 					Cell_states[n].row(t) = c_t;
-					Output_state[n].row(t) = h_t;
+					//Output_state[n].row(t) = h_t;
 
+					// Выходной слой
+					RowVectorXld out_input(h_t.cols() + context.cols());
+					out_input << h_t, context;
+					layer_norm(out_input);
+
+					U_state[n].row(t) = out_input;
+
+					Output_state[n].row(t) = out_input * W_output.transpose();
+					Output_state[n].row(t) += b_output;
 					h_prev = h_t;
 					c_prev = c_t;
 				}
 			}
 		}
 
-		std::shared_ptr<Attention> attention_;
+		std::shared_ptr</*Attention*/BahdanauAttention> attention_;
 
 		std::vector<MatrixXld> encoder_outputs_;
 		std::vector<MatrixXld> context_vectors;
 
+		std::vector<MatrixXld> U_state;
+
 		std::vector<MatrixXld> Output_state;
-		
+
+		// --- Обновляемый выходной слой ---
+		MatrixXld W_output;      // [output_size x (hidden_size + context_size)]
+		RowVectorXld b_output;   // [1 x output_size]
+
+		size_t output_size;
+		size_t embedding_dim;
+	
 		RowVectorXld layernorm_gamma; // [1 x Input_size]
 		RowVectorXld layernorm_beta;  // [1 x Input_size]
 	};
@@ -770,7 +798,6 @@ protected:
 	std::vector<MatrixXld> Input_States;
 
 };
-
 
 // ==== ТРЕНИРОВОЧНАЯ Seq2Seq + Attention ====
 class Seq2SeqWithAttention_ForTrain : public Seq2SeqWithAttention {
@@ -1104,6 +1131,7 @@ public:
 
 	class Encoder : public Seq2SeqWithAttention::Encoder, public BiLSTM_ForTrain {
 	public:
+		friend class Seq2SeqWithAttention_ForTrain;
 		using BiLSTM_ForTrain::SetInput_states;
 		using BiLSTM_ForTrain::Common_Hidden_states;
 
@@ -1124,6 +1152,8 @@ public:
 	};
 
 	class Decoder : public Seq2SeqWithAttention::Decoder, public SimpleLSTM_ForTrain{
+		friend class Seq2SeqWithAttention_ForTrain;
+
 		using SimpleLSTM_ForTrain::Input_states;
 		using SimpleLSTM_ForTrain::Input_size;
 		using SimpleLSTM_ForTrain::Hidden_size;
@@ -1146,22 +1176,13 @@ public:
 		using SimpleLSTM_ForTrain::B_O;  // Матрица 1xHidden_size
 
 	public:
-		Decoder(std::shared_ptr<Attention> attention_module,
+		Decoder(std::shared_ptr</*Attention*/BahdanauAttention> attention_module,
 			size_t Batch_size,
 			Eigen::Index Number_states,   // = H_emb + 2H_enc
 			Eigen::Index Hidden_size_, Eigen::Index embedding_dim_)
-			: Seq2SeqWithAttention::Decoder(std::move(attention_module), Number_states, Hidden_size_),
+			: Seq2SeqWithAttention::Decoder(std::move(attention_module), Number_states, Hidden_size_, embedding_dim_),
 			SimpleLSTM_ForTrain(Batch_size, Number_states, Hidden_size_)
 		{
-			this->output_size = embedding_dim_;
-			// 2)  размер контекста = 2 * Hidden_size_encoder = Number_states - embedding_dim
-			//    (вариант: вы можете вынести его как аргумент, чтобы не «изобретать велосипед»)
-			size_t context_size = Number_states - embedding_dim_;
-			//    (предположим, что вы заранее сохранили embedding_dim в поле этого класса)
-			// 3)  инициализируем W_output и b_output
-			W_output = ActivationFunctions::matrix_random(output_size, Hidden_size_ + context_size);
-			b_output = RowVectorXld::Zero(output_size);
-
 			// теперь SimpleLSTM::Input_size = Number_states, Hidden_size = Hidden_size_
 		}
 
@@ -1173,13 +1194,6 @@ public:
 		const std::vector<MatrixXld>& GetTargets() const {
 			return target_outputs_;
 		}
-
-		// --- Обновляемый выходной слой ---
-		MatrixXld W_output;      // [output_size x (hidden_size + context_size)]
-		RowVectorXld b_output;   // [1 x output_size]
-
-		size_t output_size;
-		size_t embedding_dim;
 
 		// --- Результаты прямого прохода ---
 		std::vector<MatrixXld> logits;  // [B][T_dec x output_size]
@@ -1257,7 +1271,6 @@ public:
 					RowVectorXld decoder_input(Input_size);
 					assert(Input_size == y_prev.cols() + context.cols());
 					decoder_input << y_prev, context;
-					layer_norm(decoder_input);
 
 					RowVectorXld Z_t = decoder_input * W_x + h_prev * W_h;
 					Z_t += b;
@@ -1272,14 +1285,17 @@ public:
 
 					Hidden_states[n].row(t) = h_t;
 					Cell_states[n].row(t) = c_t;
-					Output_state[n].row(t) = h_t;
+					//Output_state[n].row(t) = h_t;
 
 					// Выходной слой
 					RowVectorXld out_input(h_t.cols() + context.cols());
 					out_input << h_t, context;
+					layer_norm(out_input);
 
-					logits[n].row(t) = out_input * W_output.transpose();
-					logits[n].row(t) += b_output;
+					U_state[n].row(t) = out_input;
+
+					Output_state[n].row(t) = out_input * W_output.transpose();
+					Output_state[n].row(t) += b_output;
 					h_prev = h_t;
 					c_prev = c_t;
 				}
@@ -1290,10 +1306,76 @@ public:
 		std::vector<MatrixXld> target_outputs_;  // [B][T_dec x Output_dim]
 	};
 
-	Seq2SeqWithAttention_ForTrain( std::unique_ptr<Encoder> encoder_train = std::make_unique<Encoder>, std::unique_ptr<Decoder> decoder_train = std::make_unique<Decoder>)
+	Seq2SeqWithAttention_ForTrain( std::unique_ptr<Encoder> encoder_train = std::make_unique<Encoder>(), std::unique_ptr<Decoder> decoder_train = std::make_unique<Decoder>())
 		: Seq2SeqWithAttention(std::move(encoder_train), std::move(decoder_train)) {
 	}
+	struct grads_Seq2SeqWithAttention {
+		MatrixXld dW_out; MatrixXld dB_out;
 
+		MatrixXld dW_gamma_layernorm; MatrixXld dB_beta_layernorm;
+
+		MatrixXld dV_a_attention, dW_e_attention, dW_d_attention;
+
+		MatrixXld dW_f_dec, dU_f_dec; MatrixXld dB_f_dec;
+		MatrixXld dW_i_dec, dU_i_dec; MatrixXld dB_i_dec;
+		MatrixXld dW_c_dec, dU_c_dec; MatrixXld dB_c_dec;
+		MatrixXld dW_o_dec, dU_o_dec; MatrixXld dB_o_dec;
+
+		MatrixXld dW_f_forw_enc, dU_f_forw_enc; MatrixXld dB_f_forw_enc;
+		MatrixXld dW_i_forw_enc, dU_i_forw_enc; MatrixXld dB_i_forw_enc;
+		MatrixXld dW_c_forw_enc, dU_c_forw_enc; MatrixXld dB_c_forw_enc;
+		MatrixXld dW_o_forw_enc, dU_o_forw_enc; MatrixXld dB_o_forw_enc;
+
+		MatrixXld dW_f_back_enc, dU_f_back_enc; MatrixXld dB_f_back_enc;
+		MatrixXld dW_i_back_enc, dU_i_back_enc; MatrixXld dB_i_back_enc;
+		MatrixXld dW_c_back_enc, dU_c_back_enc; MatrixXld dB_c_back_enc;
+		MatrixXld dW_o_back_enc, dU_o_back_enc; MatrixXld dB_o_back_enc;
+
+		MatrixXld && get_dB_out(const MatrixXld & Y, const MatrixXld& Y_true) {
+			return std::move(Y_true - Y);
+		}
+		MatrixXld&& get_dW_out(const MatrixXld & dB_out, const MatrixXld & U_state) {
+			return std::move(dB_out.transpose() * U_state);
+		}
+		MatrixXld&& get_dW_out(const MatrixXld& dB_out, const MatrixXld& U_state) {
+			return std::move(dB_out.transpose() * U_state);
+		}
+	};
+	grads_Seq2SeqWithAttention Backward() {
+		grads_Seq2SeqWithAttention grads;
+		{
+			Eigen::Index E = this->decoder_->output_size;
+			Eigen::Index H = this->decoder_->Hidden_size;
+			Eigen::Index C = this->decoder_->Input_size - E;
+			Eigen::Index D = H + C;
+			Eigen::Index A = this->decoder_->attention_->attention_size_;
+			Eigen::Index X = E + C;
+			Eigen::Index HE = this->encoder_->Common_Hidden_size;
+			Eigen::Index EE = this->encoder_->Common_Input_size;
+			grads.dW_out.conservativeResize(E, D), grads.dB_out.conservativeResize(1, E);
+		
+			grads.dW_gamma_layernorm.conservativeResize(1, D), grads.dB_beta_layernorm.conservativeResize(1,  D);
+		
+			grads.dV_a_attention.conservativeResize(A, 1), grads.dW_e_attention.conservativeResize(A, C), grads.dW_d_attention.conservativeResize(A, H);
+		
+			grads.dW_f_dec.conservativeResize(H, X), grads.dU_f_dec.conservativeResize(H, H), grads.dB_f_dec.conservativeResize(1, H),
+			grads.dW_i_dec.conservativeResize(H, X), grads.dU_i_dec.conservativeResize(H, H), grads.dB_i_dec.conservativeResize(1, H),
+			grads.dW_c_dec.conservativeResize(H, X), grads.dU_c_dec.conservativeResize(H, H), grads.dB_c_dec.conservativeResize(1, H),
+			grads.dW_o_dec.conservativeResize(H, X), grads.dU_o_dec.conservativeResize(H, H), grads.dB_o_dec.conservativeResize(1, H);
+		
+			grads.dW_f_forw_enc.conservativeResize(HE, EE), grads.dU_f_forw_enc.conservativeResize(HE, HE), grads.dB_f_forw_enc.conservativeResize(1, HE),
+			grads.dW_i_forw_enc.conservativeResize(HE, EE), grads.dU_i_forw_enc.conservativeResize(HE, HE), grads.dB_i_forw_enc.conservativeResize(1, HE),
+			grads.dW_c_forw_enc.conservativeResize(HE, EE), grads.dU_c_forw_enc.conservativeResize(HE, HE), grads.dB_c_forw_enc.conservativeResize(1, HE),
+			grads.dW_o_forw_enc.conservativeResize(HE, EE), grads.dU_o_forw_enc.conservativeResize(HE, HE), grads.dB_o_forw_enc.conservativeResize(1, HE);
+									
+			grads.dW_f_back_enc.conservativeResize(HE, EE), grads.dU_f_back_enc.conservativeResize(HE, HE), grads.dB_f_back_enc.conservativeResize(1, HE),
+			grads.dW_i_back_enc.conservativeResize(HE, EE), grads.dU_i_back_enc.conservativeResize(HE, HE), grads.dB_i_back_enc.conservativeResize(1, HE),
+			grads.dW_c_back_enc.conservativeResize(HE, EE), grads.dU_c_back_enc.conservativeResize(HE, HE), grads.dB_c_back_enc.conservativeResize(1, HE),
+			grads.dW_o_back_enc.conservativeResize(HE, EE), grads.dU_o_back_enc.conservativeResize(HE, HE), grads.dB_o_back_enc.conservativeResize(1, HE);
+		}
+		Eigen::Index T = this->GetDecoderOutputs()[0].cols();
+
+	}
 };
 
 
