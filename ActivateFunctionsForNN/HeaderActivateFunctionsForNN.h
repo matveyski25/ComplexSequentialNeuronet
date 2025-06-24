@@ -5,8 +5,21 @@
 #include <vector>
 #include <random>
 
-#include <Eigen/Dense>
-#include <Eigen/Core>
+//#define EIGEN_NO_DEBUG
+
+#ifdef _MSC_VER
+// Отключаем только специфичные warning'и, которые возникают из-за Eigen
+#pragma warning(push)
+#pragma warning(disable : 26495 6255 6294)  // Только эти номера, только на время include
+#endif
+
+#include <eigen-3.4.0/Eigen/Dense>
+#include <eigen-3.4.0/Eigen/Core>
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+
 
 
 using MatrixXld = Eigen::Matrix<long double, Eigen::Dynamic, Eigen::Dynamic>;

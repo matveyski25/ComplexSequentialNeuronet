@@ -7,8 +7,9 @@
 #include <string> 
 #include <sstream>
 #include <algorithm>
+#include <filesystem>
 
-#include <Eigen/Dense>
+//#include <Eigen/Dense>
 
 #include <ActivateFunctionsForNN/HeaderActivateFunctionsForNN.h>
 
