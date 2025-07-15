@@ -17,7 +17,6 @@ void load_vector(std::ifstream& file, std::vector<MatrixXld>& vec) {
 		load_matrix(file, m);
 	}
 }*/
-
 class BahdanauAttention : public Attention {
 public:
 	friend class Seq2SeqWithAttention_ForTrain;////////////

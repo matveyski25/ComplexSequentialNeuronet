@@ -4,7 +4,8 @@
 
 #include <filesystem>
 
-class Attention {
+
+class Attention {	
 public:
 	virtual ~Attention();
 

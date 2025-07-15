@@ -250,7 +250,7 @@ public:
 			VectorXld DB_dec_t = dGates_t;
 
 			std::vector<MatrixXld> _dH_back;
-			RowVectorXld Enc_Forw_dC_t = RowVectorXld::Zero(this->encoder_->Common_Hidden_size);
+			RowVectorXld Enc_Forw__dC_t = RowVectorXld::Zero(this->encoder_->Common_Hidden_size);
 			for (Eigen::Index j = N - 1; j >= 0; --j) {
 				RowVectorXld h_j = this->encoder_->Common_Hidden_states[Number_InputState].row(j);
 				RowVectorXld s_t_1 = (t > 0) ? this->decoder_->StatesForgrads.h[Number_InputState].row(t - 1)
