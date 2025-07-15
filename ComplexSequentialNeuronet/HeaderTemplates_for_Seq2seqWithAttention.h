@@ -10,7 +10,7 @@ public:
 
 	// Абстрактный метод: вычисляет контекст по шагу
 	virtual RowVectorXld ComputeContext(const MatrixXld& encoder_outputs,
-		const RowVectorXld& decoder_prev_hidden);
+		const RowVectorXld& decoder_prev_hidden) = 0;
 
 	// Очистка накопленных значений
 	virtual void ClearCache() {}
@@ -41,11 +41,11 @@ class Encoder_ : public Base_of_encoder {
 		const std::vector<MatrixXld>& GetEncodedHiddenStates() const {}
 	};
 
-template<class Base_of_decoder>
+template<class Base_of_decoder, class Base_of_attention = Attention>
 class Decoder_ : public Base_of_decoder {
 	public:
 		friend class Seq2SeqWithAttention_ForTrain; /////////////
-		Decoder_(std::unique_ptr<Attention> attention_module,
+		Decoder_(std::unique_ptr<Base_of_attention> attention_module,
 			Eigen::Index hidden_size_encoder, Eigen::Index Hidden_size_, Eigen::Index embedding_dim_,
 			RowVectorXld start_token_, MatrixXld end_token_, size_t max_steps_)
 			: Base_of_decoder(embedding_dim_ + 2 * hidden_size_encoder/*= H_emb + 2H_enc*/, Hidden_size_), attention_(std::move(attention_module))
@@ -66,7 +66,7 @@ class Decoder_ : public Base_of_decoder {
 		MatrixXld end_token;     // матрица эмбеддингов финишного токена (несколько символов)
 		size_t max_steps;    // ограничение на число шагов генерации
 
-		std::unique_ptr<Attention> attention_;
+		std::unique_ptr<Base_of_attention> attention_;
 
 		std::vector<MatrixXld> encoder_outputs;
 		//std::vector<MatrixXld> context_vectors;
