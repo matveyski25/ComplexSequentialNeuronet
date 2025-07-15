@@ -1,7 +1,7 @@
 #pragma once
 #include "HeaderTemplates_for_Seq2seqWithAttention.h"
 
-class SimpleLSTM_ForTrain_ForDecoder : public Decoder_<SimpleLSTM_ForTrain> {
+class SimpleLSTM_ForTrain_ForDecoder : public Decoder_<SimpleLSTM_ForTrain, Attention> {
 public:
 	struct states_forgrads {
 		std::vector<MatrixXld> f, i, o, ccond, c, h, context, z, x, p, p_;
@@ -21,7 +21,7 @@ public:
 	void All_state_Calculation() {}
 };
 
-class SimpleLSTM_ForDecoder : public Decoder_<SimpleLSTM> {
+class SimpleLSTM_ForDecoder : public Decoder_<SimpleLSTM, Attention> {
 public:
 
 	/*void Batch_All_state_Ñalculation(

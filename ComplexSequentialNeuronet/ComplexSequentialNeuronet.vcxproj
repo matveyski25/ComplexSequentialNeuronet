@@ -134,7 +134,6 @@
     <ClCompile Include="RealizationsNN_for_decoder.cpp" />
     <ClCompile Include="Seq2seqWithAttention.cpp" />
     <ClCompile Include="LSTM_and_BiLSTM.cpp" />
-    <ClCompile Include="Templates_for_Seq2seqWithAttention.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="RealizationsNN_for_decoder.h" />

@@ -21,9 +21,6 @@
     <ClCompile Include="LSTM_and_BiLSTM.cpp">
       <Filter>Файлы ресурсов</Filter>
     </ClCompile>
-    <ClCompile Include="Templates_for_Seq2seqWithAttention.cpp">
-      <Filter>Файлы ресурсов</Filter>
-    </ClCompile>
     <ClCompile Include="RealizationsNN_for_decoder.cpp">
       <Filter>Файлы ресурсов</Filter>
     </ClCompile>
