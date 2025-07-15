@@ -30,29 +30,28 @@ protected:
 };
 
 template<class Base_of_encoder>
-class Encoder : public Base_of_encoder {
+class Encoder_ : public Base_of_encoder {
 	public:
 		friend class Seq2SeqWithAttention_ForTrain;/////////////////
-		Encoder(Eigen::Index input_size, Eigen::Index hidden_size){}
-		Encoder() : Base_of_encoder() {};
+		using Base_of_encoder::Base_of_encoder;
+		Encoder_() : Base_of_encoder() {};
 
 		void Encode(const std::vector<MatrixXld>& input_sequence_batch) {}
 
 		const std::vector<MatrixXld>& GetEncodedHiddenStates() const {}
-		virtual ~Encoder();
 	};
 
 template<class Base_of_decoder>
-class Decoder : public Base_of_decoder {
+class Decoder_ : public Base_of_decoder {
 	public:
 		friend class Seq2SeqWithAttention_ForTrain; /////////////
-		Decoder(std::unique_ptr<Attention> attention_module,
+		Decoder_(std::unique_ptr<Attention> attention_module,
 			Eigen::Index hidden_size_encoder, Eigen::Index Hidden_size_, Eigen::Index embedding_dim_,
 			RowVectorXld start_token_, MatrixXld end_token_, size_t max_steps_)
 			: Base_of_decoder(embedding_dim_ + 2 * hidden_size_encoder/*= H_emb + 2H_enc*/, Hidden_size_), attention_(std::move(attention_module))
 		{}
 
-		Decoder();
+		Decoder_();
 
 		void SetEncoderOutputs(const std::vector<MatrixXld>& encoder_outputs) {}
 
@@ -88,3 +87,4 @@ class Decoder : public Base_of_decoder {
 	private:
 		void All_state_Calculation() {}
 	};
+

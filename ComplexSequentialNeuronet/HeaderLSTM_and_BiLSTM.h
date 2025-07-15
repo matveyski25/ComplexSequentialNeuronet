@@ -194,3 +194,43 @@ private:
 	SimpleLSTM Forward;
 	SimpleLSTM Backward;
 };
+
+class SimpleLSTM_ForTrain : public SimpleLSTM {
+	friend class BiLSTM_ForTrain;
+public:
+	SimpleLSTM_ForTrain(size_t Batch_size_, Eigen::Index Number_states, Eigen::Index Hidden_size_) {}
+
+	~SimpleLSTM_ForTrain() {}
+
+	void SetInput_states(const std::vector<MatrixXld>& Input_states_) {}
+
+	void save(const std::string& filename) const {}
+
+	void load(const std::string& filename) {}
+
+protected:
+	size_t Batch_size;
+
+	void Batch_All_state_Ñalculation() {}
+private:
+
+	struct states_forgrads {};
+
+	states_forgrads statesForgrads;
+};
+
+class BiLSTM_ForTrain : public BiLSTM {
+	friend class Seq2SeqWithAttention_ForTrain;
+public:
+	BiLSTM_ForTrain(size_t Batch_size_, Eigen::Index Number_states, Eigen::Index Hidden_size_);
+
+	BiLSTM_ForTrain();
+
+	~BiLSTM_ForTrain() {}
+
+	void Batch_All_state_Ñalculation() {}
+protected:
+	SimpleLSTM_ForTrain Forward;
+	SimpleLSTM_ForTrain Backward;
+	size_t Common_Batch_size;
+};
