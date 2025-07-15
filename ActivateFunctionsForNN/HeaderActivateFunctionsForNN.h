@@ -21,12 +21,11 @@
 #endif
 
 
-
-using MatrixXld = Eigen::Matrix<long double, Eigen::Dynamic, Eigen::Dynamic>;
-using RowVectorXld = Eigen::Matrix<long double, 1, Eigen::Dynamic>; // Вектор-строка
-using VectorXld = Eigen::Matrix<long double, Eigen::Dynamic, 1>;    // Вектор-столбец
-
 namespace ActivationFunctions {
+	using MatrixXld = Eigen::Matrix<long double, Eigen::Dynamic, Eigen::Dynamic>;
+	using RowVectorXld = Eigen::Matrix<long double, 1, Eigen::Dynamic>; // Вектор-строка
+	using VectorXld = Eigen::Matrix<long double, Eigen::Dynamic, 1>;    // Вектор-столбец
+
 	bool StepFunction(long double value, long double step);
 	MatrixXld StepFunction(const MatrixXld& matx, long double step);
 	long double Sigmoid(long double value);

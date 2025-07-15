@@ -131,10 +131,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="ComplexSequentialNeuronet.cpp" />
+    <ClCompile Include="Seq2seqWithAttention.cpp" />
+    <ClCompile Include="LSTM_and_BiLSTM.cpp" />
+    <ClCompile Include="Templates_for_Seq2seqWithAttention.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="HeaderLib_ComplexSequentialNeuronet.h" />
+    <ClInclude Include="HeaderSeq2seqWithAttention.h" />
+    <ClInclude Include="HeaderLSTM_and_BiLSTM.h" />
+    <ClInclude Include="HeaderTemplates_for_Seq2seqWithAttention.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ActivateFunctionsForNN\ActivateFunctionsForNN.vcxproj">

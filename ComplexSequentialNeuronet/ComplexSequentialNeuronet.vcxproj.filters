@@ -15,12 +15,24 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="ComplexSequentialNeuronet.cpp">
+    <ClCompile Include="Seq2seqWithAttention.cpp">
+      <Filter>Файлы ресурсов</Filter>
+    </ClCompile>
+    <ClCompile Include="LSTM_and_BiLSTM.cpp">
+      <Filter>Файлы ресурсов</Filter>
+    </ClCompile>
+    <ClCompile Include="Templates_for_Seq2seqWithAttention.cpp">
       <Filter>Файлы ресурсов</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="HeaderLib_ComplexSequentialNeuronet.h">
+    <ClInclude Include="HeaderSeq2seqWithAttention.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
+    <ClInclude Include="HeaderLSTM_and_BiLSTM.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
+    <ClInclude Include="HeaderTemplates_for_Seq2seqWithAttention.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
   </ItemGroup>
