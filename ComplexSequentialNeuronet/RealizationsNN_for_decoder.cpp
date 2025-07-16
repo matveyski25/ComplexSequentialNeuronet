@@ -1,6 +1,6 @@
 #include "RealizationsNN_for_decoder.h"
 
-class SimpleLSTM_ForTrain_ForDecoder : public Decoder_<SimpleLSTM_ForTrain> {
+class SimpleLSTM_ForTrain_ForDecoder : public Decoder_<SimpleLSTM_ForTrain, Attention> {
 public:
 	struct states_forgrads {
 		std::vector<MatrixXld> f, i, o, ccond, c, h, context, z, x, p, p_;
@@ -148,7 +148,7 @@ public:
 	}
 };
 
-class SimpleLSTM_ForDecoder : public Decoder_<SimpleLSTM> {
+class SimpleLSTM_ForDecoder : public Decoder_<SimpleLSTM, Attention> {
 public:
 
 	/*void Batch_All_state_Ñalculation(
