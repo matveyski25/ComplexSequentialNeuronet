@@ -11,7 +11,7 @@ Seq2SeqWithAttention::Seq2SeqWithAttention(
 Seq2SeqWithAttention::Seq2SeqWithAttention(
 	Eigen::Index Input_size_, Eigen::Index Encoder_Hidden_size_, Eigen::Index Decoder_Hidden_size_,
 	Eigen::Index Output_size, RowVectorXld start_token_, MatrixXld end_token_, size_t max_steps_,
-	std::unique_ptr<BahdanauAttention> attention_ = std::make_unique<BahdanauAttention>())
+	std::unique_ptr<BahdanauAttention> attention_)
 		:
 		encoder_(std::make_unique<Encoder>(Input_size_, Encoder_Hidden_size_)),
 		decoder_(std::make_unique<Decoder>(attention_, Encoder_Hidden_size_, Decoder_Hidden_size_, Output_size, start_token_, end_token_, max_steps_)) {
@@ -120,7 +120,7 @@ Seq2SeqWithAttention_ForTrain::grads_Seq2SeqWithAttention Seq2SeqWithAttention_F
 
 			RowVectorXld dO_t = dS_t.array() * ActivationFunctions::Tanh(C_t).array() * O_t.array() * (MatrixXld::Constant((O_t).size(), 1) - O_t).array();
 			RowVectorXld dC_t = dS_t.array() * O_t.array() *
-				(MatrixXld::Constant((C_t * C_t).size(), 1) - ActivationFunctions::Tanh(C_t) * ActivationFunctions::Tanh(C_t)).array() +
+				(MatrixXld::Constant((C_t * C_t).size(), 1) - (ActivationFunctions::Tanh(C_t) * ActivationFunctions::Tanh(C_t))).array() +
 				_dC_t.array() * F_t.array();
 			RowVectorXld dCcond_t = dC_t.array() * I_t.array() * (MatrixXld::Constant((Ccond_t * Ccond_t).size(), 1) - Ccond_t * Ccond_t).array();
 			RowVectorXld dI_t = dC_t.array() * I_t.array() * Ccond_t.array() * (MatrixXld::Constant((I_t).size(), 1) - I_t).array();
@@ -140,11 +140,17 @@ Seq2SeqWithAttention_ForTrain::grads_Seq2SeqWithAttention Seq2SeqWithAttention_F
 			VectorXld DB_dec_t = dGates_t;
 
 			std::vector<MatrixXld> _dH_back;
-			RowVectorXld Enc_Forw__dC_t = RowVectorXld::Zero(this->encoder_->Common_Hidden_size);
+			RowVectorXld Enc_Forw__dC_j = RowVectorXld::Zero(this->encoder_->Common_Hidden_size);
 			for (Eigen::Index j = N - 1; j >= 0; --j) {
 				RowVectorXld h_j = this->encoder_->Common_Hidden_states[Number_InputState].row(j);
-				RowVectorXld s_t_1 = (t > 0) ? this->decoder_->StatesForgrads.h[Number_InputState].row(t - 1)
-					: RowVectorXld::Zero(this->decoder_->Hidden_size);
+				RowVectorXld s_t_1;
+				if (t > 0) {
+					s_t_1 = this->decoder_->StatesForgrads.h[Number_InputState].row(t - 1);
+				}
+				else{
+					s_t_1 = RowVectorXld::Zero(this->decoder_->Hidden_size);
+				}
+
 
 				long double alpha_j = this->decoder_->attention_->all_attention_weights_[t](j);
 				long double dAlpha_j = dContext_t.dot(h_j);
@@ -169,21 +175,21 @@ Seq2SeqWithAttention_ForTrain::grads_Seq2SeqWithAttention Seq2SeqWithAttention_F
 				MatrixXld dH_j = dContext_t * alpha_j + this->decoder_->attention_->W_decoder_.transpose() * dU_tj;
 				RowVectorXld dH_forw_j = dH_j.leftCols(this->encoder_->Common_Hidden_size);
 				RowVectorXld dH_back_j = dH_j.rightCols(this->encoder_->Common_Hidden_size);
-
+				
 				_dH_back.push_back(dH_back_j);
 
 
-				RowVectorXld Enc_Forw_F_j = this->encoder_->Forward->StatesForgrads.f[Number_InputState].row(j);
-				RowVectorXld Enc_Forw_I_j = this->encoder_->Forward->StatesForgrads.i[Number_InputState].row(j);
-				RowVectorXld Enc_Forw_Ccond_j = this->encoder_->Forward->StatesForgrads.ccond[Number_InputState].row(j);
-				RowVectorXld Enc_Forw_O_j = this->encoder_->Forward->StatesForgrads.o[Number_InputState].row(j);
-				RowVectorXld Enc_Forw_C_j = this->encoder_->Forward->StatesForgrads.c[Number_InputState].row(j);
+				RowVectorXld Enc_Forw_F_j = this->encoder_->Forward.statesForgrads.f[Number_InputState].row(j);
+				RowVectorXld Enc_Forw_I_j = this->encoder_->Forward.statesForgrads.i[Number_InputState].row(j);
+				RowVectorXld Enc_Forw_Ccond_j = this->encoder_->Forward.statesForgrads.ccond[Number_InputState].row(j);
+				RowVectorXld Enc_Forw_O_j = this->encoder_->Forward.statesForgrads.o[Number_InputState].row(j);
+				RowVectorXld Enc_Forw_C_j = this->encoder_->Forward.statesForgrads.c[Number_InputState].row(j);
 				RowVectorXld Enc_Forw_C_j_l;
 				if (j == 0) {
-					Enc_Forw_C_j_l = RowVectorXld::Zero(this->encoder_->Forward->StatesForgrads.c[Number_InputState].row(j).cols());
+					Enc_Forw_C_j_l = RowVectorXld::Zero(this->encoder_->Forward.statesForgrads.c[Number_InputState].row(j).cols());
 				}
 				else {
-					Enc_Forw_C_j_l = this->encoder_->Forward->StatesForgrads.c[Number_InputState].row(j - 1);
+					Enc_Forw_C_j_l = this->encoder_->Forward.statesForgrads.c[Number_InputState].row(j - 1);
 				}
 
 				RowVectorXld dEnc_Forw_O_j = dH_forw_j.array() * ActivationFunctions::Tanh(Enc_Forw_C_j).array() * Enc_Forw_O_j.array() * (MatrixXld::Constant((Enc_Forw_O_j).size(), 1) - Enc_Forw_O_j).array();
@@ -194,16 +200,16 @@ Seq2SeqWithAttention_ForTrain::grads_Seq2SeqWithAttention Seq2SeqWithAttention_F
 				RowVectorXld dEnc_Forw_I_j = dEnc_Forw_C_j.array() * Enc_Forw_I_j.array() * Enc_Forw_Ccond_j.array() * (MatrixXld::Constant((Enc_Forw_I_j).size(), 1) - Enc_Forw_I_j).array();
 				RowVectorXld dEnc_Forw_F_j = dEnc_Forw_C_j.array() * Enc_Forw_C_j_l.array() * Enc_Forw_F_j.array() * (MatrixXld::Constant((Enc_Forw_F_j).size(), 1) - Enc_Forw_F_j).array();
 
-				RowVectorXld dEnc_Forw_Gates_j(4 * this->encoder->Common_Hidden_size);
+				RowVectorXld dEnc_Forw_Gates_j(4 * this->encoder_->Common_Hidden_size);
 				dEnc_Forw_Gates_j << dEnc_Forw_F_j, dEnc_Forw_I_j, dEnc_Forw_Ccond_j, dEnc_Forw_O_j;
 
 				MatrixXld DW_Enc_Forw_j = this->encoder_->Common_Input_states[Number_InputState].row(t).transpose() * dEnc_Forw_Gates_j;
 				MatrixXld DU_Enc_Forw_j;
 				if (t == 0) {
-					DU_Enc_Forw_j = MatrixXld::Zero(this->encoder_->Forward->StatesForgrads.h[Number_InputState].row(j).cols(), 4 * this->encoder->Common_Hidden_size);
+					DU_Enc_Forw_j = MatrixXld::Zero(this->encoder_->Forward.statesForgrads.h[Number_InputState].row(j).cols(), 4 * this->encoder_->Common_Hidden_size);
 				}
 				else {
-					DU_Enc_Forw_j = this->encoder_->Forward->StatesForgrads.h[Number_InputState].row(j - 1).transpose() * dEnc_Forw_Gates_j;
+					DU_Enc_Forw_j = this->encoder_->Forward.statesForgrads.h[Number_InputState].row(j - 1).transpose() * dEnc_Forw_Gates_j;
 				}
 				VectorXld DB_Enc_Forw_j = dEnc_Forw_Gates_j;
 			}

@@ -197,7 +197,8 @@ private:
 };
 
 class SimpleLSTM_ForTrain : public SimpleLSTM {
-	friend class BiLSTM_ForTrain;
+	friend class BiLSTM_ForTrain;////////////////
+	friend class Seq2SeqWithAttention_ForTrain;//////////////
 public:
 	SimpleLSTM_ForTrain(size_t Batch_size_, Eigen::Index Number_states, Eigen::Index Hidden_size_);
 
@@ -215,7 +216,6 @@ protected:
 	size_t Batch_size;
 
 	void Batch_All_state_Сalculation();
-private:
 
 	struct states_forgrads { std::vector<MatrixXld> f, i, ccond, o, c, h; };
 
@@ -223,7 +223,7 @@ private:
 };
 
 class BiLSTM_ForTrain : public BiLSTM {
-	friend class Seq2SeqWithAttention_ForTrain;
+	friend class Seq2SeqWithAttention_ForTrain;////////////////
 public:
 	BiLSTM_ForTrain(size_t Batch_size_, Eigen::Index Number_states, Eigen::Index Hidden_size_);
 

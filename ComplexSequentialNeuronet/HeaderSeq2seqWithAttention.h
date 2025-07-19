@@ -232,7 +232,7 @@ public:
 	void Load(std::string packname);
 protected:
 	std::vector<MatrixXld> Input_States;
-
+private:
 	std::unique_ptr<Encoder> encoder_;
 	std::unique_ptr<Decoder> decoder_;
 	
@@ -253,6 +253,7 @@ protected:
 		const std::vector<MatrixXld>& GetEncodedHiddenStates() const {
 			return this->Common_Hidden_states;
 		}
+		
 	};
 	class Decoder : public Seq2SeqWithAttention::Decoder {
 	public:
