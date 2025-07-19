@@ -118,7 +118,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\Users\matve\Desktop\program_code\myprojects\ComplexSequentialNeuronet;C:\Users\matve\Desktop\program_code\myprojects\ComplexSequentialNeuronet\Lib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\;..\Lib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -127,19 +127,16 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>ActivateFunctionsForNN.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>C:\Users\matve\Desktop\program_code\myprojects\ComplexSequentialNeuronet\x64\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\x64\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="RealizationsNN_for_decoder.cpp" />
     <ClCompile Include="Seq2seqWithAttention.cpp" />
     <ClCompile Include="LSTM_and_BiLSTM.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="RealizationsNN_for_decoder.h" />
     <ClInclude Include="HeaderSeq2seqWithAttention.h" />
     <ClInclude Include="HeaderLSTM_and_BiLSTM.h" />
-    <ClInclude Include="HeaderTemplates_for_Seq2seqWithAttention.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ActivateFunctionsForNN\ActivateFunctionsForNN.vcxproj">

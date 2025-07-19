@@ -1,605 +1,424 @@
 ﻿#include "HeaderLSTM_and_BiLSTM.h"
 
-class SimpleLSTM {
-	friend class BiLSTM;
-public:
-
-	SimpleLSTM(Eigen::Index Number_states, Eigen::Index Hidden_size_) {
-		if (Hidden_size_ <= 0) {
-			throw std::invalid_argument("Размеры слоев должны быть больше 0");
-		}
-
-		this->Input_size = Number_states;
-		this->Hidden_size = Hidden_size_;
-
-		// Инициализация весов
-		SetRandomWeights(-0.5L, 0.5L); // Инициализация весов LSTM
-
-		// Инициализация смещений (1xHidden_size)
-		SetRandomDisplacements(-1.5L, 1.5L);
-
-		// Инициализация состояний
-		//Input_states = MatrixXld(0, this->Input_size); // Пустая матрица
-		//Cell_states = MatrixXld::Zero(1, Hidden_size_);
-		//Hidden_states = MatrixXld::Zero(1, Hidden_size_);
+SimpleLSTM::SimpleLSTM(Eigen::Index Number_states, Eigen::Index Hidden_size_) {
+	if (Hidden_size_ <= 0) {
+		throw std::invalid_argument("Размеры слоев должны быть больше 0");
 	}
 
-	SimpleLSTM() = default;
+	this->Input_size = Number_states;
+	this->Hidden_size = Hidden_size_;
 
-	~SimpleLSTM() {
-		save("LSTM_state.txt");
-	}
+	// Инициализация весов
+	SetRandomWeights(-0.5L, 0.5L); // Инициализация весов LSTM
 
-	void SetInput_states(const std::vector<MatrixXld>& Input_states_) {
-		for (const auto& b : Input_states_) {
-			if (b.rows() == 0 || b.cols() != Input_size) {
-				throw std::invalid_argument("Invalid input matrix dimensions");
-			}
-		}
+	// Инициализация смещений (1xHidden_size)
+	SetRandomDisplacements(-1.5L, 1.5L);
 
-		Input_states = Input_states_;
-		//size_t steps = Input_states.rows();
+	// Инициализация состояний
+	//Input_states = MatrixXld(0, this->Input_size); // Пустая матрица
+	//Cell_states = MatrixXld::Zero(1, Hidden_size_);
+	//Hidden_states = MatrixXld::Zero(1, Hidden_size_);
+}
 
-		// Корректная инициализация размеров
-		//Cell_states = MatrixXld::Zero(steps + 1, Hidden_size);
-		//Hidden_states = MatrixXld::Zero(steps + 1, Hidden_size);
-	}
+SimpleLSTM::~SimpleLSTM() {
+	save("LSTM_state.txt");
+}
 
-	void SetWeights(const MatrixXld& weights_I_F, const MatrixXld& weights_I_I, const MatrixXld& weights_I_C, const MatrixXld& weights_I_O, const MatrixXld& weights_H_F, const MatrixXld& weights_H_I, const MatrixXld& weights_H_C, const MatrixXld& weights_H_O)
-	{
-		// Проверка размеров весов
-		auto check_weights = [&](const MatrixXld& W, size_t rows, size_t cols) {
-			return W.rows() == rows && W.cols() == cols;
-			};
-
-		if (!check_weights(weights_I_F, Hidden_size, Input_size) ||
-			!check_weights(weights_I_I, Hidden_size, Input_size) ||
-			!check_weights(weights_I_C, Hidden_size, Input_size) ||
-			!check_weights(weights_I_O, Hidden_size, Input_size) ||
-			!check_weights(weights_H_F, Hidden_size, Hidden_size) ||
-			!check_weights(weights_H_I, Hidden_size, Hidden_size) ||
-			!check_weights(weights_H_C, Hidden_size, Hidden_size) ||
-			!check_weights(weights_H_O, Hidden_size, Hidden_size))
-		{
-			throw std::invalid_argument("Invalid weights dimensions");
-		}
-
-		this->W_F_I = weights_I_F;
-		this->W_I_I = weights_I_I;
-		this->W_C_I = weights_I_C;
-		this->W_O_I = weights_I_O;
-
-		this->W_F_H = weights_H_F;
-		this->W_I_H = weights_H_I;
-		this->W_C_H = weights_H_C;
-		this->W_O_H = weights_H_O;
-	}
-
-	void SetDisplacements(const MatrixXld& displacements_FG, const MatrixXld& displacements_IG, const MatrixXld& displacements_CT, const MatrixXld& displacements_OG) {
-		auto check_displacement = [&](const MatrixXld& m) {
-			return m.rows() == 1 && m.cols() == Hidden_size;
-			};
-
-		if (!check_displacement(displacements_FG) ||
-			!check_displacement(displacements_IG) ||
-			!check_displacement(displacements_CT) ||
-			!check_displacement(displacements_OG))
-		{
-			throw std::invalid_argument("Displacements must be 1xHidden_size matrices");
-		}
-
-		B_F = displacements_FG;
-		B_I = displacements_IG;
-		B_C = displacements_CT;
-		B_O = displacements_OG;
-	}
-
-	void SetRandomWeights(long double a = -0.2L, long double b = 0.2L) {
-		//ActivationFunctions::matrix_random(Hidden_size, Hidden_size, a, b);
-		auto xavier_init = [](size_t rows, size_t cols, long double c = 2.0L) {
-			long double range = sqrt(c / (rows + cols));
-			return ActivationFunctions::matrix_random(rows, cols, -range, range);
-			};
-		auto orthogonal_init = [](size_t rows, size_t cols) {
-			MatrixXld mat = MatrixXld::Random(rows, cols);
-			Eigen::HouseholderQR<MatrixXld> qr(mat);
-			return qr.householderQ() * MatrixXld::Identity(rows, cols);
-			};
-		auto random_init = [](size_t rows, size_t cols, long double a_, long double b_) { return ActivationFunctions::matrix_random(rows, cols, a_, b_); };
-		auto init_h = orthogonal_init;
-		auto init_i = xavier_init;
-		this->W_F_H = init_h(Hidden_size, Hidden_size);
-		this->W_I_H = init_h(Hidden_size, Hidden_size);
-		this->W_C_H = init_h(Hidden_size, Hidden_size);
-		this->W_O_H = init_h(Hidden_size, Hidden_size);
-
-		this->W_F_I = init_i(Hidden_size, Input_size);
-		this->W_I_I = init_i(Hidden_size, Input_size);
-		this->W_C_I = init_i(Hidden_size, Input_size);
-		this->W_O_I = init_i(Hidden_size, Input_size);
-
-		//Output_weights = ActivationFunctions::matrix_random(Hidden_size, 1, -0.1L, 0.1L);
-	}
-
-	void SetRandomDisplacements(long double a = -0.5L, long double b = 0.5L) {
-		this->B_F = MatrixXld::Constant(1, Hidden_size, 1.0L);
-		this->B_I = ActivationFunctions::matrix_random(1, Hidden_size, a, b);
-		this->B_C = ActivationFunctions::matrix_random(1, Hidden_size, a, b);
-		this->B_O = ActivationFunctions::matrix_random(1, Hidden_size, a, b);
-
-		//Output_bias = MatrixXld::Zero(1, 1);
-	}
-
-	void All_state_Сalculation() {
-		// Подготовка весов вне цикла
-		MatrixXld W_x(this->Input_size, 4 * this->Hidden_size);
-		W_x << this->W_F_I, this->W_I_I, this->W_C_I, this->W_O_I;
-
-		MatrixXld W_h(this->Hidden_size, 4 * this->Hidden_size);
-		W_h << this->W_F_H, this->W_I_H, this->W_C_H, this->W_O_H;
-
-		RowVectorXld b(4 * this->Hidden_size);
-		b << this->B_F, this->B_I, this->B_C, this->B_O;
-
-		for (size_t nstep = 0; nstep < this->Input_states.size(); ++nstep) {
-			size_t sequence_length = this->Input_states[nstep].rows();
-
-			RowVectorXld h_t_l = RowVectorXld::Zero(this->Hidden_size);
-			RowVectorXld c_t_l = RowVectorXld::Zero(this->Hidden_size);
-
-			for (size_t timestep = 0; timestep < sequence_length; ++timestep) {
-				RowVectorXld x_t = this->Input_states[nstep].row(timestep);
-
-				RowVectorXld Z_t = x_t * W_x + h_t_l * W_h;
-				Z_t += b;
-
-				RowVectorXld f_t = ActivationFunctions::Sigmoid(Z_t.leftCols(this->Hidden_size));
-				RowVectorXld i_t = ActivationFunctions::Sigmoid(Z_t.middleCols(this->Hidden_size, this->Hidden_size));
-				RowVectorXld c_t_bar = ActivationFunctions::Tanh(Z_t.middleCols(2 * this->Hidden_size, this->Hidden_size));
-				RowVectorXld o_t = ActivationFunctions::Sigmoid(Z_t.rightCols(this->Hidden_size));
-
-				RowVectorXld new_c_t = f_t.array() * c_t_l.array() + i_t.array() * c_t_bar.array();
-				RowVectorXld new_h_t = o_t.array() * ActivationFunctions::Tanh(new_c_t).array();
-
-				this->Hidden_states[nstep].col(timestep) = new_h_t;
-				h_t_l = new_h_t;
-				c_t_l = new_c_t;
-			}
+void SimpleLSTM::SetInput_states(const std::vector<MatrixXld>& Input_states_) {
+	for (const auto& b : Input_states_) {
+		if (b.rows() == 0 || b.cols() != Input_size) {
+			throw std::invalid_argument("Invalid input matrix dimensions");
 		}
 	}
 
-	std::vector<RowVectorXld> GetLastOutputs() const {
-		std::vector<RowVectorXld> outputs;
-		for (const auto& state : this->Hidden_states) {
-			if (state.rows() > 0) {
-				outputs.push_back(state.row(state.rows() - 1));
-			}
-		}
-		return outputs;
-	}
+	Input_states = Input_states_;
+	//size_t steps = Input_states.rows();
 
+	// Корректная инициализация размеров
+	//Cell_states = MatrixXld::Zero(steps + 1, Hidden_size);
+	//Hidden_states = MatrixXld::Zero(steps + 1, Hidden_size);
+}
 
-	/*std::vector<MatrixXld> GetWeightsAndDisplacement() {
-		return {
-			this->W_F_H, this->W_F_I, this->B_F,
-			this->W_I_H, this->W_I_I, this->B_I,
-			this->W_C_H, this->W_C_I, this->B_C,
-			this->W_O_H, this->W_O_I, this->B_O
+void SimpleLSTM::SetWeights(const MatrixXld& weights_I_F, const MatrixXld& weights_I_I, const MatrixXld& weights_I_C, const MatrixXld& weights_I_O, const MatrixXld& weights_H_F, const MatrixXld& weights_H_I, const MatrixXld& weights_H_C, const MatrixXld& weights_H_O)
+{
+	// Проверка размеров весов
+	auto check_weights = [&](const MatrixXld& W, size_t rows, size_t cols) {
+		return W.rows() == rows && W.cols() == cols;
 		};
-	}*/
 
-	static long double normalize(char c) {
-		return static_cast<long double>(static_cast<unsigned char>(c)) / 127.5L - 1.0L;
+	if (!check_weights(weights_I_F, Hidden_size, Input_size) ||
+		!check_weights(weights_I_I, Hidden_size, Input_size) ||
+		!check_weights(weights_I_C, Hidden_size, Input_size) ||
+		!check_weights(weights_I_O, Hidden_size, Input_size) ||
+		!check_weights(weights_H_F, Hidden_size, Hidden_size) ||
+		!check_weights(weights_H_I, Hidden_size, Hidden_size) ||
+		!check_weights(weights_H_C, Hidden_size, Hidden_size) ||
+		!check_weights(weights_H_O, Hidden_size, Hidden_size))
+	{
+		throw std::invalid_argument("Invalid weights dimensions");
 	}
 
-	static char denormalize(const long double val) {
-		long double denorm_value = (val * 127.5L) + 1L;
-		denorm_value = std::max<long double>(
-			denorm_value,
-			static_cast<long double>(std::numeric_limits<char>::min())
-		);
-		denorm_value = std::min<long double>(
-			denorm_value,
-			static_cast<long double>(std::numeric_limits<char>::max())
-		);
-		return static_cast<char>(std::round(denorm_value));
+	this->W_F_I = weights_I_F;
+	this->W_I_I = weights_I_I;
+	this->W_C_I = weights_I_C;
+	this->W_O_I = weights_I_O;
+
+	this->W_F_H = weights_H_F;
+	this->W_I_H = weights_H_I;
+	this->W_C_H = weights_H_C;
+	this->W_O_H = weights_H_O;
+}
+
+void SimpleLSTM::SetDisplacements(const MatrixXld& displacements_FG, const MatrixXld& displacements_IG, const MatrixXld& displacements_CT, const MatrixXld& displacements_OG) {
+	auto check_displacement = [&](const MatrixXld& m) {
+		return m.rows() == 1 && m.cols() == Hidden_size;
+		};
+
+	if (!check_displacement(displacements_FG) ||
+		!check_displacement(displacements_IG) ||
+		!check_displacement(displacements_CT) ||
+		!check_displacement(displacements_OG))
+	{
+		throw std::invalid_argument("Displacements must be 1xHidden_size matrices");
 	}
 
-	static std::vector<std::vector<char>> denormalize(const MatrixXld& val) {
-		if (val.rows() == 0 || val.cols() == 0) {
-			return {};
-		}
+	B_F = displacements_FG;
+	B_I = displacements_IG;
+	B_C = displacements_CT;
+	B_O = displacements_OG;
+}
 
-		const Eigen::Index rows = val.rows();
-		const Eigen::Index cols = val.cols();
-		std::vector<std::vector<char>> result(rows, std::vector<char>(cols));
+void SimpleLSTM::SetRandomWeights(long double a, long double b) {
+	//ActivationFunctions::matrix_random(Hidden_size, Hidden_size, a, b);
+	auto xavier_init = [](size_t rows, size_t cols, long double c = 2.0L) {
+		long double range = sqrt(c / (rows + cols));
+		return ActivationFunctions::matrix_random(rows, cols, -range, range);
+		};
+	auto orthogonal_init = [](size_t rows, size_t cols) {
+		MatrixXld mat = MatrixXld::Random(rows, cols);
+		Eigen::HouseholderQR<MatrixXld> qr(mat);
+		return qr.householderQ() * MatrixXld::Identity(rows, cols);
+		};
+	auto random_init = [](size_t rows, size_t cols, long double a_, long double b_) { return ActivationFunctions::matrix_random(rows, cols, a_, b_); };
+	auto init_h = orthogonal_init;
+	auto init_i = xavier_init;
+	this->W_F_H = init_h(Hidden_size, Hidden_size);
+	this->W_I_H = init_h(Hidden_size, Hidden_size);
+	this->W_C_H = init_h(Hidden_size, Hidden_size);
+	this->W_O_H = init_h(Hidden_size, Hidden_size);
 
-		for (Eigen::Index i = 0; i < rows; ++i) {
-			for (Eigen::Index j = 0; j < cols; ++j) {
-				result[i][j] = denormalize(val(i, j));
-			}
-		}
+	this->W_F_I = init_i(Hidden_size, Input_size);
+	this->W_I_I = init_i(Hidden_size, Input_size);
+	this->W_C_I = init_i(Hidden_size, Input_size);
+	this->W_O_I = init_i(Hidden_size, Input_size);
 
-		return result;
-	}
+	//Output_weights = ActivationFunctions::matrix_random(Hidden_size, 1, -0.1L, 0.1L);
+}
 
-	void save(const std::string& filename) const {
-		std::ofstream file(filename, std::ios::trunc); // Используйте trunc для перезаписи
-		if (!file) throw std::runtime_error("Cannot open file for writing");
+void SimpleLSTM::SetRandomDisplacements(long double a, long double b) {
+	this->B_F = MatrixXld::Constant(1, Hidden_size, 1.0L);
+	this->B_I = ActivationFunctions::matrix_random(1, Hidden_size, a, b);
+	this->B_C = ActivationFunctions::matrix_random(1, Hidden_size, a, b);
+	this->B_O = ActivationFunctions::matrix_random(1, Hidden_size, a, b);
 
-		// Сохраняем только актуальные параметры
-		file << this->Input_size << "\n" << this->Hidden_size << "\n";
+	//Output_bias = MatrixXld::Zero(1, 1);
+}
 
-		// Сохраняем веса и смещения
-		save_matrix(file, this->W_F_H);
-		save_matrix(file, this->W_I_H);
-		save_matrix(file, this->W_C_H);
-		save_matrix(file, this->W_O_H);
+void SimpleLSTM::All_state_Сalculation() {
+	// Подготовка весов вне цикла
+	MatrixXld W_x(this->Input_size, 4 * this->Hidden_size);
+	W_x << this->W_F_I, this->W_I_I, this->W_C_I, this->W_O_I;
 
-		save_matrix(file, this->W_F_I);
-		save_matrix(file, this->W_I_I);
-		save_matrix(file, this->W_C_I);
-		save_matrix(file, this->W_O_I);
+	MatrixXld W_h(this->Hidden_size, 4 * this->Hidden_size);
+	W_h << this->W_F_H, this->W_I_H, this->W_C_H, this->W_O_H;
 
-		save_matrix(file, this->B_F);
-		save_matrix(file, this->B_I);
-		save_matrix(file, this->B_C);
-		save_matrix(file, this->B_O);
-	}
+	RowVectorXld b(4 * this->Hidden_size);
+	b << this->B_F, this->B_I, this->B_C, this->B_O;
 
-	void load(const std::string& filename) {
-		std::ifstream file(filename);
-		if (!file) throw std::runtime_error("Cannot open file for reading");
+	for (size_t nstep = 0; nstep < this->Input_states.size(); ++nstep) {
+		size_t sequence_length = this->Input_states[nstep].rows();
 
-		file >> this->Input_size >> this->Hidden_size;
-
-		load_matrix(file, this->W_F_H);
-		load_matrix(file, this->W_I_H);
-		load_matrix(file, this->W_C_H);
-		load_matrix(file, this->W_O_H);
-
-		load_matrix(file, this->W_F_I);
-		load_matrix(file, this->W_I_I);
-		load_matrix(file, this->W_C_I);
-		load_matrix(file, this->W_O_I);
-
-		load_matrix(file, this->B_F);
-		load_matrix(file, this->B_I);
-		load_matrix(file, this->B_C);
-		load_matrix(file, this->B_O);
-	}
-
-	void save_matrix(std::ofstream& file, const MatrixXld& m) const {
-		file << m.rows() << " " << m.cols() << "\n";
-		for (Eigen::Index i = 0; i < m.rows(); ++i) {
-			for (Eigen::Index j = 0; j < m.cols(); ++j) {
-				file << m(i, j) << " ";
-			}
-			file << "\n";
-		}
-	}
-
-	void load_matrix(std::ifstream& file, MatrixXld& m) {
-		Eigen::Index rows, cols;
-		file >> rows >> cols;
-		m = MatrixXld(rows, cols);
-		for (Eigen::Index i = 0; i < rows; ++i) {
-			for (Eigen::Index j = 0; j < cols; ++j) {
-				file >> m(i, j);
-			}
-		}
-	}
-
-protected:
-	/*struct LSTMGradients {
-		// Градиенты для Forget Gate
-		MatrixXld dW_fg_hs;  // по весам hidden-state
-		MatrixXld dW_fg_is;  // по весам input
-		MatrixXld db_fg;     // по смещению
-
-		// Градиенты для Input Gate
-		MatrixXld dW_ig_hs;
-		MatrixXld dW_ig_is;
-		MatrixXld db_ig;
-
-		// Градиенты для Cell State
-		MatrixXld dW_ct_hs;
-		MatrixXld dW_ct_is;
-		MatrixXld db_ct;
-
-		// Градиенты для Output Gate
-		MatrixXld dW_og_hs;
-		MatrixXld dW_og_is;
-		MatrixXld db_og;
-		std::vector<MatrixXld*> GetAll() {
-			return {
-				&dW_fg_hs, &dW_fg_is, &db_fg,
-				&dW_ig_hs, &dW_ig_is, &db_ig,
-				&dW_ct_hs, &dW_ct_is, &db_ct,
-				&dW_og_hs, &dW_og_is, &db_og
-			};
-		}
-	};*/
-
-	Eigen::Index Input_size;
-	Eigen::Index Hidden_size;
-	std::vector<MatrixXld> Input_states;
-
-	MatrixXld W_F_H;  // Forget gate hidden state weights
-	MatrixXld W_I_H;  // Input gate hidden state weights
-	MatrixXld W_C_H;  // Cell state hidden state weights
-	MatrixXld W_O_H;  // Output gate hidden state weights
-
-	MatrixXld W_F_I;  // Forget gate input weights
-	MatrixXld W_I_I;  // Input gate input weights
-	MatrixXld W_C_I;  // Cell state input weights
-	MatrixXld W_O_I;  // Output gate input weights
-
-	MatrixXld B_F;  // Матрица 1xHidden_size
-	MatrixXld B_I;  // Матрица 1xHidden_size
-	MatrixXld B_C;  // Матрица 1xHidden_size
-	MatrixXld B_O;  // Матрица 1xHidden_size
-
-	//MatrixXld Output_weights; // (Hidden_size x 1)
-	//MatrixXld Output_bias;    // (1 x 1)
-
-private:
-	/*void n_state_Сalculation(size_t timestep, size_t nstep) {
-		RowVectorXld x_t(this->Input_size);
 		RowVectorXld h_t_l = RowVectorXld::Zero(this->Hidden_size);
 		RowVectorXld c_t_l = RowVectorXld::Zero(this->Hidden_size);
 
-		// Получение входа
-		x_t = this->Input_states[nstep].row(timestep);
+		for (size_t timestep = 0; timestep < sequence_length; ++timestep) {
+			RowVectorXld x_t = this->Input_states[nstep].row(timestep);
 
-		// Если timestep > 0, берём предыдущие состояния
-		if (timestep > 0) {
-			h_t_l = this->Hidden_states[nstep].row(timestep - 1);
-			c_t_l = this->Cell_states[nstep].row(timestep - 1);
-		}
+			RowVectorXld Z_t = x_t * W_x + h_t_l * W_h;
+			Z_t += b;
 
-		// Объединенные веса и смещения
-		MatrixXld W_x(this->Input_size, 4 * this->Hidden_size);
-		W_x << this->W_F_I, this->W_I_I, this->W_C_I, this->W_O_I;
+			RowVectorXld f_t = ActivationFunctions::Sigmoid(Z_t.leftCols(this->Hidden_size));
+			RowVectorXld i_t = ActivationFunctions::Sigmoid(Z_t.middleCols(this->Hidden_size, this->Hidden_size));
+			RowVectorXld c_t_bar = ActivationFunctions::Tanh(Z_t.middleCols(2 * this->Hidden_size, this->Hidden_size));
+			RowVectorXld o_t = ActivationFunctions::Sigmoid(Z_t.rightCols(this->Hidden_size));
 
-		MatrixXld W_h(this->Hidden_size, 4 * this->Hidden_size);
-		W_h << this->W_F_H, this->W_I_H, this->W_C_H, this->W_O_H;
+			RowVectorXld new_c_t = f_t.array() * c_t_l.array() + i_t.array() * c_t_bar.array();
+			RowVectorXld new_h_t = o_t.array() * ActivationFunctions::Tanh(new_c_t).array();
 
-		RowVectorXld b(4 * this->Hidden_size);
-		b << this->B_F, this->B_I, this->B_C, this->B_O;
-
-		// Расчёт выхода
-		RowVectorXld Z_t = x_t * W_x + h_t_l * W_h;
-		Z_t += b;
-
-		RowVectorXld f_t = ActivationFunctions::Sigmoid(Z_t.leftCols(this->Hidden_size));
-		RowVectorXld i_t = ActivationFunctions::Sigmoid(Z_t.middleCols(this->Hidden_size, this->Hidden_size));
-		RowVectorXld c_t_bar = ActivationFunctions::Tanh(Z_t.middleCols(2 * this->Hidden_size, this->Hidden_size));
-		RowVectorXld o_t = ActivationFunctions::Sigmoid(Z_t.rightCols(this->Hidden_size));
-
-		RowVectorXld new_c_t = f_t.array() * c_t_l.array() + i_t.array() * c_t_bar.array();
-		RowVectorXld new_h_t = o_t.array() * ActivationFunctions::Tanh(new_c_t).array();
-
-		// Обеспечение размеров
-		size_t total_sequences = this->Input_states.size();
-		this->Hidden_states.resize(total_sequences);
-		this->Cell_states.resize(total_sequences);
-
-		for (size_t i = 0; i < total_sequences; ++i) {
-			Eigen::Index T = timestep + 1;
-			if (this->Hidden_states[i].rows() < T) {
-				this->Hidden_states[i].conservativeResize(T, this->Hidden_size);
-				this->Hidden_states[i].row(T - 1).setZero();
-			}
-			if (this->Cell_states[i].rows() < T) {
-				this->Cell_states[i].conservativeResize(T, this->Hidden_size);
-				this->Cell_states[i].row(T - 1).setZero();
-			}
-		}
-
-		// Запись новых состояний
-		this->Hidden_states[nstep].row(timestep) = new_h_t;
-		this->Cell_states[nstep].row(timestep) = new_c_t;
-	}*/
-	std::vector<MatrixXld> Hidden_states;
-};
-
-class BiLSTM {
-
-public:
-	BiLSTM(Eigen::Index Number_states, Eigen::Index Hidden_size_) {
-		if (Hidden_size_ <= 0) {
-			throw std::invalid_argument("Размеры слоев должны быть больше 0");
-		}
-		this->Common_Input_size = Number_states;
-		this->Common_Hidden_size = Hidden_size_;
-
-		this->Forward = SimpleLSTM(this->Common_Input_size, this->Common_Hidden_size);
-		this->Backward = SimpleLSTM(this->Common_Input_size, this->Common_Hidden_size);
-		// Инициализация весов
-		//SetRandomWeights(-0.5L, 0.5L); // Инициализация весов LSTM
-
-		// Инициализация смещений (1xHidden_size)
-		//SetRandomDisplacements(-1.5L, 1.5L);
-
-		// Инициализация состояний
-		//Input_states = MatrixXld(0, this->Input_size); // Пустая матрица
-		//Cell_states = MatrixXld::Zero(1, Hidden_size_);
-		//Hidden_states = MatrixXld::Zero(1, Hidden_size_);
-	}
-
-	BiLSTM() = default;
-
-	~BiLSTM() {
-		this->Save("BiLSTM_state.txt");
-	}
-
-	void All_state_Сalculation() {
-		this->Forward.All_state_Сalculation();
-		this->Backward.All_state_Сalculation();
-
-		this->Common_Hidden_states.clear();
-		this->Common_Hidden_states.resize(this->Common_Input_states.size());
-
-		for (size_t i = 0; i < this->Common_Input_states.size(); ++i) {
-			const MatrixXld& Hf = this->Forward.Hidden_states[i];
-			const MatrixXld& Hb = this->Backward.Hidden_states[i];
-			size_t T = Hf.rows();
-
-			MatrixXld concat(T, 2 * this->Common_Hidden_size);
-			for (size_t t = 0; t < T; ++t) {
-				concat.row(t) << Hf.row(t), Hb.row(T - 1 - t); // склеивание forward и backward
-			}
-			this->Common_Hidden_states[i] = concat;
+			this->Hidden_states[nstep].col(timestep) = new_h_t;
+			h_t_l = new_h_t;
+			c_t_l = new_c_t;
 		}
 	}
+}
 
-	void SetInput_states(const std::vector<MatrixXld>& inputs) {
-		this->Common_Input_states = inputs;
-		this->Forward.SetInput_states(inputs);
-
-		std::vector<MatrixXld> reversed_inputs(inputs.size());
-		for (size_t i = 0; i < inputs.size(); ++i) {
-			MatrixXld reversed = inputs[i].colwise().reverse().eval(); // обратный порядок временных шагов
-			reversed_inputs[i] = reversed;
+std::vector<RowVectorXld> SimpleLSTM::GetLastOutputs() const {
+	std::vector<RowVectorXld> outputs;
+	for (const auto& state : this->Hidden_states) {
+		if (state.rows() > 0) {
+			outputs.push_back(state.row(state.rows() - 1));
 		}
-		this->Backward.SetInput_states(reversed_inputs);
 	}
+	return outputs;
+}
 
-	std::vector<RowVectorXld> GetFinalHidden_ForwardBackward() const {
-		std::vector<RowVectorXld> out;
-		for (const auto& H : this->Common_Hidden_states) {
-			if (H.rows() > 0) {
-				out.push_back(H.row(H.rows() - 1)); // последний шаг
-			}
+void SimpleLSTM::save(const std::string& filename) const {
+	std::ofstream file(filename, std::ios::trunc); // Используйте trunc для перезаписи
+	if (!file) throw std::runtime_error("Cannot open file for writing");
+
+	// Сохраняем только актуальные параметры
+	file << this->Input_size << "\n" << this->Hidden_size << "\n";
+
+	// Сохраняем веса и смещения
+	save_matrix(file, this->W_F_H);
+	save_matrix(file, this->W_I_H);
+	save_matrix(file, this->W_C_H);
+	save_matrix(file, this->W_O_H);
+
+	save_matrix(file, this->W_F_I);
+	save_matrix(file, this->W_I_I);
+	save_matrix(file, this->W_C_I);
+	save_matrix(file, this->W_O_I);
+
+	save_matrix(file, this->B_F);
+	save_matrix(file, this->B_I);
+	save_matrix(file, this->B_C);
+	save_matrix(file, this->B_O);
+}
+
+void SimpleLSTM::load(const std::string& filename) {
+	std::ifstream file(filename);
+	if (!file) throw std::runtime_error("Cannot open file for reading");
+
+	file >> this->Input_size >> this->Hidden_size;
+
+	load_matrix(file, this->W_F_H);
+	load_matrix(file, this->W_I_H);
+	load_matrix(file, this->W_C_H);
+	load_matrix(file, this->W_O_H);
+
+	load_matrix(file, this->W_F_I);
+	load_matrix(file, this->W_I_I);
+	load_matrix(file, this->W_C_I);
+	load_matrix(file, this->W_O_I);
+
+	load_matrix(file, this->B_F);
+	load_matrix(file, this->B_I);
+	load_matrix(file, this->B_C);
+	load_matrix(file, this->B_O);
+}
+
+void SimpleLSTM::save_matrix(std::ofstream& file, const MatrixXld& m) const {
+	file << m.rows() << " " << m.cols() << "\n";
+	for (Eigen::Index i = 0; i < m.rows(); ++i) {
+		for (Eigen::Index j = 0; j < m.cols(); ++j) {
+			file << m(i, j) << " ";
 		}
-		return out;
+		file << "\n";
 	}
+}
 
-	void Save(const std::string& filename) {
-		auto addtofilename = [](const std::string& filename, const std::string& whatadd) {std::string ffilename;  for (const char a : filename) { if (a != '.') { ffilename += a; } else { ffilename += (whatadd + '.'); } } return ffilename; };
-		this->Forward.save(addtofilename(filename, "_Forward"));
-		this->Backward.save(addtofilename(filename, "_Backward"));
-	}
-
-	void Load(const std::string& filename) {
-		this->Forward.load(filename + "_Forward");
-		this->Backward.load(filename + "_Backward");
-	}
-protected:
-	Eigen::Index Common_Input_size;
-	Eigen::Index Common_Hidden_size;
-	std::vector<MatrixXld> Common_Input_states;
-	std::vector<MatrixXld> Common_Hidden_states;
-private:
-	SimpleLSTM Forward;
-	SimpleLSTM Backward;
-};
-
-class SimpleLSTM_ForTrain : public SimpleLSTM {
-	friend class BiLSTM_ForTrain;
-public:
-	SimpleLSTM_ForTrain(size_t Batch_size_, Eigen::Index Number_states, Eigen::Index Hidden_size_) {
-		if (Hidden_size_ <= 0) {
-			throw std::invalid_argument("Размеры слоев должны быть больше 0");
+void SimpleLSTM::load_matrix(std::ifstream& file, MatrixXld& m) {
+	Eigen::Index rows, cols;
+	file >> rows >> cols;
+	m = MatrixXld(rows, cols);
+	for (Eigen::Index i = 0; i < rows; ++i) {
+		for (Eigen::Index j = 0; j < cols; ++j) {
+			file >> m(i, j);
 		}
-		if (Batch_size_ <= 0) {
-			throw std::invalid_argument("Размеры батчей должны быть больше 0");
+	}
+}
+
+
+
+BiLSTM::BiLSTM(Eigen::Index Number_states, Eigen::Index Hidden_size_) {
+	if (Hidden_size_ <= 0) {
+		throw std::invalid_argument("Размеры слоев должны быть больше 0");
+	}
+	this->Common_Input_size = Number_states;
+	this->Common_Hidden_size = Hidden_size_;
+
+	this->Forward = SimpleLSTM(this->Common_Input_size, this->Common_Hidden_size);
+	this->Backward = SimpleLSTM(this->Common_Input_size, this->Common_Hidden_size);
+	// Инициализация весов
+	//SetRandomWeights(-0.5L, 0.5L); // Инициализация весов LSTM
+
+	// Инициализация смещений (1xHidden_size)
+	//SetRandomDisplacements(-1.5L, 1.5L);
+
+	// Инициализация состояний
+	//Input_states = MatrixXld(0, this->Input_size); // Пустая матрица
+	//Cell_states = MatrixXld::Zero(1, Hidden_size_);
+	//Hidden_states = MatrixXld::Zero(1, Hidden_size_);
+}
+
+BiLSTM::~BiLSTM() {
+	this->Save("BiLSTM_state.txt");
+}
+
+void BiLSTM::All_state_Сalculation() {
+	this->Forward.All_state_Сalculation();
+	this->Backward.All_state_Сalculation();
+
+	this->Common_Hidden_states.clear();
+	this->Common_Hidden_states.resize(this->Common_Input_states.size());
+
+	for (size_t i = 0; i < this->Common_Input_states.size(); ++i) {
+		const MatrixXld& Hf = this->Forward.Hidden_states[i];
+		const MatrixXld& Hb = this->Backward.Hidden_states[i];
+		size_t T = Hf.rows();
+
+		MatrixXld concat(T, 2 * this->Common_Hidden_size);
+		for (size_t t = 0; t < T; ++t) {
+			concat.row(t) << Hf.row(t), Hb.row(T - 1 - t); // склеивание forward и backward
 		}
-
-		this->Batch_size = Batch_size_;
-		this->Input_size = Number_states;
-		this->Hidden_size = Hidden_size_;
-
-		// Инициализация весов
-		SetRandomWeights(-0.5L, 0.5L); // Инициализация весов LSTM
-
-		// Инициализация смещений (1xHidden_size)
-		SetRandomDisplacements(-1.5L, 1.5L);
-
-		// Инициализация состояний
-		//Input_states = MatrixXld(0, this->Input_size); // Пустая матрица
-		//Cell_states = MatrixXld::Zero(1, Hidden_size_);
-		//Hidden_states = MatrixXld::Zero(1, Hidden_size_);
+		this->Common_Hidden_states[i] = concat;
 	}
+}
 
-	~SimpleLSTM_ForTrain() {
-		save("LSTM_state_ForTrain.txt");
+void BiLSTM::SetInput_states(const std::vector<MatrixXld>& inputs) {
+	this->Common_Input_states = inputs;
+	this->Forward.SetInput_states(inputs);
+
+	std::vector<MatrixXld> reversed_inputs(inputs.size());
+	for (size_t i = 0; i < inputs.size(); ++i) {
+		MatrixXld reversed = inputs[i].colwise().reverse().eval(); // обратный порядок временных шагов
+		reversed_inputs[i] = reversed;
 	}
+	this->Backward.SetInput_states(reversed_inputs);
+}
 
-	void SetInput_states(const std::vector<MatrixXld>& Input_states_) {
-		for (const auto& b : Input_states_) {
-			if (b.rows() == 0 || b.cols() != Input_size) {
-				throw std::invalid_argument("Invalid input matrix dimensions");
-			}
+std::vector<RowVectorXld> BiLSTM::GetFinalHidden_ForwardBackward() const {
+	std::vector<RowVectorXld> out;
+	for (const auto& H : this->Common_Hidden_states) {
+		if (H.rows() > 0) {
+			out.push_back(H.row(H.rows() - 1)); // последний шаг
 		}
+	}
+	return out;
+}
 
-		// Очищаем историю состояний
-		this->statesForgrads.f.clear();
-		this->statesForgrads.i.clear();
-		this->statesForgrads.ccond.clear();
-		this->statesForgrads.o.clear();
-		this->statesForgrads.c.clear();
-		this->statesForgrads.h.clear();
+void BiLSTM::Save(const std::string& filename) {
+	auto addtofilename = [](const std::string& filename, const std::string& whatadd) {std::string ffilename;  for (const char a : filename) { if (a != '.') { ffilename += a; } else { ffilename += (whatadd + '.'); } } return ffilename; };
+	this->Forward.save(addtofilename(filename, "_Forward"));
+	this->Backward.save(addtofilename(filename, "_Backward"));
+}
 
-		Input_states = Input_states_;
-		//size_t steps = Input_states.rows();
+void BiLSTM::Load(const std::string& filename) {
+	this->Forward.load(filename + "_Forward");
+	this->Backward.load(filename + "_Backward");
+}
 
-		// Корректная инициализация размеров
-		//Cell_states = MatrixXld::Zero(steps + 1, Hidden_size);
-		//Hidden_states = MatrixXld::Zero(steps + 1, Hidden_size);
+
+
+SimpleLSTM_ForTrain::SimpleLSTM_ForTrain(size_t Batch_size_, Eigen::Index Number_states, Eigen::Index Hidden_size_) {
+	if (Hidden_size_ <= 0) {
+		throw std::invalid_argument("Размеры слоев должны быть больше 0");
+	}
+	if (Batch_size_ <= 0) {
+		throw std::invalid_argument("Размеры батчей должны быть больше 0");
 	}
 
-	void save(const std::string& filename) const {
-		std::ofstream file(filename, std::ios::trunc); // Используйте trunc для перезаписи
-		if (!file) throw std::runtime_error("Cannot open file for writing");
+	this->Batch_size = Batch_size_;
+	this->Input_size = Number_states;
+	this->Hidden_size = Hidden_size_;
 
-		// Сохраняем только актуальные параметры
-		file << this->Input_size << "\n" << this->Hidden_size << "\n" << this->Batch_size << "\n";
+	// Инициализация весов
+	SetRandomWeights(-0.5L, 0.5L); // Инициализация весов LSTM
 
-		// Сохраняем веса и смещения
-		save_matrix(file, this->W_F_H);
-		save_matrix(file, this->W_I_H);
-		save_matrix(file, this->W_C_H);
-		save_matrix(file, this->W_O_H);
+	// Инициализация смещений (1xHidden_size)
+	SetRandomDisplacements(-1.5L, 1.5L);
 
-		save_matrix(file, this->W_F_I);
-		save_matrix(file, this->W_I_I);
-		save_matrix(file, this->W_C_I);
-		save_matrix(file, this->W_O_I);
+	// Инициализация состояний
+	//Input_states = MatrixXld(0, this->Input_size); // Пустая матрица
+	//Cell_states = MatrixXld::Zero(1, Hidden_size_);
+	//Hidden_states = MatrixXld::Zero(1, Hidden_size_);
+}
 
-		save_matrix(file, this->B_F);
-		save_matrix(file, this->B_I);
-		save_matrix(file, this->B_C);
-		save_matrix(file, this->B_O);
+SimpleLSTM_ForTrain::~SimpleLSTM_ForTrain() {
+	save("LSTM_state_ForTrain.txt");
+}
+
+void SimpleLSTM_ForTrain::SetInput_states(const std::vector<MatrixXld>& Input_states_) {
+	for (const auto& b : Input_states_) {
+		if (b.rows() == 0 || b.cols() != Input_size) {
+			throw std::invalid_argument("Invalid input matrix dimensions");
+		}
 	}
 
-	void load(const std::string& filename) {
-		std::ifstream file(filename);
-		if (!file) throw std::runtime_error("Cannot open file for reading");
+	// Очищаем историю состояний
+	this->statesForgrads.f.clear();
+	this->statesForgrads.i.clear();
+	this->statesForgrads.ccond.clear();
+	this->statesForgrads.o.clear();
+	this->statesForgrads.c.clear();
+	this->statesForgrads.h.clear();
 
-		file >> this->Input_size >> this->Hidden_size >> this->Batch_size;
+	Input_states = Input_states_;
+	//size_t steps = Input_states.rows();
 
-		load_matrix(file, this->W_F_H);
-		load_matrix(file, this->W_I_H);
-		load_matrix(file, this->W_C_H);
-		load_matrix(file, this->W_O_H);
+	// Корректная инициализация размеров
+	//Cell_states = MatrixXld::Zero(steps + 1, Hidden_size);
+	//Hidden_states = MatrixXld::Zero(steps + 1, Hidden_size);
+}
 
-		load_matrix(file, this->W_F_I);
-		load_matrix(file, this->W_I_I);
-		load_matrix(file, this->W_C_I);
-		load_matrix(file, this->W_O_I);
+void SimpleLSTM_ForTrain::save(const std::string& filename) const {
+	std::ofstream file(filename, std::ios::trunc); // Используйте trunc для перезаписи
+	if (!file) throw std::runtime_error("Cannot open file for writing");
 
-		load_matrix(file, this->B_F);
-		load_matrix(file, this->B_I);
-		load_matrix(file, this->B_C);
-		load_matrix(file, this->B_O);
-	}
+	// Сохраняем только актуальные параметры
+	file << this->Input_size << "\n" << this->Hidden_size << "\n" << this->Batch_size << "\n";
 
-protected:
-	size_t Batch_size;
+	// Сохраняем веса и смещения
+	save_matrix(file, this->W_F_H);
+	save_matrix(file, this->W_I_H);
+	save_matrix(file, this->W_C_H);
+	save_matrix(file, this->W_O_H);
 
-	void Batch_All_state_Сalculation() {
+	save_matrix(file, this->W_F_I);
+	save_matrix(file, this->W_I_I);
+	save_matrix(file, this->W_C_I);
+	save_matrix(file, this->W_O_I);
+
+	save_matrix(file, this->B_F);
+	save_matrix(file, this->B_I);
+	save_matrix(file, this->B_C);
+	save_matrix(file, this->B_O);
+}
+
+void SimpleLSTM_ForTrain::load(const std::string& filename) {
+	std::ifstream file(filename);
+	if (!file) throw std::runtime_error("Cannot open file for reading");
+
+	file >> this->Input_size >> this->Hidden_size >> this->Batch_size;
+
+	load_matrix(file, this->W_F_H);
+	load_matrix(file, this->W_I_H);
+	load_matrix(file, this->W_C_H);
+	load_matrix(file, this->W_O_H);
+
+	load_matrix(file, this->W_F_I);
+	load_matrix(file, this->W_I_I);
+	load_matrix(file, this->W_C_I);
+	load_matrix(file, this->W_O_I);
+
+	load_matrix(file, this->B_F);
+	load_matrix(file, this->B_I);
+	load_matrix(file, this->B_C);
+	load_matrix(file, this->B_O);
+}
+
+void SimpleLSTM_ForTrain::Batch_All_state_Сalculation() {
 		size_t total_sequences = this->Input_states.size();
 		if (total_sequences == 0) return;
 
@@ -681,68 +500,122 @@ protected:
 			}
 		}
 	}
-private:
 
-	struct states_forgrads {
-		std::vector<MatrixXld> f, i, ccond, o, c, h;
-	};
 
-	states_forgrads statesForgrads;
 
-};
+BiLSTM_ForTrain::BiLSTM_ForTrain(size_t Batch_size_, Eigen::Index Number_states, Eigen::Index Hidden_size_)
+	: BiLSTM(Number_states, Hidden_size_),
+	Forward(Batch_size_, Number_states, Hidden_size_),
+	Backward(Batch_size_, Number_states, Hidden_size_),
+	Common_Batch_size(Batch_size_) {
 
-class BiLSTM_ForTrain : public BiLSTM {
-	friend class Seq2SeqWithAttention_ForTrain;
-public:
-	BiLSTM_ForTrain(size_t Batch_size_, Eigen::Index Number_states, Eigen::Index Hidden_size_)
-		: BiLSTM(Number_states, Hidden_size_),
-		Forward(Batch_size_, Number_states, Hidden_size_),
-		Backward(Batch_size_, Number_states, Hidden_size_),
-		Common_Batch_size(Batch_size_) {
-
-		if (Hidden_size_ <= 0) {
-			throw std::invalid_argument("Размеры слоев должны быть больше 0");
-		}
-		if (Batch_size_ <= 0) {
-			throw std::invalid_argument("Размеры батчей должны быть больше 0");
-		}
-
-		// Инициализация весов
-		//SetRandomWeights(-0.5L, 0.5L); // Инициализация весов LSTM
-
-		// Инициализация смещений (1xHidden_size)
-		//SetRandomDisplacements(-1.5L, 1.5L);
-
-		// Инициализация состояний
-		//Input_states = MatrixXld(0, this->Input_size); // Пустая матрица
-		//Cell_states = MatrixXld::Zero(1, Hidden_size_);
-		//Hidden_states = MatrixXld::Zero(1, Hidden_size_);
+	if (Hidden_size_ <= 0) {
+		throw std::invalid_argument("Размеры слоев должны быть больше 0");
+	}
+	if (Batch_size_ <= 0) {
+		throw std::invalid_argument("Размеры батчей должны быть больше 0");
 	}
 
-	BiLSTM_ForTrain() = default;
+	// Инициализация весов
+	//SetRandomWeights(-0.5L, 0.5L); // Инициализация весов LSTM
 
-	~BiLSTM_ForTrain() {
-		this->Save("BiLSTM_state_ForTrain.txt");
-	}
+	// Инициализация смещений (1xHidden_size)
+	//SetRandomDisplacements(-1.5L, 1.5L);
 
-	void Batch_All_state_Сalculation() {
-		this->Forward.Batch_All_state_Сalculation();
-		this->Backward.Batch_All_state_Сalculation();
-		Common_Hidden_states.clear();
-		Common_Hidden_states.resize(Forward.statesForgrads.h.size());
-		for (size_t i = 0; i < Forward.statesForgrads.h.size(); ++i) {
-			const auto& Hf = Forward.statesForgrads.h[i];  // [T × H]
-			const auto& Hb = Backward.statesForgrads.h[i]; // [T × H], но обратный порядок
-			size_t T = Hf.rows();
-			MatrixXld concat(T, 2 * this->Common_Hidden_size);
-			for (size_t t = 0; t < T; ++t) {
-				concat.row(t) << Hf.row(t), Hb.row(T - 1 - t);
-			}
-			Common_Hidden_states[i] = concat;
+	// Инициализация состояний
+	//Input_states = MatrixXld(0, this->Input_size); // Пустая матрица
+	//Cell_states = MatrixXld::Zero(1, Hidden_size_);
+	//Hidden_states = MatrixXld::Zero(1, Hidden_size_);
+}
+
+BiLSTM_ForTrain::~BiLSTM_ForTrain() {
+	this->Save("BiLSTM_state_ForTrain.txt");
+}
+
+void BiLSTM_ForTrain::Batch_All_state_Сalculation() {
+	this->Forward.Batch_All_state_Сalculation();
+	this->Backward.Batch_All_state_Сalculation();
+	Common_Hidden_states.clear();
+	Common_Hidden_states.resize(Forward.statesForgrads.h.size());
+	for (size_t i = 0; i < Forward.statesForgrads.h.size(); ++i) {
+		const auto& Hf = Forward.statesForgrads.h[i];  // [T × H]
+		const auto& Hb = Backward.statesForgrads.h[i]; // [T × H], но обратный порядок
+		size_t T = Hf.rows();
+		MatrixXld concat(T, 2 * this->Common_Hidden_size);
+		for (size_t t = 0; t < T; ++t) {
+			concat.row(t) << Hf.row(t), Hb.row(T - 1 - t);
 		}
+		Common_Hidden_states[i] = concat;
 	}
-protected:
-	SimpleLSTM_ForTrain Forward;
-	SimpleLSTM_ForTrain Backward;
-	size_t Common_Batch_size;
-};
+}
+
+
+
+// Очистка накопленных значений
+void Attention::ClearCache() {
+	all_attention_weights_.clear();
+	all_scores_.clear();
+	all_tanh_outputs_.clear();
+}
+
+// Получение attention-весов по всем временным шагам
+const std::vector<VectorXld>& Attention::GetAllAttentionWeights() const { return all_attention_weights_; }
+
+// Получение сырых score-векторов (до softmax)
+const std::vector<VectorXld>& Attention::GetAllScores() const { return all_scores_; }
+
+
+
+BahdanauAttention::BahdanauAttention(Eigen::Index encoder_hidden_size, Eigen::Index decoder_hidden_size, Eigen::Index attention_size)
+	: encoder_hidden_size_(encoder_hidden_size),
+	decoder_hidden_size_(decoder_hidden_size),
+	attention_size_(attention_size)
+{
+	// Инициализация весов (Xavier)
+	W_encoder_ = ActivationFunctions::matrix_random(attention_size_, encoder_hidden_size_, -1.0L, 1.0L); // [A x 2H]
+	W_decoder_ = ActivationFunctions::matrix_random(attention_size_, decoder_hidden_size_, -1.0L, 1.0L); // [A x H_dec]
+	attention_vector_ = ActivationFunctions::matrix_random(attention_size_, 1, -1.0L, 1.0L);              // [A x 1]
+}
+
+// Вычисляет контекстный вектор и сохраняет внутренние веса
+RowVectorXld BahdanauAttention::ComputeContext(const MatrixXld& encoder_outputs,
+	const RowVectorXld& decoder_prev_hidden) {
+	const size_t time_steps_enc = encoder_outputs.rows();   // длина входной последовательности
+	const size_t hidden_size_enc = encoder_outputs.cols();  // размерность h_i (обычно 2H)
+	const size_t A = this->attention_size_;                 // размер attention-пространства
+
+	VectorXld scores(time_steps_enc);         // e_{ti}
+	std::vector<RowVectorXld> u_t;            // вектор для хранения u_{ti} на текущем шаге t
+
+	for (size_t i = 0; i < time_steps_enc; ++i) {
+		RowVectorXld h_i = encoder_outputs.row(i); // [1 x 2H]
+
+		// [A x 1] = W_encoder * h_i^T + W_decoder * s_{t-1}^T
+		RowVectorXld combined_input =
+			(W_encoder_ * h_i.transpose() + W_decoder_ * decoder_prev_hidden.transpose()).transpose(); // [1 x A]
+
+		RowVectorXld u_ti = combined_input.array().tanh().matrix();  // [1 x A]
+
+		scores(i) = (u_ti * attention_vector_).value();  // e_{ti} = v^T u_{ti}
+
+		u_t.push_back(u_ti);  // сохраняем u_{ti} для текущего i
+	}
+
+	// Softmax по e_{ti} → α_{ti}
+	VectorXld attention_weights = scores.array().exp();
+	long double sum_exp = attention_weights.sum() + 1e-8L;
+	attention_weights /= sum_exp;
+
+	// Сохраняем веса и логиты
+	this->all_attention_weights_.push_back(attention_weights);
+	this->all_scores_.push_back(scores);
+	this->all_tanh_outputs_.push_back(u_t);  // сохраняем все u_{ti} для текущего t
+
+	// Вычисляем контекст: c_t = ∑ α_{ti} * h_i
+	RowVectorXld context = RowVectorXld::Zero(hidden_size_enc);
+	for (size_t i = 0; i < time_steps_enc; ++i) {
+		context += attention_weights(i) * encoder_outputs.row(i);
+	}
+
+	return context;
+}

@@ -21,21 +21,12 @@
     <ClCompile Include="LSTM_and_BiLSTM.cpp">
       <Filter>Файлы ресурсов</Filter>
     </ClCompile>
-    <ClCompile Include="RealizationsNN_for_decoder.cpp">
-      <Filter>Файлы ресурсов</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="HeaderSeq2seqWithAttention.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
     <ClInclude Include="HeaderLSTM_and_BiLSTM.h">
-      <Filter>Файлы заголовков</Filter>
-    </ClInclude>
-    <ClInclude Include="HeaderTemplates_for_Seq2seqWithAttention.h">
-      <Filter>Файлы заголовков</Filter>
-    </ClInclude>
-    <ClInclude Include="RealizationsNN_for_decoder.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
   </ItemGroup>

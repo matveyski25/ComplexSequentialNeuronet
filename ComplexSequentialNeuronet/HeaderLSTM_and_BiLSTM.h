@@ -1,37 +1,38 @@
-#pragma once
+﻿#pragma once
 
-#include <ActivateFunctionsForNN/HeaderActivateFunctionsForNN.h>
+#include "ActivateFunctionsForNN/HeaderActivateFunctionsForNN.h"
 
 #include <fstream>
+#include <filesystem>
 
 using ActivationFunctions::MatrixXld;
-using ActivationFunctions::RowVectorXld; // ������-������
-using ActivationFunctions::VectorXld;    // ������-�������
+using ActivationFunctions::RowVectorXld; // Вектор-строка
+using ActivationFunctions::VectorXld;    // Вектор-столбец
 
 class SimpleLSTM {
 	friend class BiLSTM;
 public:
 
-	SimpleLSTM(Eigen::Index Number_states, Eigen::Index Hidden_size_) {}
+	SimpleLSTM(Eigen::Index Number_states, Eigen::Index Hidden_size_);
 
-	SimpleLSTM();
+	SimpleLSTM() = default;
 
-	~SimpleLSTM() {}
+	~SimpleLSTM();
 
-	void SetInput_states(const std::vector<MatrixXld>& Input_states_) {}
+	void SetInput_states(const std::vector<MatrixXld>& Input_states_);
 
 	void SetWeights(const MatrixXld& weights_I_F, const MatrixXld& weights_I_I, const MatrixXld& weights_I_C, const MatrixXld& weights_I_O, 
-		const MatrixXld& weights_H_F, const MatrixXld& weights_H_I, const MatrixXld& weights_H_C, const MatrixXld& weights_H_O){}
+		const MatrixXld& weights_H_F, const MatrixXld& weights_H_I, const MatrixXld& weights_H_C, const MatrixXld& weights_H_O);
 
-	void SetDisplacements(const MatrixXld& displacements_FG, const MatrixXld& displacements_IG, const MatrixXld& displacements_CT, const MatrixXld& displacements_OG) {}
+	void SetDisplacements(const MatrixXld& displacements_FG, const MatrixXld& displacements_IG, const MatrixXld& displacements_CT, const MatrixXld& displacements_OG);
 
-	void SetRandomWeights(long double a = -0.2L, long double b = 0.2L) {}
+	void SetRandomWeights(long double a = -0.2L, long double b = 0.2L);
 
-	void SetRandomDisplacements(long double a = -0.5L, long double b = 0.5L) {}
+	void SetRandomDisplacements(long double a = -0.5L, long double b = 0.5L);
 
-	void All_state_�alculation() {}
+	void All_state_Сalculation();
 
-	std::vector<RowVectorXld> GetLastOutputs() const {}
+	std::vector<RowVectorXld> GetLastOutputs() const;
 
 
 	/*std::vector<MatrixXld> GetWeightsAndDisplacement() {
@@ -43,34 +44,34 @@ public:
 		};
 	}*/
 
-	static std::vector<std::vector<char>> denormalize(const MatrixXld& val) {}
+	static std::vector<std::vector<char>> denormalize(const MatrixXld& val);
 
-	void save(const std::string& filename) const {}
+	void save(const std::string& filename) const;
 
-	void load(const std::string& filename) {}
+	void load(const std::string& filename);
 
-	void save_matrix(std::ofstream& file, const MatrixXld& m) const {}
+	void save_matrix(std::ofstream& file, const MatrixXld& m) const;
 
-	void load_matrix(std::ifstream& file, MatrixXld& m) {}
+	void load_matrix(std::ifstream& file, MatrixXld& m);
 
 protected:
 	/*struct LSTMGradients {
-		// ��������� ��� Forget Gate
-		MatrixXld dW_fg_hs;  // �� ����� hidden-state
-		MatrixXld dW_fg_is;  // �� ����� input
-		MatrixXld db_fg;     // �� ��������
+		// Градиенты для Forget Gate
+		MatrixXld dW_fg_hs;  // по весам hidden-state
+		MatrixXld dW_fg_is;  // по весам input
+		MatrixXld db_fg;     // по смещению
 
-		// ��������� ��� Input Gate
+		// Градиенты для Input Gate
 		MatrixXld dW_ig_hs;
 		MatrixXld dW_ig_is;
 		MatrixXld db_ig;
 
-		// ��������� ��� Cell State
+		// Градиенты для Cell State
 		MatrixXld dW_ct_hs;
 		MatrixXld dW_ct_is;
 		MatrixXld db_ct;
 
-		// ��������� ��� Output Gate
+		// Градиенты для Output Gate
 		MatrixXld dW_og_hs;
 		MatrixXld dW_og_is;
 		MatrixXld db_og;
@@ -98,30 +99,30 @@ protected:
 	MatrixXld W_C_I;  // Cell state input weights
 	MatrixXld W_O_I;  // Output gate input weights
 
-	MatrixXld B_F;  // ������� 1xHidden_size
-	MatrixXld B_I;  // ������� 1xHidden_size
-	MatrixXld B_C;  // ������� 1xHidden_size
-	MatrixXld B_O;  // ������� 1xHidden_size
+	MatrixXld B_F;  // Матрица 1xHidden_size
+	MatrixXld B_I;  // Матрица 1xHidden_size
+	MatrixXld B_C;  // Матрица 1xHidden_size
+	MatrixXld B_O;  // Матрица 1xHidden_size
 
 	//MatrixXld Output_weights; // (Hidden_size x 1)
 	//MatrixXld Output_bias;    // (1 x 1)
 
 private:
-	/*void n_state_�alculation(size_t timestep, size_t nstep) {
+	/*void n_state_Сalculation(size_t timestep, size_t nstep) {
 		RowVectorXld x_t(this->Input_size);
 		RowVectorXld h_t_l = RowVectorXld::Zero(this->Hidden_size);
 		RowVectorXld c_t_l = RowVectorXld::Zero(this->Hidden_size);
 
-		// ��������� �����
+		// Получение входа
 		x_t = this->Input_states[nstep].row(timestep);
 
-		// ���� timestep > 0, ���� ���������� ���������
+		// Если timestep > 0, берём предыдущие состояния
 		if (timestep > 0) {
 			h_t_l = this->Hidden_states[nstep].row(timestep - 1);
 			c_t_l = this->Cell_states[nstep].row(timestep - 1);
 		}
 
-		// ������������ ���� � ��������
+		// Объединенные веса и смещения
 		MatrixXld W_x(this->Input_size, 4 * this->Hidden_size);
 		W_x << this->W_F_I, this->W_I_I, this->W_C_I, this->W_O_I;
 
@@ -131,7 +132,7 @@ private:
 		RowVectorXld b(4 * this->Hidden_size);
 		b << this->B_F, this->B_I, this->B_C, this->B_O;
 
-		// ������ ������
+		// Расчёт выхода
 		RowVectorXld Z_t = x_t * W_x + h_t_l * W_h;
 		Z_t += b;
 
@@ -143,7 +144,7 @@ private:
 		RowVectorXld new_c_t = f_t.array() * c_t_l.array() + i_t.array() * c_t_bar.array();
 		RowVectorXld new_h_t = o_t.array() * ActivationFunctions::Tanh(new_c_t).array();
 
-		// ����������� ��������
+		// Обеспечение размеров
 		size_t total_sequences = this->Input_states.size();
 		this->Hidden_states.resize(total_sequences);
 		this->Cell_states.resize(total_sequences);
@@ -160,7 +161,7 @@ private:
 			}
 		}
 
-		// ������ ����� ���������
+		// Запись новых состояний
 		this->Hidden_states[nstep].row(timestep) = new_h_t;
 		this->Cell_states[nstep].row(timestep) = new_c_t;
 	}*/
@@ -170,21 +171,21 @@ private:
 class BiLSTM {
 
 public:
-	BiLSTM(Eigen::Index Number_states, Eigen::Index Hidden_size_) {}
+	BiLSTM(Eigen::Index Number_states, Eigen::Index Hidden_size_);
 
-	BiLSTM();
+	BiLSTM() = default;
 
-	~BiLSTM() {}
+	~BiLSTM();
 
-	void All_state_�alculation() {}
+	void All_state_Сalculation();
 
-	void SetInput_states(const std::vector<MatrixXld>& inputs) {}
+	void SetInput_states(const std::vector<MatrixXld>& inputs);
 
-	std::vector<RowVectorXld> GetFinalHidden_ForwardBackward() const {}
+	std::vector<RowVectorXld> GetFinalHidden_ForwardBackward() const;
 
-	void Save(const std::string& filename) {}
+	void Save(const std::string& filename);
 
-	void Load(const std::string& filename) {}
+	void Load(const std::string& filename);
 protected:
 	Eigen::Index Common_Input_size;
 	Eigen::Index Common_Hidden_size;
@@ -198,23 +199,25 @@ private:
 class SimpleLSTM_ForTrain : public SimpleLSTM {
 	friend class BiLSTM_ForTrain;
 public:
-	SimpleLSTM_ForTrain(size_t Batch_size_, Eigen::Index Number_states, Eigen::Index Hidden_size_) {}
+	SimpleLSTM_ForTrain(size_t Batch_size_, Eigen::Index Number_states, Eigen::Index Hidden_size_);
 
-	~SimpleLSTM_ForTrain() {}
+	SimpleLSTM_ForTrain() = default;
 
-	void SetInput_states(const std::vector<MatrixXld>& Input_states_) {}
+	~SimpleLSTM_ForTrain();
 
-	void save(const std::string& filename) const {}
+	void SetInput_states(const std::vector<MatrixXld>& Input_states_);
 
-	void load(const std::string& filename) {}
+	void save(const std::string& filename) const;
+
+	void load(const std::string& filename);
 
 protected:
 	size_t Batch_size;
 
-	void Batch_All_state_�alculation() {}
+	void Batch_All_state_Сalculation();
 private:
 
-	struct states_forgrads {};
+	struct states_forgrads { std::vector<MatrixXld> f, i, ccond, o, c, h; };
 
 	states_forgrads statesForgrads;
 };
@@ -224,13 +227,56 @@ class BiLSTM_ForTrain : public BiLSTM {
 public:
 	BiLSTM_ForTrain(size_t Batch_size_, Eigen::Index Number_states, Eigen::Index Hidden_size_);
 
-	BiLSTM_ForTrain();
+	BiLSTM_ForTrain() = default;
 
-	~BiLSTM_ForTrain() {}
+	~BiLSTM_ForTrain();
 
-	void Batch_All_state_�alculation() {}
+	void Batch_All_state_Сalculation();
 protected:
 	SimpleLSTM_ForTrain Forward;
 	SimpleLSTM_ForTrain Backward;
 	size_t Common_Batch_size;
+};
+
+class Attention {
+public:
+	virtual ~Attention() = default;
+
+	// Абстрактный метод: вычисляет контекст по шагу
+	virtual RowVectorXld ComputeContext(const MatrixXld& encoder_outputs,
+		const RowVectorXld& decoder_prev_hidden) = 0;
+
+	// Очистка накопленных значений
+	virtual void ClearCache();
+
+	// Получение attention-весов по всем временным шагам
+	const std::vector<VectorXld>& GetAllAttentionWeights() const;
+
+	// Получение сырых score-векторов (до softmax)
+	const std::vector<VectorXld>& GetAllScores() const;
+
+protected:
+	// Вспомогательные буферы для накопления истории attention по всем шагам
+	std::vector<VectorXld> all_attention_weights_;  // α_t для всех t
+	std::vector<VectorXld> all_scores_;             // e_{t,i} для всех t
+	std::vector<std::vector<RowVectorXld>> all_tanh_outputs_;  // u_{ti} для всех t, i
+
+};
+
+class BahdanauAttention : public Attention {
+public:
+	friend class Seq2SeqWithAttention_ForTrain;////////////
+	BahdanauAttention(Eigen::Index encoder_hidden_size, Eigen::Index decoder_hidden_size, Eigen::Index attention_size);
+	// Вычисляет контекстный вектор и сохраняет внутренние веса
+	RowVectorXld ComputeContext(const MatrixXld& encoder_outputs,
+		const RowVectorXld& decoder_prev_hidden) override;
+protected:
+	Eigen::Index encoder_hidden_size_;    // 2H
+	Eigen::Index decoder_hidden_size_;    // H_dec
+	Eigen::Index attention_size_;         // A
+
+	MatrixXld W_encoder_;       // [A x 2H]
+	MatrixXld W_decoder_;       // [A x H_dec]
+	MatrixXld attention_vector_; // [A x 1]
+
 };
