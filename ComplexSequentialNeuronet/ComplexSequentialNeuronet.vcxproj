@@ -133,6 +133,7 @@
   <ItemGroup>
     <ClCompile Include="Seq2seqWithAttention.cpp" />
     <ClCompile Include="LSTM_and_BiLSTM.cpp" />
+    <ClCompile Include="Seq2seqWithAttention_ForTrain.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="HeaderSeq2seqWithAttention.h" />

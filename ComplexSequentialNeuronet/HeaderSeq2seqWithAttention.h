@@ -408,17 +408,17 @@ public:
 
 		MatrixXld dW_f_dec, dU_f_dec; MatrixXld dB_f_dec;
 		MatrixXld dW_i_dec, dU_i_dec; MatrixXld dB_i_dec;
-		MatrixXld dW_c_dec, dU_c_dec; MatrixXld dB_c_dec;
+		MatrixXld dW_ccond_dec, dU_ccond_dec; MatrixXld dB_ccond_dec;
 		MatrixXld dW_o_dec, dU_o_dec; MatrixXld dB_o_dec;
 
 		MatrixXld dW_f_forw_enc, dU_f_forw_enc; MatrixXld dB_f_forw_enc;
 		MatrixXld dW_i_forw_enc, dU_i_forw_enc; MatrixXld dB_i_forw_enc;
-		MatrixXld dW_c_forw_enc, dU_c_forw_enc; MatrixXld dB_c_forw_enc;
+		MatrixXld dW_ccond_forw_enc, dU_ccond_forw_enc; MatrixXld dB_ccond_forw_enc;
 		MatrixXld dW_o_forw_enc, dU_o_forw_enc; MatrixXld dB_o_forw_enc;
 
 		MatrixXld dW_f_back_enc, dU_f_back_enc; MatrixXld dB_f_back_enc;
 		MatrixXld dW_i_back_enc, dU_i_back_enc; MatrixXld dB_i_back_enc;
-		MatrixXld dW_c_back_enc, dU_c_back_enc; MatrixXld dB_c_back_enc;
+		MatrixXld dW_ccond_back_enc, dU_ccond_back_enc; MatrixXld dB_ccond_back_enc;
 		MatrixXld dW_o_back_enc, dU_o_back_enc; MatrixXld dB_o_back_enc;
 	};
 
