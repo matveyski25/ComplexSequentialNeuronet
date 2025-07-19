@@ -1,10 +1,9 @@
 ﻿#include "HeaderSeq2seqWithAttention.h"
  
 
-template<typename EncoderT, typename DecoderT>
 Seq2SeqWithAttention::Seq2SeqWithAttention(
-	std::unique_ptr<EncoderT> encoder,
-	std::unique_ptr<DecoderT> decoder)
+	std::unique_ptr<Encoder> encoder,
+	std::unique_ptr<Decoder> decoder)
 		: encoder_(std::move(encoder)), decoder_(std::move(decoder)) {
 	}
 
@@ -14,7 +13,7 @@ Seq2SeqWithAttention::Seq2SeqWithAttention(
 	std::unique_ptr<BahdanauAttention> attention_)
 		:
 		encoder_(std::make_unique<Encoder>(Input_size_, Encoder_Hidden_size_)),
-		decoder_(std::make_unique<Decoder>(attention_, Encoder_Hidden_size_, Decoder_Hidden_size_, Output_size, start_token_, end_token_, max_steps_)) {
+	decoder_(std::make_unique<Decoder>(std::move(attention_), Encoder_Hidden_size_, Decoder_Hidden_size_, Output_size, start_token_, end_token_, max_steps_)) {
 	}
 
 void Seq2SeqWithAttention::SetInput_states(const std::vector<MatrixXld>& _inputs) {
@@ -53,7 +52,7 @@ void Seq2SeqWithAttention::Load(std::string packname) {
 
 
 Seq2SeqWithAttention_ForTrain::Seq2SeqWithAttention_ForTrain(std::unique_ptr<Encoder> encoder_train, std::unique_ptr<Decoder> decoder_train)
-	: Seq2SeqWithAttention(std::move(encoder_train), std::move(decoder_train)) {
+	: encoder_(std::move(encoder_train)), decoder_(std::move(decoder_train)) {
 }
 
 Seq2SeqWithAttention_ForTrain::grads_Seq2SeqWithAttention Seq2SeqWithAttention_ForTrain::Backward(size_t Number_InputState, MatrixXld Y_True) {
@@ -118,14 +117,14 @@ Seq2SeqWithAttention_ForTrain::grads_Seq2SeqWithAttention Seq2SeqWithAttention_F
 				C_t_l = this->decoder_->StatesForgrads.c[Number_InputState].row(t - 1);
 			}
 
-			RowVectorXld dO_t = dS_t.array() * ActivationFunctions::Tanh(C_t).array() * O_t.array() * (MatrixXld::Constant((O_t).size(), 1) - O_t).array();
+			RowVectorXld dO_t = dS_t.array() * C_t.array().tanh() * O_t.array() * (MatrixXld::Constant(O_t.rows(), O_t.cols(), 1) - O_t).array();
 			RowVectorXld dC_t = dS_t.array() * O_t.array() *
-				(MatrixXld::Constant((C_t * C_t).size(), 1) - (ActivationFunctions::Tanh(C_t) * ActivationFunctions::Tanh(C_t))).array() +
+				(MatrixXld::Constant((C_t * C_t).rows(), (C_t * C_t).cols(), 1) - (ActivationFunctions::Tanh(C_t) * ActivationFunctions::Tanh(C_t))).array() +
 				_dC_t.array() * F_t.array();
-			RowVectorXld dCcond_t = dC_t.array() * I_t.array() * (MatrixXld::Constant((Ccond_t * Ccond_t).size(), 1) - Ccond_t * Ccond_t).array();
-			RowVectorXld dI_t = dC_t.array() * I_t.array() * Ccond_t.array() * (MatrixXld::Constant((I_t).size(), 1) - I_t).array();
-			RowVectorXld dF_t = dC_t.array() * C_t_l.array() * F_t.array() * (MatrixXld::Constant((F_t).size(), 1) - F_t).array();
-
+			RowVectorXld dCcond_t = dC_t.array() * I_t.array() * (MatrixXld::Constant((Ccond_t * Ccond_t).rows(), (Ccond_t * Ccond_t).cols(), 1) - Ccond_t * Ccond_t).array();
+			RowVectorXld dI_t = dC_t.array() * I_t.array() * Ccond_t.array() * (MatrixXld::Constant(I_t.rows(), I_t.cols(), 1) - I_t).array();
+			RowVectorXld dF_t = dC_t.array() * C_t_l.array() * F_t.array() * (MatrixXld::Constant(F_t.rows(), F_t.cols(), 1) - F_t).array();
+			
 			RowVectorXld dGates_t(4 * this->decoder_->Hidden_size);
 			dGates_t << dF_t, dI_t, dCcond_t, dO_t;
 
@@ -141,6 +140,7 @@ Seq2SeqWithAttention_ForTrain::grads_Seq2SeqWithAttention Seq2SeqWithAttention_F
 
 			std::vector<MatrixXld> _dH_back;
 			RowVectorXld Enc_Forw__dC_j = RowVectorXld::Zero(this->encoder_->Common_Hidden_size);
+
 			for (Eigen::Index j = N - 1; j >= 0; --j) {
 				RowVectorXld h_j = this->encoder_->Common_Hidden_states[Number_InputState].row(j);
 				RowVectorXld s_t_1;
@@ -192,13 +192,13 @@ Seq2SeqWithAttention_ForTrain::grads_Seq2SeqWithAttention Seq2SeqWithAttention_F
 					Enc_Forw_C_j_l = this->encoder_->Forward.statesForgrads.c[Number_InputState].row(j - 1);
 				}
 
-				RowVectorXld dEnc_Forw_O_j = dH_forw_j.array() * ActivationFunctions::Tanh(Enc_Forw_C_j).array() * Enc_Forw_O_j.array() * (MatrixXld::Constant((Enc_Forw_O_j).size(), 1) - Enc_Forw_O_j).array();
+				RowVectorXld dEnc_Forw_O_j = dH_forw_j.array() * ActivationFunctions::Tanh(Enc_Forw_C_j).array() * Enc_Forw_O_j.array() * (MatrixXld::Constant(Enc_Forw_O_j.rows(), Enc_Forw_O_j.cols(), 1) - Enc_Forw_O_j).array();
 				RowVectorXld dEnc_Forw_C_j = dH_forw_j.array() * Enc_Forw_O_j.array() *
-					(MatrixXld::Constant((Enc_Forw_C_j * Enc_Forw_C_j).size(), 1) - ActivationFunctions::Tanh(Enc_Forw_C_j) * ActivationFunctions::Tanh(Enc_Forw_C_j)).array() +
+					(MatrixXld::Constant((Enc_Forw_C_j * Enc_Forw_C_j).rows(), (Enc_Forw_C_j * Enc_Forw_C_j).cols(), 1) - ActivationFunctions::Tanh(Enc_Forw_C_j) * ActivationFunctions::Tanh(Enc_Forw_C_j)).array() +
 					Enc_Forw__dC_j.array() * Enc_Forw_F_j.array();
-				RowVectorXld dEnc_Forw_Ccond_j = dEnc_Forw_C_j.array() * Enc_Forw_I_j.array() * (MatrixXld::Constant((Enc_Forw_Ccond_j * Enc_Forw_Ccond_j).size(), 1) - Enc_Forw_Ccond_j * Enc_Forw_Ccond_j).array();
-				RowVectorXld dEnc_Forw_I_j = dEnc_Forw_C_j.array() * Enc_Forw_I_j.array() * Enc_Forw_Ccond_j.array() * (MatrixXld::Constant((Enc_Forw_I_j).size(), 1) - Enc_Forw_I_j).array();
-				RowVectorXld dEnc_Forw_F_j = dEnc_Forw_C_j.array() * Enc_Forw_C_j_l.array() * Enc_Forw_F_j.array() * (MatrixXld::Constant((Enc_Forw_F_j).size(), 1) - Enc_Forw_F_j).array();
+				RowVectorXld dEnc_Forw_Ccond_j = dEnc_Forw_C_j.array() * Enc_Forw_I_j.array() * (MatrixXld::Constant((Enc_Forw_Ccond_j * Enc_Forw_Ccond_j).rows(), (Enc_Forw_Ccond_j * Enc_Forw_Ccond_j).cols(), 1) - Enc_Forw_Ccond_j * Enc_Forw_Ccond_j).array();
+				RowVectorXld dEnc_Forw_I_j = dEnc_Forw_C_j.array() * Enc_Forw_I_j.array() * Enc_Forw_Ccond_j.array() * (MatrixXld::Constant(Enc_Forw_I_j.rows(), Enc_Forw_I_j.cols(), 1) - Enc_Forw_I_j).array();
+				RowVectorXld dEnc_Forw_F_j = dEnc_Forw_C_j.array() * Enc_Forw_C_j_l.array() * Enc_Forw_F_j.array() * (MatrixXld::Constant(Enc_Forw_F_j.rows(), Enc_Forw_F_j.cols(), 1) - Enc_Forw_F_j).array();
 
 				RowVectorXld dEnc_Forw_Gates_j(4 * this->encoder_->Common_Hidden_size);
 				dEnc_Forw_Gates_j << dEnc_Forw_F_j, dEnc_Forw_I_j, dEnc_Forw_Ccond_j, dEnc_Forw_O_j;

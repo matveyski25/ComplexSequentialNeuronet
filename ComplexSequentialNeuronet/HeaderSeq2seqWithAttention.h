@@ -207,17 +207,16 @@ protected:
 
 	};
 public:
-	template<typename EncoderT, typename DecoderT>
 	Seq2SeqWithAttention(
-		std::unique_ptr<EncoderT> encoder = std::make_unique<Encoder>,
-		std::unique_ptr<DecoderT> decoder = std::make_unique<Decoder>);
+		std::unique_ptr<Encoder> encoder = std::make_unique<Encoder>(),
+		std::unique_ptr<Decoder> decoder = std::make_unique<Decoder>());
 
 	Seq2SeqWithAttention(
 		Eigen::Index Input_size_, Eigen::Index Encoder_Hidden_size_, Eigen::Index Decoder_Hidden_size_,
 		Eigen::Index Output_size, RowVectorXld start_token_, MatrixXld end_token_, size_t max_steps_,
 		std::unique_ptr<BahdanauAttention> attention_ = std::make_unique<BahdanauAttention>());
 
-	Seq2SeqWithAttention() = default;
+	//Seq2SeqWithAttention() = default;
 
 	void SetInput_states(const std::vector<MatrixXld>& _inputs);
 
