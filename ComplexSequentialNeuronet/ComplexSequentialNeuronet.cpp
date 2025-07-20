@@ -8,7 +8,7 @@ class SimpleLSTM {
 	friend class BiLSTM;
 public:
 	
-	SimpleLSTM(Eigen::Index Number_states = 1, Eigen::Index Hidden_size_ = 10){
+	SimpleLSTM(Eigen::Index Number_states, Eigen::Index Hidden_size_){
 		if (Hidden_size_ <= 0){
 			throw std::invalid_argument("Размеры слоев должны быть больше 0");
 		}
@@ -27,7 +27,9 @@ public:
 		//Cell_states = MatrixXld::Zero(1, Hidden_size_);
 		//Hidden_states = MatrixXld::Zero(1, Hidden_size_);
 	}
-	//SimpleLSTM() = delete;
+
+	SimpleLSTM() = default;
+
 	~SimpleLSTM() {
 		save("LSTM_state.txt");
 	}
@@ -143,25 +145,14 @@ public:
 		RowVectorXld b(4 * this->Hidden_size);
 		b << this->B_F, this->B_I, this->B_C, this->B_O;
 
-		// Подготовка хранилищ
-		this->Hidden_states.resize(this->Input_states.size());
-		this->Cell_states.resize(this->Input_states.size());
-
 		for (size_t nstep = 0; nstep < this->Input_states.size(); ++nstep) {
 			size_t sequence_length = this->Input_states[nstep].rows();
 
-			this->Hidden_states[nstep] = MatrixXld::Zero(sequence_length, this->Hidden_size);
-			this->Cell_states[nstep] = MatrixXld::Zero(sequence_length, this->Hidden_size);
+			RowVectorXld h_t_l = RowVectorXld::Zero(this->Hidden_size);
+			RowVectorXld c_t_l = RowVectorXld::Zero(this->Hidden_size);
 
 			for (size_t timestep = 0; timestep < sequence_length; ++timestep) {
 				RowVectorXld x_t = this->Input_states[nstep].row(timestep);
-				RowVectorXld h_t_l = RowVectorXld::Zero(this->Hidden_size);
-				RowVectorXld c_t_l = RowVectorXld::Zero(this->Hidden_size);
-
-				if (timestep > 0) {
-					h_t_l = this->Hidden_states[nstep].row(timestep - 1);
-					c_t_l = this->Cell_states[nstep].row(timestep - 1);
-				}
 
 				RowVectorXld Z_t = x_t * W_x + h_t_l * W_h;
 				Z_t += b;
@@ -173,9 +164,10 @@ public:
 
 				RowVectorXld new_c_t = f_t.array() * c_t_l.array() + i_t.array() * c_t_bar.array();
 				RowVectorXld new_h_t = o_t.array() * ActivationFunctions::Tanh(new_c_t).array();
-
-				this->Hidden_states[nstep].row(timestep) = new_h_t;
-				this->Cell_states[nstep].row(timestep) = new_c_t;
+				 
+				this->Hidden_states[nstep].col(timestep) = new_h_t;
+				h_t_l = new_h_t;
+				c_t_l = new_c_t;
 			}
 		}
 	}
@@ -336,8 +328,6 @@ protected:
 	Eigen::Index Input_size;
 	Eigen::Index Hidden_size;
 	std::vector<MatrixXld> Input_states;
-	std::vector<MatrixXld> Hidden_states;
-	std::vector<MatrixXld> Cell_states;
 
 	MatrixXld W_F_H;  // Forget gate hidden state weights
 	MatrixXld W_I_H;  // Input gate hidden state weights
@@ -358,7 +348,7 @@ protected:
 	//MatrixXld Output_bias;    // (1 x 1)
 
 	private:
-		void n_state_Сalculation(size_t timestep, size_t nstep) {
+		/*void n_state_Сalculation(size_t timestep, size_t nstep) {
 			RowVectorXld x_t(this->Input_size);
 			RowVectorXld h_t_l = RowVectorXld::Zero(this->Hidden_size);
 			RowVectorXld c_t_l = RowVectorXld::Zero(this->Hidden_size);
@@ -414,13 +404,14 @@ protected:
 			// Запись новых состояний
 			this->Hidden_states[nstep].row(timestep) = new_h_t;
 			this->Cell_states[nstep].row(timestep) = new_c_t;
-		}
+		}*/
+		std::vector<MatrixXld> Hidden_states;
 };
 
 class BiLSTM {
 	
 public:
-	BiLSTM(Eigen::Index Number_states = 1, Eigen::Index Hidden_size_ = 10) {
+	BiLSTM(Eigen::Index Number_states, Eigen::Index Hidden_size_) {
 		if (Hidden_size_ <= 0) {
 			throw std::invalid_argument("Размеры слоев должны быть больше 0");
 		}
@@ -440,6 +431,8 @@ public:
 		//Cell_states = MatrixXld::Zero(1, Hidden_size_);
 		//Hidden_states = MatrixXld::Zero(1, Hidden_size_);
 	}
+
+	BiLSTM() = default;
 
 	~BiLSTM() {
 		this->Save("BiLSTM_state.txt");
@@ -519,6 +512,8 @@ public:
 	virtual void ClearCache() {
 		all_attention_weights_.clear();
 		all_scores_.clear();
+		all_tanh_outputs_.clear();
+
 	}
 
 	// Получение attention-весов по всем временным шагам
@@ -531,7 +526,10 @@ protected:
 	// Вспомогательные буферы для накопления истории attention по всем шагам
 	std::vector<VectorXld> all_attention_weights_;  // α_t для всех t
 	std::vector<VectorXld> all_scores_;             // e_{t,i} для всех t
+	std::vector<std::vector<RowVectorXld>> all_tanh_outputs_;  // u_{ti} для всех t, i
+
 };
+
 
 // ==== БАЗОВАЯ Seq2Seq + Attention ====
 class Seq2SeqWithAttention {
@@ -553,30 +551,38 @@ public:
 		RowVectorXld ComputeContext(const MatrixXld& encoder_outputs,
 			const RowVectorXld& decoder_prev_hidden) override
 		{
-			const size_t time_steps_enc = encoder_outputs.rows();   // Tx
-			const size_t hidden_size_enc = encoder_outputs.cols();  // 2H
+			const size_t time_steps_enc = encoder_outputs.rows();   // длина входной последовательности
+			const size_t hidden_size_enc = encoder_outputs.cols();  // размерность h_i (обычно 2H)
+			const size_t A = this->attention_size_;                 // размер attention-пространства
 
-			VectorXld scores(time_steps_enc);  // e_{t,i}
+			VectorXld scores(time_steps_enc);         // e_{ti}
+			std::vector<RowVectorXld> u_t;            // вектор для хранения u_{ti} на текущем шаге t
 
 			for (size_t i = 0; i < time_steps_enc; ++i) {
-				RowVectorXld h_i = encoder_outputs.row(i);  // [1 x 2H]
+				RowVectorXld h_i = encoder_outputs.row(i); // [1 x 2H]
 
+				// [A x 1] = W_encoder * h_i^T + W_decoder * s_{t-1}^T
 				RowVectorXld combined_input =
 					(W_encoder_ * h_i.transpose() + W_decoder_ * decoder_prev_hidden.transpose()).transpose(); // [1 x A]
 
-				scores(i) = (combined_input.array().tanh().matrix() * attention_vector_).value();  // scalar
+				RowVectorXld u_ti = combined_input.array().tanh().matrix();  // [1 x A]
+
+				scores(i) = (u_ti * attention_vector_).value();  // e_{ti} = v^T u_{ti}
+
+				u_t.push_back(u_ti);  // сохраняем u_{ti} для текущего i
 			}
 
-			// Softmax для e → α
+			// Softmax по e_{ti} → α_{ti}
 			VectorXld attention_weights = scores.array().exp();
 			long double sum_exp = attention_weights.sum() + 1e-8L;
 			attention_weights /= sum_exp;
 
-			// Сохраняем историю на каждом шаге
+			// Сохраняем веса и логиты
 			this->all_attention_weights_.push_back(attention_weights);
 			this->all_scores_.push_back(scores);
+			this->all_tanh_outputs_.push_back(u_t);  // сохраняем все u_{ti} для текущего t
 
-			// Контекст: sum_i α_i * h_i
+			// Вычисляем контекст: c_t = ∑ α_{ti} * h_i
 			RowVectorXld context = RowVectorXld::Zero(hidden_size_enc);
 			for (size_t i = 0; i < time_steps_enc; ++i) {
 				context += attention_weights(i) * encoder_outputs.row(i);
@@ -584,6 +590,7 @@ public:
 
 			return context;
 		}
+
 
 	protected:
 		Eigen::Index encoder_hidden_size_;    // 2H
@@ -593,6 +600,7 @@ public:
 		MatrixXld W_encoder_;       // [A x 2H]
 		MatrixXld W_decoder_;       // [A x H_dec]
 		MatrixXld attention_vector_; // [A x 1]
+
 	};
 	class Encoder : public BiLSTM {
 	public:
@@ -615,7 +623,7 @@ public:
 	class Decoder : public SimpleLSTM {
 	public:
 		friend class Seq2SeqWithAttention_ForTrain;
-		Decoder(std::shared_ptr</*Attention*/BahdanauAttention> attention_module,
+		Decoder(std::unique_ptr</*Attention*/BahdanauAttention> attention_module,
 			Eigen::Index hidden_size_encoder, Eigen::Index Hidden_size_, Eigen::Index embedding_dim_, 
 			RowVectorXld start_token_, MatrixXld end_token_, size_t max_steps_)
 			: SimpleLSTM(embedding_dim_ + 2 * hidden_size_encoder/*= H_emb + 2H_enc*/, Hidden_size_), attention_(std::move(attention_module))
@@ -634,7 +642,7 @@ public:
 			this->end_token = end_token_;     // матрица эмбеддингов финишного токена (несколько символов)
 			this->max_steps = max_steps_;    // ограничение на число шагов генерации
 		}
-
+		Decoder() = default;
 		void SetEncoderOutputs(const std::vector<MatrixXld>& encoder_outputs) {
 			this->encoder_outputs = encoder_outputs;
 		}
@@ -653,6 +661,30 @@ public:
 			}
 			return false;
 		}
+
+		RowVectorXld start_token;   // эмбеддинг стартового токена (1 символ)
+		MatrixXld end_token;     // матрица эмбеддингов финишного токена (несколько символов)
+		size_t max_steps;    // ограничение на число шагов генерации
+
+		std::shared_ptr</*Attention*/BahdanauAttention> attention_;
+
+		std::vector<MatrixXld> encoder_outputs;
+		//std::vector<MatrixXld> context_vectors;
+
+		//std::vector<MatrixXld> U_state;
+
+		std::vector<MatrixXld> Output_state;
+		// --- Обновляемый выходной слой ---
+		MatrixXld W_output;      // [output_size x (hidden_size + context_size)]
+		RowVectorXld b_output;   // [1 x output_size]
+
+		size_t output_size;
+		//size_t embedding_dim;
+
+		RowVectorXld layernorm_gamma; // [1 x Input_size]
+		RowVectorXld layernorm_beta;  // [1 x Input_size]
+
+	private:
 		void All_state_Calculation() {
 			if (this->encoder_outputs.empty()) return;
 
@@ -675,14 +707,14 @@ public:
 
 			// Очистка
 			Output_state.clear();
-			context_vectors.clear();
-			U_state.clear();
+			//context_vectors.clear();
+			//U_state.clear();
 			attention_->ClearCache();
 
 			size_t batch_size = encoder_outputs.size();
 			Output_state.resize(batch_size);
-			context_vectors.resize(batch_size);
-			U_state.resize(batch_size);
+			//context_vectors.resize(batch_size);
+			//U_state.resize(batch_size);
 
 			// Общие веса
 			MatrixXld W_x(Input_size, 4 * Hidden_size);
@@ -697,8 +729,8 @@ public:
 			for (size_t n = 0; n < batch_size; ++n) {
 				const auto& enc_out = encoder_outputs[n];
 				std::vector<RowVectorXld> y_sequence;
-				std::vector<RowVectorXld> context_sequence;
-				std::vector<RowVectorXld> u_sequence;
+				//std::vector<RowVectorXld> context_sequence;
+				//std::vector<RowVectorXld> u_sequence;
 
 				RowVectorXld y_prev = start_token;
 				RowVectorXld h_prev = RowVectorXld::Zero(Hidden_size);
@@ -706,7 +738,7 @@ public:
 
 				for (size_t t = 0; t < max_steps; ++t) {
 					RowVectorXld context = attention_->ComputeContext(enc_out, h_prev);
-					context_sequence.push_back(context);
+					//context_sequence.push_back(context);
 
 					RowVectorXld decoder_input(Input_size);
 					decoder_input << y_prev, context;
@@ -727,15 +759,15 @@ public:
 					proj_input = apply_layernorm(proj_input);
 
 					RowVectorXld y_t = proj_input * W_output.transpose() + b_output;
-					u_sequence.push_back(proj_input);
+					//u_sequence.push_back(proj_input);
 					y_sequence.push_back(y_t);
 
 					if (IsEndToken(y_t)) {
 						size_t end_len = static_cast<size_t>(end_token.rows());
 						if (y_sequence.size() >= end_len - 1) {
 							y_sequence.resize(y_sequence.size() - (end_len - 1));
-							context_sequence.resize(context_sequence.size() - (end_len - 1));
-							u_sequence.resize(u_sequence.size() - (end_len - 1));
+							//context_sequence.resize(context_sequence.size() - (end_len - 1));
+							//u_sequence.resize(u_sequence.size() - (end_len - 1));
 						}
 						break;
 					}
@@ -750,38 +782,16 @@ public:
 				Eigen::Index D = static_cast<Eigen::Index>(y_sequence[0].cols());
 
 				Output_state[n] = MatrixXld(T, D);
-				U_state[n] = MatrixXld(T, u_sequence[0].cols());
-				context_vectors[n] = MatrixXld(T, context_sequence[0].cols());
+				//U_state[n] = MatrixXld(T, u_sequence[0].cols());
+				//context_vectors[n] = MatrixXld(T, context_sequence[0].cols());
 
 				for (Eigen::Index t = 0; t < T; ++t) {
 					Output_state[n].row(t) = y_sequence[t];
-					U_state[n].row(t) = u_sequence[t];
-					context_vectors[n].row(t) = context_sequence[t];
+					//this->states[n].row(t) = u_sequence[t];
+					//context_vectors[n].row(t) = context_sequence[t];
 				}
 			}
 		}
-
-		RowVectorXld start_token;   // эмбеддинг стартового токена (1 символ)
-		MatrixXld end_token;     // матрица эмбеддингов финишного токена (несколько символов)
-		size_t max_steps;    // ограничение на число шагов генерации
-
-		std::shared_ptr</*Attention*/BahdanauAttention> attention_;
-
-		std::vector<MatrixXld> encoder_outputs;
-		std::vector<MatrixXld> context_vectors;
-
-		std::vector<MatrixXld> U_state;
-
-		std::vector<MatrixXld> Output_state;
-		// --- Обновляемый выходной слой ---
-		MatrixXld W_output;      // [output_size x (hidden_size + context_size)]
-		RowVectorXld b_output;   // [1 x output_size]
-
-		size_t output_size;
-		//size_t embedding_dim;
-
-		RowVectorXld layernorm_gamma; // [1 x Input_size]
-		RowVectorXld layernorm_beta;  // [1 x Input_size]
 	};
 
 	template<typename EncoderT, typename DecoderT>
@@ -833,10 +843,10 @@ public:
 		decoder_->load(packname + "/" + "Decoder");
 	}
 protected:
+	std::vector<MatrixXld> Input_States;
+private:
 	std::unique_ptr<Encoder> encoder_;
 	std::unique_ptr<Decoder> decoder_;
-	std::vector<MatrixXld> Input_States;
-
 };
 
 
@@ -849,7 +859,7 @@ public:
 	class SimpleLSTM_ForTrain : public SimpleLSTM {
 		friend class BiLSTM_ForTrain;
 	public:
-		SimpleLSTM_ForTrain(size_t Batch_size_ = 32, Eigen::Index Number_states = 1, Eigen::Index Hidden_size_ = 10) {
+		SimpleLSTM_ForTrain(size_t Batch_size_, Eigen::Index Number_states, Eigen::Index Hidden_size_) {
 			if (Hidden_size_ <= 0) {
 				throw std::invalid_argument("Размеры слоев должны быть больше 0");
 			}
@@ -872,6 +882,7 @@ public:
 			//Cell_states = MatrixXld::Zero(1, Hidden_size_);
 			//Hidden_states = MatrixXld::Zero(1, Hidden_size_);
 		}
+
 		~SimpleLSTM_ForTrain() {
 			save("LSTM_state_ForTrain.txt");
 		}
@@ -884,10 +895,12 @@ public:
 			}
 
 			// Очищаем историю состояний
-			FG_states.clear();
-			IG_states.clear();
-			CT_states.clear();
-			OG_states.clear();
+			this->statesForgrads.f.clear();
+			this->statesForgrads.i.clear();
+			this->statesForgrads.ccond.clear();
+			this->statesForgrads.o.clear();
+			this->statesForgrads.c.clear();
+			this->statesForgrads.h.clear();
 
 			Input_states = Input_states_;
 			//size_t steps = Input_states.rows();
@@ -946,92 +959,6 @@ public:
 protected:
 		size_t Batch_size;
 
-		std::vector<MatrixXld> FG_states;
-		std::vector<MatrixXld> IG_states;
-		std::vector<MatrixXld> CT_states;
-		std::vector<MatrixXld> OG_states;
-
-		
-		void Batch_n_state_Сalculation(size_t timestep, size_t Batchstep) {
-			// Инициализация входов, скрытых и ячеечных состояний
-			MatrixXld x_t(this->Batch_size, this->Input_size);
-			MatrixXld h_t_l = MatrixXld::Zero(this->Batch_size, this->Hidden_size);
-			MatrixXld c_t_l = MatrixXld::Zero(this->Batch_size, this->Hidden_size);
-
-			// Заполнение входных данных на шаге t
-			for (size_t i = 0; i < this->Batch_size; ++i) {
-				size_t idx = Batchstep * this->Batch_size + i;
-				if (idx < this->Input_states.size()) {
-					x_t.row(i) = this->Input_states[idx].row(timestep);
-				}
-			}
-
-			// Если timestep > 0, заполняем предыдущие состояния
-			if (timestep > 0) {
-				for (size_t i = 0; i < this->Batch_size; ++i) {
-					size_t idx = Batchstep * this->Batch_size + i;
-					if (idx < this->Hidden_states.size()) {
-						h_t_l.row(i) = this->Hidden_states[idx].row(timestep - 1);
-						c_t_l.row(i) = this->Cell_states[idx].row(timestep - 1);
-					}
-				}
-			}
-
-			// Объединённые веса и смещения
-			MatrixXld W_x(this->Input_size, 4 * this->Hidden_size);
-			W_x << this->W_F_I, this->W_I_I, this->W_C_I, this->W_O_I;
-
-			MatrixXld W_h(this->Hidden_size, 4 * this->Hidden_size);
-			W_h << this->W_F_H, this->W_I_H, this->W_C_H, this->W_O_H;
-
-			RowVectorXld b(4 * this->Hidden_size);
-			b << this->B_F, this->B_I, this->B_C, this->B_O;
-
-			// Расчет Z и разделение на ворота
-			MatrixXld Z_t = x_t * W_x + h_t_l * W_h;
-			Z_t.rowwise() += b;
-
-			MatrixXld f_t = ActivationFunctions::Sigmoid(Z_t.leftCols(this->Hidden_size));
-			MatrixXld i_t = ActivationFunctions::Sigmoid(Z_t.middleCols(this->Hidden_size, this->Hidden_size));
-			MatrixXld c_t_bar = ActivationFunctions::Tanh(Z_t.middleCols(2 * this->Hidden_size, this->Hidden_size));
-			MatrixXld o_t = ActivationFunctions::Sigmoid(Z_t.rightCols(this->Hidden_size));
-
-			MatrixXld new_c_t = f_t.array() * c_t_l.array() + i_t.array() * c_t_bar.array();
-			MatrixXld new_h_t = o_t.array() * ActivationFunctions::Tanh(new_c_t).array();
-
-			// Убедимся, что состояние достаточно расширено
-			size_t total_sequences = this->Input_states.size();
-			this->Hidden_states.resize(total_sequences);
-			this->Cell_states.resize(total_sequences);
-			this->FG_states.resize(total_sequences);
-			this->IG_states.resize(total_sequences);
-			this->CT_states.resize(total_sequences);
-			this->OG_states.resize(total_sequences);
-
-			for (size_t i = 0; i < total_sequences; ++i) {
-				size_t T = timestep + 1;
-				if (this->Hidden_states[i].rows() < T) this->Hidden_states[i].conservativeResize(T, this->Hidden_size);
-				if (this->Cell_states[i].rows() < T) this->Cell_states[i].conservativeResize(T, this->Hidden_size);
-				if (this->FG_states[i].rows() < T) this->FG_states[i].conservativeResize(T, this->Hidden_size);
-				if (this->IG_states[i].rows() < T) this->IG_states[i].conservativeResize(T, this->Hidden_size);
-				if (this->CT_states[i].rows() < T) this->CT_states[i].conservativeResize(T, this->Hidden_size);
-				if (this->OG_states[i].rows() < T) this->OG_states[i].conservativeResize(T, this->Hidden_size);
-			}
-
-			// Сохранение состояний
-			for (size_t i = 0; i < this->Batch_size; ++i) {
-				size_t idx = Batchstep * this->Batch_size + i;
-				if (idx < total_sequences) {
-					this->Hidden_states[idx].row(timestep) = new_h_t.row(i);
-					this->Cell_states[idx].row(timestep) = new_c_t.row(i);
-					this->FG_states[idx].row(timestep) = f_t.row(i);
-					this->IG_states[idx].row(timestep) = i_t.row(i);
-					this->CT_states[idx].row(timestep) = c_t_bar.row(i);
-					this->OG_states[idx].row(timestep) = o_t.row(i);
-				}
-			}
-		}
-
 		void Batch_All_state_Сalculation() {
 			size_t total_sequences = this->Input_states.size();
 			if (total_sequences == 0) return;
@@ -1049,20 +976,20 @@ protected:
 			b << this->B_F, this->B_I, this->B_C, this->B_O;
 
 			// Подготовка хранилищ состояний
-			this->Hidden_states.resize(total_sequences);
-			this->Cell_states.resize(total_sequences);
-			this->FG_states.resize(total_sequences);
-			this->IG_states.resize(total_sequences);
-			this->CT_states.resize(total_sequences);
-			this->OG_states.resize(total_sequences);
+			statesForgrads.f.resize(total_sequences);
+			statesForgrads.i.resize(total_sequences);
+			statesForgrads.ccond.resize(total_sequences);
+			statesForgrads.o.resize(total_sequences);
+			statesForgrads.c.resize(total_sequences);
+			statesForgrads.h.resize(total_sequences);
 
 			for (size_t i = 0; i < total_sequences; ++i) {
-				this->Hidden_states[i] = MatrixXld::Zero(sequence_length, this->Hidden_size);
-				this->Cell_states[i] = MatrixXld::Zero(sequence_length, this->Hidden_size);
-				this->FG_states[i] = MatrixXld::Zero(sequence_length, this->Hidden_size);
-				this->IG_states[i] = MatrixXld::Zero(sequence_length, this->Hidden_size);
-				this->CT_states[i] = MatrixXld::Zero(sequence_length, this->Hidden_size);
-				this->OG_states[i] = MatrixXld::Zero(sequence_length, this->Hidden_size);
+				statesForgrads.f[i] = MatrixXld::Zero(sequence_length, this->Hidden_size);
+				statesForgrads.i[i] = MatrixXld::Zero(sequence_length, this->Hidden_size);
+				statesForgrads.ccond[i] = MatrixXld::Zero(sequence_length, this->Hidden_size);
+				statesForgrads.o[i] = MatrixXld::Zero(sequence_length, this->Hidden_size);
+				statesForgrads.c[i] = MatrixXld::Zero(sequence_length, this->Hidden_size);
+				statesForgrads.h[i] = MatrixXld::Zero(sequence_length, this->Hidden_size);
 			}
 
 			size_t num_batches = (total_sequences + this->Batch_size - 1) / this->Batch_size;
@@ -1080,8 +1007,8 @@ protected:
 						if (idx < total_sequences) {
 							x_t.row(i) = this->Input_states[idx].row(timestep);
 							if (timestep > 0) {
-								h_t_l.row(i) = this->Hidden_states[idx].row(timestep - 1);
-								c_t_l.row(i) = this->Cell_states[idx].row(timestep - 1);
+								c_t_l.row(i) = this->statesForgrads.c[idx].row(timestep - 1);
+								h_t_l.row(i) = this->statesForgrads.h[idx].row(timestep - 1);
 							}
 						}
 					}
@@ -1102,22 +1029,32 @@ protected:
 					for (size_t i = 0; i < this->Batch_size; ++i) {
 						size_t idx = Batchstep * this->Batch_size + i;
 						if (idx < total_sequences) {
-							this->Hidden_states[idx].row(timestep) = new_h_t.row(i);
-							this->Cell_states[idx].row(timestep) = new_c_t.row(i);
-							this->FG_states[idx].row(timestep) = f_t.row(i);
-							this->IG_states[idx].row(timestep) = i_t.row(i);
-							this->CT_states[idx].row(timestep) = c_t_bar.row(i);
-							this->OG_states[idx].row(timestep) = o_t.row(i);
+							statesForgrads.f[idx].row(timestep) = f_t.row(i);
+							statesForgrads.i[idx].row(timestep) = i_t.row(i);
+							statesForgrads.ccond[idx].row(timestep) = c_t_bar.row(i);
+							statesForgrads.o[idx].row(timestep) = o_t.row(i);
+							statesForgrads.c[idx].row(timestep) = new_c_t.row(i);
+							statesForgrads.h[idx].row(timestep) = new_h_t.row(i);
+							
 						}
 					}
 				}
 			}
 		}
+private:
+
+	struct states_forgrads {
+		std::vector<MatrixXld> f, i, ccond, o, c, h;
+	};
+
+	states_forgrads statesForgrads;
+
 	};
 
 	class BiLSTM_ForTrain : public BiLSTM {
+		friend class Seq2SeqWithAttention_ForTrain;
 	public:
-		BiLSTM_ForTrain(size_t Batch_size_ = 32, Eigen::Index Number_states = 1, Eigen::Index Hidden_size_ = 10)
+		BiLSTM_ForTrain(size_t Batch_size_, Eigen::Index Number_states, Eigen::Index Hidden_size_)
 			: BiLSTM(Number_states, Hidden_size_),
 			Forward(Batch_size_, Number_states, Hidden_size_),
 			Backward(Batch_size_, Number_states, Hidden_size_),
@@ -1142,7 +1079,7 @@ protected:
 			//Hidden_states = MatrixXld::Zero(1, Hidden_size_);
 		}
 
-		//BiLSTM_ForTrain() = default;
+		BiLSTM_ForTrain() = default;
 
 		~BiLSTM_ForTrain() {
 			this->Save("BiLSTM_state_ForTrain.txt");
@@ -1152,10 +1089,10 @@ protected:
 			this->Forward.Batch_All_state_Сalculation();
 			this->Backward.Batch_All_state_Сalculation();
 			Common_Hidden_states.clear();
-			Common_Hidden_states.resize(Forward.Hidden_states.size());
-			for (size_t i = 0; i < Forward.Hidden_states.size(); ++i) {
-				const auto& Hf = Forward.Hidden_states[i];  // [T × H]
-				const auto& Hb = Backward.Hidden_states[i]; // [T × H], но обратный порядок
+			Common_Hidden_states.resize(Forward.statesForgrads.h.size());
+			for (size_t i = 0; i < Forward.statesForgrads.h.size(); ++i) {
+				const auto& Hf = Forward.statesForgrads.h[i];  // [T × H]
+				const auto& Hb = Backward.statesForgrads.h[i]; // [T × H], но обратный порядок
 				size_t T = Hf.rows();
 				MatrixXld concat(T, 2 * this->Common_Hidden_size);
 				for (size_t t = 0; t < T; ++t) {
@@ -1175,10 +1112,14 @@ protected:
 		friend class Seq2SeqWithAttention_ForTrain;
 		using BiLSTM_ForTrain::SetInput_states;
 		using BiLSTM_ForTrain::Common_Hidden_states;
+		using BiLSTM_ForTrain::Common_Input_states;
+		using BiLSTM_ForTrain::Common_Hidden_size;
+		using BiLSTM_ForTrain::Common_Input_size;
 
 		Encoder(size_t batch_size, Eigen::Index input_size, Eigen::Index hidden_size)
 			: BiLSTM_ForTrain(batch_size, input_size, hidden_size) {
 		}
+
 		Encoder() = default;
 
 		void Encode(const std::vector<MatrixXld>& input_sequence_batch) {
@@ -1190,16 +1131,25 @@ protected:
 			return this->Common_Hidden_states;
 		}
 
+		std::vector<Eigen::Index> Get_LenghtsInputStates() {
+			std::vector<Eigen::Index> N;
+			for (auto& inp : this->Common_Input_states) {
+				N.push_back(inp.cols());
+			}
+		}
 	};
 
 	class Decoder : public Seq2SeqWithAttention::Decoder, public SimpleLSTM_ForTrain{
+		struct states_forgrads {
+			std::vector<MatrixXld> f, i, o, ccond, c, h, context, z, x, p, p_;
+		};
+		states_forgrads StatesForgrads;
+
 		friend class Seq2SeqWithAttention_ForTrain;
 
 		using SimpleLSTM_ForTrain::Input_states;
 		using SimpleLSTM_ForTrain::Input_size;
 		using SimpleLSTM_ForTrain::Hidden_size;
-		using SimpleLSTM_ForTrain::Hidden_states;
-		using SimpleLSTM_ForTrain::Cell_states;
 
 		using SimpleLSTM_ForTrain::W_F_H;  // Forget gate hidden state weights
 		using SimpleLSTM_ForTrain::W_I_H;  // Input gate hidden state weights
@@ -1217,120 +1167,151 @@ protected:
 		using SimpleLSTM_ForTrain::B_O;  // Матрица 1xHidden_size
 
 	public:
-		/*Decoder(std::shared_ptr</*Attention*//*BahdanauAttention> attention_module,
-			size_t Batch_size,
-			Eigen::Index Number_states,   // = H_emb + 2H_enc
-			Eigen::Index Hidden_size_, Eigen::Index embedding_dim_)
-			: Seq2SeqWithAttention::Decoder(std::move(attention_module), Number_states, Hidden_size_, embedding_dim_),
-			SimpleLSTM_ForTrain(Batch_size, Number_states, Hidden_size_)
+		
+		/*void Batch_All_state_Сalculation(
+			const std::vector<MatrixXld>& encoder_outputs,
+			const std::vector<MatrixXld>& teacher_inputs,        // [B][T_dec x emb_dim]
+			const std::vector<std::vector<bool>>& loss_mask,     // [B][T_dec]
+			long double teacher_forcing_ratio)
 		{
-			// теперь SimpleLSTM::Input_size = Number_states, Hidden_size = Hidden_size_
 		}*/
 
-		// --- Настройка целей для обучения ---
-		void SetTargets(const std::vector<MatrixXld>& targets) {
-			target_outputs_ = targets;
-		}
+		void All_state_Calculation() {
+			if (this->encoder_outputs.empty()) return;
 
-		const std::vector<MatrixXld>& GetTargets() const {
-			return target_outputs_;
-		}
+			auto apply_layernorm = [this](const RowVectorXld& x) -> RowVectorXld {
+				long double mean = x.mean();
+				long double variance = (x.array() - mean).square().mean();
+				return ((x.array() - mean) / std::sqrt(variance + 1e-5L)).matrix().array() * layernorm_gamma.array() + layernorm_beta.array();
+				};
 
-		// --- Результаты прямого прохода ---
-		std::vector<MatrixXld> logits;  // [B][T_dec x output_size]
+			auto l2_normalize = [](const RowVectorXld& x) -> RowVectorXld {
+				long double norm = std::sqrt(x.squaredNorm() + 1e-8L);
+				return x / norm;
+				};
 
-		const std::vector<MatrixXld>& GetLogits() const { return logits; }
-		
-		void Batch_All_state_Сalculation() {
-			if (Input_states.empty() || encoder_outputs.empty()) return;
+			// --- Lambda: Масштабирование по max(abs)
+			auto normalize_scale = [](RowVectorXld& vec) {
+				long double maxval = vec.cwiseAbs().maxCoeff();
+				if (maxval > 0.0L) vec /= maxval;
+				};
 
 			// Очистка
-			logits.clear();
-			context_vectors.clear();
-			U_state.clear();
-			Hidden_states.clear();
-			Cell_states.clear();
+			Output_state.clear();
+			this->StatesForgrads.context.clear();
+			this->StatesForgrads.x.clear();
+			this->StatesForgrads.p.clear();
+			this->StatesForgrads.p_.clear();
+			this->StatesForgrads.z.clear();
+			this->StatesForgrads.f.clear();
+			this->StatesForgrads.i.clear();
+			this->StatesForgrads.o.clear();
+			this->StatesForgrads.ccond.clear(); 
+			this->StatesForgrads.c.clear();
+			this->StatesForgrads.h.clear();
 			attention_->ClearCache();
 
-			const size_t batch_size = Input_states.size();
-			const size_t T_dec = Input_states[0].rows();
-			const size_t enc_dim = encoder_outputs[0].cols();
-			const size_t H = Hidden_size;
-			const size_t E = output_size;
-			const size_t C = enc_dim;
-			const size_t D = H + C;
+			size_t batch_size = encoder_outputs.size();
+			Output_state.resize(batch_size);
+			this->StatesForgrads.context.resize(batch_size);
+			this->StatesForgrads.x.resize(batch_size);
+			this->StatesForgrads.p.resize(batch_size);
+			this->StatesForgrads.p_.resize(batch_size);
+			this->StatesForgrads.z.resize(batch_size);
+			this->StatesForgrads.f.resize(batch_size);
+			this->StatesForgrads.i.resize(batch_size);
+			this->StatesForgrads.o.resize(batch_size);
+			this->StatesForgrads.ccond.resize(batch_size);
+			this->StatesForgrads.c.resize(batch_size);
+			this->StatesForgrads.h.resize(batch_size);
 
-			// Подготовка выходных контейнеров
-			logits.resize(batch_size, MatrixXld::Zero(T_dec, E));
-			context_vectors.resize(batch_size, MatrixXld::Zero(T_dec, C));
-			U_state.resize(batch_size, MatrixXld::Zero(T_dec, D));
-			Hidden_states.resize(batch_size, MatrixXld::Zero(T_dec, H));
-			Cell_states.resize(batch_size, MatrixXld::Zero(T_dec, H));
-
-			// Собираем объединённые веса вне цикла
-			MatrixXld W_x(Input_size, 4 * H);
+			// Общие веса
+			MatrixXld W_x(Input_size, 4 * Hidden_size);
 			W_x << W_F_I, W_I_I, W_C_I, W_O_I;
-			MatrixXld W_h(H, 4 * H);
+
+			MatrixXld W_h(Hidden_size, 4 * Hidden_size);
 			W_h << W_F_H, W_I_H, W_C_H, W_O_H;
-			RowVectorXld b(4 * H);
+
+			RowVectorXld b(4 * Hidden_size);
 			b << B_F, B_I, B_C, B_O;
 
-			// По батчам
 			for (size_t n = 0; n < batch_size; ++n) {
-				RowVectorXld h_prev = RowVectorXld::Zero(H);
-				RowVectorXld c_prev = RowVectorXld::Zero(H);
+				const auto& enc_out = encoder_outputs[n];
+				std::vector<RowVectorXld> y_sequence;
 
-				for (size_t t = 0; t < T_dec; ++t) {
-					// 1) Attention
-					const MatrixXld& H_enc = encoder_outputs[n];
-					RowVectorXld context = attention_->ComputeContext(H_enc, h_prev);
-					context_vectors[n].row(t) = context;
+				RowVectorXld y_prev = start_token;
+				RowVectorXld h_prev = RowVectorXld::Zero(Hidden_size);
+				RowVectorXld c_prev = RowVectorXld::Zero(Hidden_size);
 
-					// 2) Собираем вход декодера: y_prev||context
-					RowVectorXld y_prev = Input_states[n].row(t);
-					// L2-нормализация
-					long double norm = std::sqrt(y_prev.squaredNorm() + 1e-8L);
-					y_prev /= norm;
-					RowVectorXld dec_in(D);
-					dec_in << y_prev, context;
+				for (size_t t = 0; t < max_steps; ++t) {
+					RowVectorXld context = attention_->ComputeContext(enc_out, h_prev);
 
-					// 3) LSTM-шаг
-					RowVectorXld Z = dec_in * W_x + h_prev * W_h + b;
-					auto f_t = ActivationFunctions::Sigmoid(Z.leftCols(H));
-					auto i_t = ActivationFunctions::Sigmoid(Z.middleCols(H, H));
-					auto c_bar = ActivationFunctions::Tanh(Z.middleCols(2 * H, H));
-					auto o_t = ActivationFunctions::Sigmoid(Z.rightCols(H));
+					RowVectorXld decoder_input(Input_size);
+					decoder_input << y_prev, context;
+					decoder_input = l2_normalize(decoder_input);
+
+					RowVectorXld Z = decoder_input * W_x + h_prev * W_h + b;
+
+					RowVectorXld f_t = ActivationFunctions::Sigmoid(Z.leftCols(Hidden_size));
+					RowVectorXld i_t = ActivationFunctions::Sigmoid(Z.middleCols(Hidden_size, Hidden_size));
+					RowVectorXld c_bar = ActivationFunctions::Tanh(Z.middleCols(2 * Hidden_size, Hidden_size));
+					RowVectorXld o_t = ActivationFunctions::Sigmoid(Z.rightCols(Hidden_size));
+
 					RowVectorXld c_t = f_t.array() * c_prev.array() + i_t.array() * c_bar.array();
 					RowVectorXld h_t = o_t.array() * ActivationFunctions::Tanh(c_t).array();
-					Hidden_states[n].row(t) = h_t;
-					Cell_states[n].row(t) = c_t;
+
+					RowVectorXld proj_input_(Hidden_size + context.size());
+					proj_input_ << h_t, context;
+					auto proj_input = apply_layernorm(proj_input_);
+
+					RowVectorXld y_t = proj_input * W_output.transpose() + b_output;
+					y_sequence.push_back(y_t);
+
+					this->StatesForgrads.f[n].row(t) = f_t;
+					this->StatesForgrads.i[n].row(t) = i_t;
+					this->StatesForgrads.ccond[n].row(t) = c_bar;
+					this->StatesForgrads.o[n].row(t) = o_t;
+					this->StatesForgrads.c[n].row(t) = c_t;
+					this->StatesForgrads.h[n].row(t) = h_t;
+
+					this->StatesForgrads.context[n].row(t) = context;
+					this->StatesForgrads.x[n].row(t) = decoder_input;
+					this->StatesForgrads.p[n].row(t) = proj_input_;
+					this->StatesForgrads.p_[n].row(t) = proj_input;
+					this->StatesForgrads.z[n].row(t) = Z;
+
+					if (IsEndToken(y_t)) {
+						/*size_t end_len = static_cast<size_t>(end_token.rows());
+						if (y_sequence.size() >= end_len - 1) {
+							y_sequence.resize(y_sequence.size() - (end_len - 1));
+							context_sequence.resize(context_sequence.size() - (end_len - 1));
+							u_sequence.resize(u_sequence.size() - (end_len - 1));
+						}*/
+						break;
+					}
+
+					y_prev = y_t;
 					h_prev = h_t;
 					c_prev = c_t;
+				}
 
-					// 4) Проекции + LayerNorm
-					RowVectorXld proj(D);
-					proj << h_t, context;
-					// LayerNorm
-					long double mean = proj.mean();
-					long double var = (proj.array() - mean).square().mean();
-					proj = ((proj.array() - mean) / std::sqrt(var + 1e-5L)).matrix().array().cwiseProduct(layernorm_gamma.array())
-						+ layernorm_beta.array();
-					U_state[n].row(t) = proj;
+				// Преобразуем в матрицы
+				Eigen::Index T = static_cast<Eigen::Index>(y_sequence.size());
+				Eigen::Index D = static_cast<Eigen::Index>(y_sequence[0].cols());
 
-					// 5) Логиты
-					logits[n].row(t) = proj * W_output.transpose() + b_output;
+				Output_state[n] = MatrixXld(T, D);
+				
+				for (Eigen::Index t = 0; t < T; ++t) {
+					Output_state[n].row(t) = y_sequence[t];
 				}
 			}
 		}
-
-
-	private:
-		std::vector<MatrixXld> target_outputs_;  // [B][T_dec x Output_dim]
 	};
 
 	Seq2SeqWithAttention_ForTrain( std::unique_ptr<Encoder> encoder_train = std::make_unique<Encoder>(), std::unique_ptr<Decoder> decoder_train = std::make_unique<Decoder>())
 		: Seq2SeqWithAttention(std::move(encoder_train), std::move(decoder_train)) {
 	}
+	
 	struct grads_Seq2SeqWithAttention {
 		MatrixXld dW_out; MatrixXld dB_out;
 
@@ -1352,18 +1333,14 @@ protected:
 		MatrixXld dW_i_back_enc, dU_i_back_enc; MatrixXld dB_i_back_enc;
 		MatrixXld dW_c_back_enc, dU_c_back_enc; MatrixXld dB_c_back_enc;
 		MatrixXld dW_o_back_enc, dU_o_back_enc; MatrixXld dB_o_back_enc;
-
-		MatrixXld && get_dB_out(const MatrixXld & Y, const MatrixXld& Y_true) {
-			return std::move(Y_true - Y);
-		}
-		MatrixXld&& get_dW_out(const MatrixXld & dB_out, const MatrixXld & U_state) {
-			return std::move(dB_out.transpose() * U_state);
-		}
-		MatrixXld&& get_dW_out(const MatrixXld& dB_out, const MatrixXld& U_state) {
-			return std::move(dB_out.transpose() * U_state);
-		}
 	};
-	grads_Seq2SeqWithAttention Backward() {
+
+	struct states_forgrads {
+		MatrixXld f_enc_forw, i_enc_forw, ccond_enc_forw, o_enc_forw, c_enc_forw;
+		MatrixXld f_enc_back, i_enc_back, ccond_enc_back, o_enc_back, c_enc_back;
+	};
+
+	grads_Seq2SeqWithAttention Backward(size_t Number_InputState, MatrixXld Y_True) {
 		grads_Seq2SeqWithAttention grads;
 		{
 			Eigen::Index E = this->decoder_->output_size;
@@ -1395,9 +1372,133 @@ protected:
 			grads.dW_c_back_enc.conservativeResize(HE, EE), grads.dU_c_back_enc.conservativeResize(HE, HE), grads.dB_c_back_enc.conservativeResize(1, HE),
 			grads.dW_o_back_enc.conservativeResize(HE, EE), grads.dU_o_back_enc.conservativeResize(HE, HE), grads.dB_o_back_enc.conservativeResize(1, HE);
 		}
-		Eigen::Index T = this->GetDecoderOutputs()[0].cols();
 
+		Eigen::Index T = std::min(this->GetDecoderOutputs()[Number_InputState].cols(), Y_True.cols());
+		Eigen::Index N = this->encoder_->Get_LenghtsInputStates()[Number_InputState];
+
+		RowVectorXld _dC_t = RowVectorXld::Zero(this->decoder_->Hidden_size);
+		for (Eigen::Index t = T; t >= 0; t--) {
+			RowVectorXld dY_t = Y_True.row(t) - this->GetDecoderOutputs()[Number_InputState].row(t); //Y_true_t - Y_t
+			MatrixXld DW_out_t = dY_t * this->decoder_->StatesForgrads.p_[Number_InputState].row(t).transpose();
+			RowVectorXld dp__t = this->decoder_->W_output.transpose() * dY_t;
+			RowVectorXld DB_out_t = std::move(dY_t);
+
+			RowVectorXld dS_t = dp__t.leftCols(this->decoder_->Hidden_size);
+			RowVectorXld dContext_t = dp__t.middleCols(this->decoder_->Hidden_size, dp__t.cols() - this->decoder_->Hidden_size);
+
+			RowVectorXld DGamma_t = dp__t.array() * this->decoder_->StatesForgrads.p_[Number_InputState].row(t).array();
+			RowVectorXld DBeta_t = dp__t;
+
+			RowVectorXld F_t = this->decoder_->StatesForgrads.f[Number_InputState].row(t);
+			RowVectorXld I_t = this->decoder_->StatesForgrads.i[Number_InputState].row(t);
+			RowVectorXld Ccond_t = this->decoder_->StatesForgrads.ccond[Number_InputState].row(t);
+			RowVectorXld O_t = this->decoder_->StatesForgrads.o[Number_InputState].row(t);
+			RowVectorXld C_t = this->decoder_->StatesForgrads.c[Number_InputState].row(t);
+			RowVectorXld C_t_l;
+			if (t == 0) {
+				C_t_l = RowVectorXld::Zero(this->decoder_->StatesForgrads.c[Number_InputState].row(t).cols());
+			}
+			else {
+				C_t_l = this->decoder_->StatesForgrads.c[Number_InputState].row(t - 1);
+			}
+			
+			RowVectorXld dO_t = dS_t.array() * ActivationFunctions::Tanh(C_t).array() * O_t.array() * (MatrixXld::Constant((O_t).size(), 1) - O_t).array();
+			RowVectorXld dC_t = dS_t.array() * O_t.array() * 
+				(MatrixXld::Constant((C_t * C_t).size(), 1) - ActivationFunctions::Tanh(C_t) * ActivationFunctions::Tanh(C_t)).array() + 
+				_dC_t.array() * F_t.array();
+			RowVectorXld dCcond_t = dC_t.array() * I_t.array() * (MatrixXld::Constant((Ccond_t * Ccond_t).size(), 1) - Ccond_t * Ccond_t).array();
+			RowVectorXld dI_t = dC_t.array() * I_t.array() * Ccond_t.array() * (MatrixXld::Constant((I_t).size(), 1) - I_t).array();
+			RowVectorXld dF_t = dC_t.array() * C_t_l.array() * F_t.array() * (MatrixXld::Constant((F_t).size(), 1) - F_t).array();
+
+			RowVectorXld dGates_t(4 * this->decoder_->Hidden_size);
+			dGates_t  << dF_t, dI_t, dCcond_t, dO_t;
+
+			MatrixXld DW_dec_t = this->decoder_->StatesForgrads.x[Number_InputState].row(t).transpose() * dGates_t;
+			MatrixXld DU_dec_t;
+			if (t == 0) {
+				DU_dec_t = MatrixXld::Zero(this->decoder_->StatesForgrads.h[Number_InputState].row(t).cols(), 4 * this->decoder_->Hidden_size);
+			}
+			else {
+				DU_dec_t = this->decoder_->StatesForgrads.h[Number_InputState].row(t - 1).transpose() * dGates_t;
+			}
+			VectorXld DB_dec_t = dGates_t;
+
+			std::vector<MatrixXld> _dH_back;
+			RowVectorXld Enc_Forw_dC_t = RowVectorXld::Zero(this->encoder_->Common_Hidden_size);
+			for (Eigen::Index j = N - 1; j >= 0; --j) {
+				RowVectorXld h_j = this->encoder_->Common_Hidden_states[Number_InputState].row(j);
+				RowVectorXld s_t_1 = (t > 0) ? this->decoder_->StatesForgrads.h[Number_InputState].row(t - 1)
+					: RowVectorXld::Zero(this->decoder_->Hidden_size);
+
+				long double alpha_j = this->decoder_->attention_->all_attention_weights_[t](j);
+				long double dAlpha_j = dContext_t.dot(h_j);
+
+				long double dE_tj = 0.0;
+				for (int k = 0; k < N; ++k) {
+					long double alpha_k = this->decoder_->attention_->all_attention_weights_[t](k);
+					RowVectorXld h_k = this->encoder_->Common_Hidden_states[Number_InputState].row(k);
+					long double dAlpha_k = dContext_t.dot(h_k);
+
+					dE_tj += dAlpha_k * alpha_k * ((j == k) - alpha_j);  // ∂α_k / ∂e_j
+				}
+
+				RowVectorXld u_tj = this->decoder_->attention_->all_tanh_outputs_[t][j];
+				RowVectorXld dU_tj = dE_tj * this->decoder_->attention_->attention_vector_.transpose();  // [1 x A]
+				RowVectorXld dPreact_tj = dU_tj.array() * (1.0 - u_tj.array().square());
+
+				MatrixXld DW_att_enc_tj = dPreact_tj.transpose() * h_j;   // [A x 1] * [1 x H_enc]
+				MatrixXld DW_att_dec_tj = dPreact_tj.transpose() * s_t_1; // [A x 1] * [1 x H_dec]
+				MatrixXld DV_att_tj = u_tj.transpose() * dE_tj;       // [A x 1]
+
+				MatrixXld dH_j = dContext_t * alpha_j + this->decoder_->attention_->W_decoder_.transpose() * dU_tj;
+				RowVectorXld dH_forw_j = dH_j.leftCols(this->encoder_->Common_Hidden_size);
+				RowVectorXld dH_back_j = dH_j.rightCols(this->encoder_->Common_Hidden_size);
+
+				_dH_back.push_back(dH_back_j);
+
+				
+				RowVectorXld Enc_Forw_F_j = this->encoder_->Forward->StatesForgrads.f[Number_InputState].row(j);
+				RowVectorXld Enc_Forw_I_j = this->encoder_->Forward->StatesForgrads.i[Number_InputState].row(j);
+				RowVectorXld Enc_Forw_Ccond_j = this->encoder_->Forward->StatesForgrads.ccond[Number_InputState].row(j);
+				RowVectorXld Enc_Forw_O_j = this->encoder_->Forward->StatesForgrads.o[Number_InputState].row(j);
+				RowVectorXld Enc_Forw_C_j = this->encoder_->Forward->StatesForgrads.c[Number_InputState].row(j);
+				RowVectorXld Enc_Forw_C_j_l;
+				if (j == 0) {
+					Enc_Forw_C_j_l = RowVectorXld::Zero(this->encoder_->Forward->StatesForgrads.c[Number_InputState].row(j).cols());
+				}
+				else {
+					Enc_Forw_C_j_l = this->encoder_->Forward->StatesForgrads.c[Number_InputState].row(j - 1);
+				}
+
+				RowVectorXld dEnc_Forw_O_j = dH_forw_j.array() * ActivationFunctions::Tanh(Enc_Forw_C_j).array() * Enc_Forw_O_j.array() * (MatrixXld::Constant((Enc_Forw_O_j).size(), 1) - Enc_Forw_O_j).array();
+				RowVectorXld dEnc_Forw_C_j = dH_forw_j.array() * Enc_Forw_O_j.array() *
+					(MatrixXld::Constant((Enc_Forw_C_j * Enc_Forw_C_j).size(), 1) - ActivationFunctions::Tanh(Enc_Forw_C_j) * ActivationFunctions::Tanh(Enc_Forw_C_j)).array() +
+					Enc_Forw__dC_j.array() * Enc_Forw_F_j.array();
+				RowVectorXld dEnc_Forw_Ccond_j = dEnc_Forw_C_j.array() * Enc_Forw_I_j.array() * (MatrixXld::Constant((Enc_Forw_Ccond_j * Enc_Forw_Ccond_j).size(), 1) - Enc_Forw_Ccond_j * Enc_Forw_Ccond_j).array();
+				RowVectorXld dEnc_Forw_I_j = dEnc_Forw_C_j.array() * Enc_Forw_I_j.array() * Enc_Forw_Ccond_j.array() * (MatrixXld::Constant((Enc_Forw_I_j).size(), 1) - Enc_Forw_I_j).array();
+				RowVectorXld dEnc_Forw_F_j = dEnc_Forw_C_j.array() * Enc_Forw_C_j_l.array() * Enc_Forw_F_j.array() * (MatrixXld::Constant((Enc_Forw_F_j).size(), 1) - Enc_Forw_F_j).array();
+
+				RowVectorXld dEnc_Forw_Gates_j(4 * this->encoder->Common_Hidden_size);
+				dEnc_Forw_Gates_j << dEnc_Forw_F_j, dEnc_Forw_I_j, dEnc_Forw_Ccond_j, dEnc_Forw_O_j;
+
+				MatrixXld DW_Enc_Forw_j = this->encoder_->Common_Input_states.row(t).transpose() * dEnc_Forw_Gates_j;
+				MatrixXld DU_Enc_Forw_j;
+				if (t == 0) {
+					DU_Enc_Forw_j = MatrixXld::Zero(this->encoder_->Forward->StatesForgrads.h[Number_InputState].row(j).cols(), 4 * this->encoder->Common_Hidden_size);
+				}
+				else {
+					DU_Enc_Forw_j = this->encoder_->Forward->StatesForgrads.h[Number_InputState].row(j - 1).transpose() * dEnc_Forw_Gates_j;
+				}
+				VectorXld DB_Enc_Forw_j = dEnc_Forw_Gates_j;
+			}
+
+		}
 	}
+	std::unique_ptr<Encoder> encoder_;
+	std::unique_ptr<Decoder> decoder_;
+
+	std::vector<MatrixXld> Target_outputs;  // [B][T_dec x Output_dim]
+
 };
 
 
