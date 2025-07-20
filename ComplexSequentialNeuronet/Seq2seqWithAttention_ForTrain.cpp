@@ -5,7 +5,7 @@ Seq2SeqWithAttention_ForTrain::Seq2SeqWithAttention_ForTrain(std::unique_ptr<Enc
 }
 
   
-Seq2SeqWithAttention_ForTrain::Backward(size_t Number_InputState, MatrixXld Y_True) {
+Seq2SeqWithAttention_ForTrain::grads_Seq2SeqWithAttention Seq2SeqWithAttention_ForTrain::Backward(size_t Number_InputState, MatrixXld Y_True) {
 	grads_Seq2SeqWithAttention grads;
 	{
 		Eigen::Index E = this->decoder_->output_size;
