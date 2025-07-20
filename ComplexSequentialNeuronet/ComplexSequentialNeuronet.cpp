@@ -602,6 +602,7 @@ public:
 		MatrixXld attention_vector_; // [A x 1]
 
 	};
+private:
 	class Encoder : public BiLSTM {
 	public:
 		friend class Seq2SeqWithAttention_ForTrain;
@@ -793,6 +794,7 @@ public:
 			}
 		}
 	};
+public:
 
 	template<typename EncoderT, typename DecoderT>
 	Seq2SeqWithAttention(
@@ -1481,7 +1483,7 @@ private:
 				RowVectorXld dEnc_Forw_Gates_j(4 * this->encoder->Common_Hidden_size);
 				dEnc_Forw_Gates_j << dEnc_Forw_F_j, dEnc_Forw_I_j, dEnc_Forw_Ccond_j, dEnc_Forw_O_j;
 
-				MatrixXld DW_Enc_Forw_j = this->encoder_->Common_Input_states.row(t).transpose() * dEnc_Forw_Gates_j;
+				MatrixXld DW_Enc_Forw_j = this->encoder_->Common_Input_states[Number_InputState].row(t).transpose() * dEnc_Forw_Gates_j;
 				MatrixXld DU_Enc_Forw_j;
 				if (t == 0) {
 					DU_Enc_Forw_j = MatrixXld::Zero(this->encoder_->Forward->StatesForgrads.h[Number_InputState].row(j).cols(), 4 * this->encoder->Common_Hidden_size);
