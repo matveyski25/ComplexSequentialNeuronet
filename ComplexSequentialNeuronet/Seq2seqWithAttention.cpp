@@ -34,6 +34,6 @@ void Seq2SeqWithAttention::Inference(const std::vector<MatrixXld>& input_sequenc
 		decoder_->Decode(encoder_->GetEncodedHiddenStates());
 	}
 
-const std::vector<MatrixXld>& Seq2SeqWithAttention::GetOutputs() const {
+const std::vector<MatrixXld> &Seq2SeqWithAttention::GetOutputs() const {
 		return decoder_->GetOutputStates();
 	}

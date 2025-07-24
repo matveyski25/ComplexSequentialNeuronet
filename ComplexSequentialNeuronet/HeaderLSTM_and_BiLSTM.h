@@ -200,6 +200,14 @@ public:
 
 	BiLSTM_ForTrain() = default;
 
+	void SetInput_states(const std::vector<MatrixXld>& inputs);
+
+	std::vector<RowVectorXld> GetFinalHidden_ForwardBackward() const;
+
+	void Save(const std::string& filename);
+
+	void Load(const std::string& filename);
+
 	~BiLSTM_ForTrain();
 
 	void Batch_All_state_Сalculation();
@@ -241,7 +249,7 @@ public:
 	// Вычисляет контекстный вектор и сохраняет внутренние веса
 	RowVectorXld ComputeContext(const MatrixXld& encoder_outputs,
 		const RowVectorXld& decoder_prev_hidden) override;
-	void SetRandomDisplacements(long double a, long double b);
+	void SetRandomWeights(long double a, long double b);
 protected:
 	Eigen::Index encoder_hidden_size_;    // 2H
 	Eigen::Index decoder_hidden_size_;    // H_dec
@@ -249,6 +257,6 @@ protected:
 
 	MatrixXld W_encoder_;       // [A x 2H]
 	MatrixXld W_decoder_;       // [A x H_dec]
-	MatrixXld attention_vector_; // [A x 1]
+	VectorXld attention_vector_; // [A x 1]
 
 };

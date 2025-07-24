@@ -1,5 +1,24 @@
 ﻿#include "HeaderSeq2seqWithAttention.h"
 
+
+void Seq2SeqWithAttention_ForTrain::Inference()
+{
+	if (this->Input_States.empty()) { throw std::invalid_argument("Вход пустой"); }
+	encoder_->Encode(this->Input_States);
+	decoder_->Decode(encoder_->GetEncodedHiddenStates());
+}
+
+void Seq2SeqWithAttention_ForTrain::Inference(const std::vector<MatrixXld>& input_sequence_batch)
+{
+	SetInput_states(input_sequence_batch);
+	encoder_->Encode(this->Input_States);
+	decoder_->Decode(encoder_->GetEncodedHiddenStates());
+}
+
+const std::vector<MatrixXld>& Seq2SeqWithAttention_ForTrain::GetOutputs() const {
+	return decoder_->GetOutputStates();
+}
+
 Seq2SeqWithAttention_ForTrain::Seq2SeqWithAttention_ForTrain(std::unique_ptr<Encoder> encoder_train, std::unique_ptr<Decoder> decoder_train)
 	: encoder_(std::move(encoder_train)), decoder_(std::move(decoder_train)) {
 }
@@ -9,17 +28,8 @@ Seq2SeqWithAttention_ForTrain::Seq2SeqWithAttention_ForTrain(
 	Eigen::Index Output_size, RowVectorXld start_token_, MatrixXld end_token_, size_t max_steps_,
 	std::unique_ptr<BahdanauAttention> attention_, size_t batch_size)
 	:
-	encoder_(std::make_unique<Encoder>(batch_size, Input_size_, Encoder_Hidden_size_)),
-	decoder_(std::make_unique<Decoder>(std::move(attention_), Encoder_Hidden_size_, Decoder_Hidden_size_, Output_size, start_token_, end_token_, max_steps_)) {
-}
-
-Seq2SeqWithAttention_ForTrain::Seq2SeqWithAttention_ForTrain(
-	Eigen::Index Input_size_, Eigen::Index Encoder_Hidden_size_,
-	Eigen::Index Decoder_Hidden_size_, Eigen::Index Attention_size_,
-	Eigen::Index Output_size, RowVectorXld start_token_, MatrixXld end_token_, size_t max_steps_, size_t batch_size) : 
-	encoder_(std::make_unique<Encoder>(batch_size, Input_size_, Encoder_Hidden_size_)),
-	decoder_(std::make_unique<Decoder>(std::make_unique<BahdanauAttention>(Encoder_Hidden_size_, Decoder_Hidden_size_, Attention_size_), Encoder_Hidden_size_, Decoder_Hidden_size_, Output_size, start_token_, end_token_, max_steps_)) {
-
+	encoder_(std::make_unique<Seq2SeqWithAttention_ForTrain::Encoder>(batch_size, Input_size_, Encoder_Hidden_size_)),
+	decoder_(std::make_unique<Seq2SeqWithAttention_ForTrain::Decoder>(std::move(attention_), Encoder_Hidden_size_, Decoder_Hidden_size_, Output_size, start_token_, end_token_, max_steps_)) {
 }
   
 Seq2SeqWithAttention_ForTrain::grads_Seq2SeqWithAttention Seq2SeqWithAttention_ForTrain::Backward(size_t Number_InputState, MatrixXld Y_True) {
@@ -67,7 +77,7 @@ Seq2SeqWithAttention_ForTrain::grads_Seq2SeqWithAttention Seq2SeqWithAttention_F
 		RowVectorXld DB_out_t = std::move(dY_t);
 
 		RowVectorXld dS_t = dp__t.leftCols(this->decoder_->Hidden_size) + _dS_t;
-		RowVectorXld dContext_t = dp__t.middleCols(this->decoder_->Hidden_size, dp__t.cols() - this->decoder_->Hidden_size);
+		RowVectorXld dContext_t = dp__t.rightCols(this->decoder_->Hidden_size);
 
 		RowVectorXld DGamma_t = dp__t.array() * this->decoder_->StatesForgrads.p_[Number_InputState].row(t).array();
 		RowVectorXld DBeta_t = dp__t;
@@ -297,14 +307,31 @@ Seq2SeqWithAttention_ForTrain::grads_Seq2SeqWithAttention Seq2SeqWithAttention_F
 		grads.dB_ccond_dec += std::move(DB_dec_t.middleCols(2 * this->decoder_->Hidden_size, this->decoder_->Hidden_size));
 		grads.dB_o_dec += std::move(DB_dec_t.rightCols(this->decoder_->Hidden_size));
 	}
+	return grads;
 }
 
 Seq2SeqWithAttention_ForTrain::grads_Seq2SeqWithAttention Seq2SeqWithAttention_ForTrain::BackwardWithLogging(size_t Number_InputState, MatrixXld Y_True) {
 	auto check_nan_inf = [](const MatrixXld& m, const std::string& name) {
 		if (!m.allFinite()) {
-			std::cerr << "[ERROR] NaN or Inf detected in: " << name << "\n";
-		}
+			auto lyambda = [](const MatrixXld& m) {
+				int nan_count = 0;
+				int inf_count = 0;
+
+				for (int i = 0; i < m.size(); ++i) {
+					double val = *(m.data() + i);
+					if (std::isnan(val)) ++nan_count;
+					else if (std::isinf(val)) ++inf_count;
+				}
+
+				return std::make_pair(nan_count, inf_count);
+				};
+			size_t nnan = 0;
+			size_t ninf = 0;
+			[nan_count, inf_count] = lyambda(m);
+			std::cerr << "[ERROR] NaN or Inf detected in: " << name << "\tnan-inf: " << nnan << "/" << ninf << "\n";
+		} 
 		};
+
 	
 	grads_Seq2SeqWithAttention grads;
 	{
@@ -337,7 +364,7 @@ Seq2SeqWithAttention_ForTrain::grads_Seq2SeqWithAttention Seq2SeqWithAttention_F
 			grads.dW_ccond_back_enc.conservativeResize(HE, EE), grads.dU_ccond_back_enc.conservativeResize(HE, HE), grads.dB_ccond_back_enc.conservativeResize(1, HE),
 			grads.dW_o_back_enc.conservativeResize(HE, EE), grads.dU_o_back_enc.conservativeResize(HE, HE), grads.dB_o_back_enc.conservativeResize(1, HE);
 	}
-
+	
 	Eigen::Index T = std::min(this->GetOutputs()[Number_InputState].rows(), Y_True.rows());
 	Eigen::Index N = this->encoder_->Common_Input_states[Number_InputState].rows();
 
@@ -350,7 +377,7 @@ Seq2SeqWithAttention_ForTrain::grads_Seq2SeqWithAttention Seq2SeqWithAttention_F
 		RowVectorXld DB_out_t = dY_t;
 
 		RowVectorXld dS_t = dp__t.leftCols(this->decoder_->Hidden_size) + _dS_t;
-		RowVectorXld dContext_t = dp__t.middleCols(this->decoder_->Hidden_size, dp__t.cols() - this->decoder_->Hidden_size);
+		RowVectorXld dContext_t = dp__t.rightCols(this->decoder_->Hidden_size);
 
 		RowVectorXld DGamma_t = dp__t.array() * this->decoder_->StatesForgrads.p_[Number_InputState].row(t).array();
 		RowVectorXld DBeta_t = dp__t;
@@ -370,7 +397,7 @@ Seq2SeqWithAttention_ForTrain::grads_Seq2SeqWithAttention Seq2SeqWithAttention_F
 
 		RowVectorXld dO_t = dS_t.array() * ActivationFunctions::Tanh(C_t).array() * O_t.array() * (MatrixXld::Constant(O_t.rows(), O_t.cols(), 1) - O_t).array();
 		RowVectorXld dC_t = dS_t.array() * O_t.array() *
-			(MatrixXld::Constant((C_t).rows(), (C_t).cols(), 1).array() - (ActivationFunctions::Tanh(C_t).array() * ActivationFunctions::Tanh(C_t).array())) +
+			(MatrixXld::Constant(C_t.rows(), C_t.cols(), 1).array() - (ActivationFunctions::Tanh(C_t).array() * ActivationFunctions::Tanh(C_t).array())) +
 			_dC_t.array();
 		RowVectorXld dCcond_t = dC_t.array() * I_t.array() * (MatrixXld::Constant(Ccond_t.rows(), Ccond_t.cols(), 1).array() - (Ccond_t.array() * Ccond_t.array()));
 		RowVectorXld dI_t = dC_t.array() * I_t.array() * Ccond_t.array() * (MatrixXld::Constant(I_t.rows(), I_t.cols(), 1) - I_t).array();
@@ -398,23 +425,23 @@ Seq2SeqWithAttention_ForTrain::grads_Seq2SeqWithAttention Seq2SeqWithAttention_F
 		RowVectorXld Enc_Forw__dC_j = RowVectorXld::Zero(this->encoder_->Common_Hidden_size);
 		RowVectorXld Enc_Forw__dH_j = RowVectorXld::Zero(this->encoder_->Common_Hidden_size);
 
-		check_nan_inf(dY_t, "dY_t_" + t);
-		check_nan_inf(dp__t, "dp__t_" + t);
-		check_nan_inf(dS_t, "dS_t_" + t);
-		check_nan_inf(dContext_t, "dContext_t_" + t);
-		check_nan_inf(dF_t, "dF_t_" + t);
-		check_nan_inf(dI_t, "dI_t_" + t);
-		check_nan_inf(dC_t, "dC_t_" + t);
-		check_nan_inf(dO_t, "dO_t_" + t);
-		check_nan_inf(dCcond_t, "dCcond_t_" + t);
+		check_nan_inf(dY_t, "dY_t_" + std::to_string(t) + "\tstep : " + std::to_string(Number_InputState));
+		check_nan_inf(dp__t, "dp__t_" + std::to_string(t) + "\tstep : " + std::to_string(Number_InputState));
+		check_nan_inf(dS_t, "dS_t_" + std::to_string(t) + "\tstep : " + std::to_string(Number_InputState));
+		check_nan_inf(dContext_t, "dContext_t_" + std::to_string(t) + "\tstep : " + std::to_string(Number_InputState));
+		check_nan_inf(dF_t, "dF_t_" + std::to_string(t) + "\tstep : " + std::to_string(Number_InputState));
+		check_nan_inf(dI_t, "dI_t_" + std::to_string(t) + "\tstep : " + std::to_string(Number_InputState));
+		check_nan_inf(dC_t, "dC_t_" + std::to_string(t) + "\tstep : " + std::to_string(Number_InputState));
+		check_nan_inf(dO_t, "dO_t_" + std::to_string(t) + "\tstep : " + std::to_string(Number_InputState));
+		check_nan_inf(dCcond_t, "dCcond_t_" + std::to_string(t) + "\tstep : " + std::to_string(Number_InputState));
 
-		check_nan_inf(DW_out_t, "DW_out_t_" + t);
-		check_nan_inf(DB_out_t, "DB_out_t_" + t);
-		check_nan_inf(DGamma_t, "DGamma_t_" + t);
-		check_nan_inf(DBeta_t, "DBeta_t_" + t);
-		check_nan_inf(DW_dec_t, "DW_dec_t_" + t);
-		check_nan_inf(DU_dec_t, "DU_dec_t_" + t);
-		check_nan_inf(DB_dec_t, "DB_dec_t_" + t);
+		check_nan_inf(DW_out_t, "DW_out_t_" + std::to_string(t) + "\tstep : " + std::to_string(Number_InputState));
+		check_nan_inf(DB_out_t, "DB_out_t_" + std::to_string(t) + "\tstep : " + std::to_string(Number_InputState));
+		check_nan_inf(DGamma_t, "DGamma_t_" + std::to_string(t) + "\tstep : " + std::to_string(Number_InputState));
+		check_nan_inf(DBeta_t, "DBeta_t_" + std::to_string(t) + "\tstep : " + std::to_string(Number_InputState));
+		check_nan_inf(DW_dec_t, "DW_dec_t_" + std::to_string(t) + "\tstep : " + std::to_string(Number_InputState));
+		check_nan_inf(DU_dec_t, "DU_dec_t_" + std::to_string(t) + "\tstep : " + std::to_string(Number_InputState));
+		check_nan_inf(DB_dec_t, "DB_dec_t_" + std::to_string(t) + "\tstep : " + std::to_string(Number_InputState));
 
 
 		for (Eigen::Index j = N - 1; j >= 0; j--) {
@@ -515,22 +542,22 @@ Seq2SeqWithAttention_ForTrain::grads_Seq2SeqWithAttention Seq2SeqWithAttention_F
 			grads.dB_o_forw_enc += DB_Enc_Forw_j.rightCols(this->encoder_->Common_Hidden_size);
 
 			
-			check_nan_inf(dU_tj, "dU_tj_" + t + j);
-			check_nan_inf(dPreact_tj, "dPreact_tj_" + t + j);
-			check_nan_inf(dH_forw_j, "dH_forw_j_" + j);
-			check_nan_inf(dH_back_j, "dH_back_j_" + j);
-			check_nan_inf(dEnc_Forw_F_j, "dEnc_Forw_F_j_"  + j);
-			check_nan_inf(dEnc_Forw_I_j, "dEnc_Forw_I_j_"  + j);
-			check_nan_inf(dEnc_Forw_C_j, "dEnc_Forw_C_j_"  + j);
-			check_nan_inf(dEnc_Forw_Ccond_j, "dEnc_Forw_Ccond_j_"  + j);
-			check_nan_inf(dEnc_Forw_O_j, "dEnc_Forw_O_j_"  + j);
+			check_nan_inf(dU_tj, "dU_tj_" + std::to_string(t) + std::to_string(j) + "\tstep : " + std::to_string(Number_InputState));
+			check_nan_inf(dPreact_tj, "dPreact_tj_" + std::to_string(t) + std::to_string(j) + "\tstep : " + std::to_string(Number_InputState));
+			check_nan_inf(dH_forw_j, "dH_forw_j_" + std::to_string(j) + "\tstep : " + std::to_string(Number_InputState));
+			check_nan_inf(dH_back_j, "dH_back_j_" + std::to_string(j) + "\tstep : " + std::to_string(Number_InputState));
+			check_nan_inf(dEnc_Forw_F_j, "dEnc_Forw_F_j_"  + std::to_string(j) + "\tstep : " + std::to_string(Number_InputState));
+			check_nan_inf(dEnc_Forw_I_j, "dEnc_Forw_I_j_"  + std::to_string(j) + "\tstep : " + std::to_string(Number_InputState));
+			check_nan_inf(dEnc_Forw_C_j, "dEnc_Forw_C_j_"  + std::to_string(j) + "\tstep : " + std::to_string(Number_InputState));
+			check_nan_inf(dEnc_Forw_Ccond_j, "dEnc_Forw_Ccond_j_"  + std::to_string(j) + "\tstep : " + std::to_string(Number_InputState));
+			check_nan_inf(dEnc_Forw_O_j, "dEnc_Forw_O_j_"  + std::to_string(j) + "\tstep : " + std::to_string(Number_InputState));
 
-			check_nan_inf(DW_att_enc_tj, "DW_att_enc_tj_" + t + j);
-			check_nan_inf(DW_att_dec_tj, "DW_att_dec_tj_" + t + j);
-			check_nan_inf(DV_att_tj, "DV_att_tj_" + t + j);
-			check_nan_inf(DW_Enc_Forw_j, "DW_Enc_Forw_j_" + j);
-			check_nan_inf(DU_Enc_Forw_j, "DU_Enc_Forw_j_" + j);
-			check_nan_inf(DB_Enc_Forw_j, "DB_Enc_Forw_j_" + j);
+			check_nan_inf(DW_att_enc_tj, "DW_att_enc_tj_" + std::to_string(t) + std::to_string(j) + "\tstep : " + std::to_string(Number_InputState));
+			check_nan_inf(DW_att_dec_tj, "DW_att_dec_tj_" + std::to_string(t) + std::to_string(j) + "\tstep : " + std::to_string(Number_InputState));
+			check_nan_inf(DV_att_tj, "DV_att_tj_" + std::to_string(t) + std::to_string(j) + "\tstep : " + std::to_string(Number_InputState));
+			check_nan_inf(DW_Enc_Forw_j, "DW_Enc_Forw_j_" + std::to_string(j) + "\tstep : " + std::to_string(Number_InputState));
+			check_nan_inf(DU_Enc_Forw_j, "DU_Enc_Forw_j_" + std::to_string(j) + "\tstep : " + std::to_string(Number_InputState));
+			check_nan_inf(DB_Enc_Forw_j, "DB_Enc_Forw_j_" + std::to_string(j) + "\tstep : " + std::to_string(Number_InputState));
 		}
 
 		RowVectorXld Enc_Back__dC_j = RowVectorXld::Zero(this->encoder_->Common_Hidden_size);
@@ -595,15 +622,15 @@ Seq2SeqWithAttention_ForTrain::grads_Seq2SeqWithAttention Seq2SeqWithAttention_F
 			grads.dB_o_back_enc += DB_Enc_Back_j.rightCols(this->encoder_->Common_Hidden_size);
 
 			
-			check_nan_inf(dEnc_Back_F_j, "dEnc_Back_F_j_" + j);
-			check_nan_inf(dEnc_Back_I_j, "dEnc_Back_I_j_" + j);
-			check_nan_inf(dEnc_Back_C_j, "dEnc_Back_C_j_" + j);
-			check_nan_inf(dEnc_Back_Ccond_j, "dEnc_Back_Ccond_j_" + j);
-			check_nan_inf(dEnc_Back_O_j, "dEnc_Back_O_j_" + j);
+			check_nan_inf(dEnc_Back_F_j, "dEnc_Back_F_j_" + std::to_string(j) + "\tstep : " + std::to_string(Number_InputState));
+			check_nan_inf(dEnc_Back_I_j, "dEnc_Back_I_j_" + std::to_string(j) + "\tstep : " + std::to_string(Number_InputState));
+			check_nan_inf(dEnc_Back_C_j, "dEnc_Back_C_j_" + std::to_string(j) + "\tstep : " + std::to_string(Number_InputState));
+			check_nan_inf(dEnc_Back_Ccond_j, "dEnc_Back_Ccond_j_" + std::to_string(j) + "\tstep : " + std::to_string(Number_InputState));
+			check_nan_inf(dEnc_Back_O_j, "dEnc_Back_O_j_" + std::to_string(j) + "\tstep : " + std::to_string(Number_InputState));
 
-			check_nan_inf(DW_Enc_Back_j, "DW_Enc_Back_j_" + j);
-			check_nan_inf(DU_Enc_Back_j, "DU_Enc_Back_j_" + j);
-			check_nan_inf(DB_Enc_Back_j, "DB_Enc_Back_j_" + j);
+			check_nan_inf(DW_Enc_Back_j, "DW_Enc_Back_j_" + std::to_string(j) + "\tstep : " + std::to_string(Number_InputState));
+			check_nan_inf(DU_Enc_Back_j, "DU_Enc_Back_j_" + std::to_string(j) + "\tstep : " + std::to_string(Number_InputState));
+			check_nan_inf(DB_Enc_Back_j, "DB_Enc_Back_j_" + std::to_string(j) + "\tstep : " + std::to_string(Number_InputState));
 		}
 
 
@@ -628,6 +655,7 @@ Seq2SeqWithAttention_ForTrain::grads_Seq2SeqWithAttention Seq2SeqWithAttention_F
 		grads.dB_ccond_dec += DB_dec_t.middleCols(2 * this->decoder_->Hidden_size, this->decoder_->Hidden_size);
 		grads.dB_o_dec += DB_dec_t.rightCols(this->decoder_->Hidden_size);
 	}
+	return grads;
 }
 
 void Seq2SeqWithAttention_ForTrain::UpdateAdamOpt

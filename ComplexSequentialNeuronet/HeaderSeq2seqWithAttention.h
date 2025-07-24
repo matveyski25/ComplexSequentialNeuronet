@@ -42,38 +42,7 @@ protected:
 	};
 	class Decoder : public SimpleLSTM {
 	public:
-		Decoder(std::unique_ptr<BahdanauAttention> attention_module,
-			Eigen::Index hidden_size_encoder, Eigen::Index Hidden_size_, Eigen::Index embedding_dim_,
-			RowVectorXld start_token_, MatrixXld end_token_, size_t max_steps_)
-			: SimpleLSTM(embedding_dim_ + 2 * hidden_size_encoder/*= H_emb + 2H_enc*/, Hidden_size_), attention_(std::move(attention_module))
-		{
-			this->output_size = embedding_dim_;
-			//размер контекста = 2 * Hidden_size_encoder = Number_states - embedding_dim
-			size_t context_size = 2 * hidden_size_encoder;
-			W_output = ActivationFunctions::matrix_random(output_size, Hidden_size_ + context_size);
-			b_output = RowVectorXld::Zero(output_size);
-
-			this->layernorm_gamma = RowVectorXld::Ones(Input_size);
-			this->layernorm_beta = RowVectorXld::Zero(Input_size);
-			// теперь SimpleLSTM::Input_size = Number_states, Hidden_size = Hidden_size_
-
-			this->start_token = start_token_;   // эмбеддинг стартового токена (1 символ)
-			this->end_token = end_token_;     // матрица эмбеддингов финишного токена (несколько символов)
-			this->max_steps = max_steps_;    // ограничение на число шагов генерации
-		}
-		Decoder() = default;
-		void SetEncoderOutputs(const std::vector<MatrixXld>& encoder_outputs) {
-			this->encoder_outputs = encoder_outputs;
-		}
-
-		void Decode(const std::vector<MatrixXld>& encoder_outputs) {
-			this->SetEncoderOutputs(encoder_outputs);
-			this->All_state_Сalculation();
-		}
-
-		const std::vector<MatrixXld>& GetOutputStates() const { return Output_state; }
-
-		void All_state_Calculation() {
+		virtual void All_state_Calculation() {
 			if (this->encoder_outputs.empty()) return;
 
 			auto apply_layernorm = [this](const RowVectorXld& x) -> RowVectorXld {
@@ -106,14 +75,14 @@ protected:
 			//U_state.resize(batch_size);
 
 			// Общие веса
-			MatrixXld W_x(Input_size, 4 * Hidden_size);
-			W_x << W_F, W_I, W_C, W_O;
+			MatrixXld W_x(this->Input_size, 4 * this->Hidden_size);
+			W_x << this->W_F, this->W_I, this->W_C, this->W_O;
 
-			MatrixXld W_h(Hidden_size, 4 * Hidden_size);
-			W_h << U_F, U_I, U_C, U_O;
+			MatrixXld W_h(this->Hidden_size, 4 * this->Hidden_size);
+			W_h << this->U_F, this->U_I, this->U_C, this->U_O;
 
-			RowVectorXld b(4 * Hidden_size);
-			b << B_F, B_I, B_C, B_O;
+			RowVectorXld b(4 * this->Hidden_size);
+			b << this->B_F, this->B_I, this->B_C, this->B_O;
 
 			for (size_t n = 0; n < batch_size; ++n) {
 				const auto& enc_out = encoder_outputs[n];
@@ -129,7 +98,7 @@ protected:
 					RowVectorXld context = attention_->ComputeContext(enc_out, h_prev);
 					//context_sequence.push_back(context);
 
-					RowVectorXld decoder_input(Input_size);
+					RowVectorXld decoder_input(Input_size);//[]
 					decoder_input << y_prev, context;
 					decoder_input = l2_normalize(decoder_input);
 
@@ -181,6 +150,36 @@ protected:
 				}
 			}
 		}
+		Decoder(std::unique_ptr<BahdanauAttention> attention_module,
+			Eigen::Index hidden_size_encoder, Eigen::Index Hidden_size_, Eigen::Index embedding_dim_,
+			RowVectorXld start_token_, MatrixXld end_token_, size_t max_steps_)
+			: SimpleLSTM(embedding_dim_ + 2 * hidden_size_encoder/*= H_emb + 2H_enc*/, Hidden_size_), attention_(std::move(attention_module))
+		{
+			this->output_size = embedding_dim_;
+			//размер контекста = 2 * Hidden_size_encoder = Number_states - embedding_dim
+			size_t context_size = 2 * hidden_size_encoder;
+			W_output = ActivationFunctions::matrix_random(output_size, Hidden_size_ + context_size);
+			b_output = RowVectorXld::Zero(output_size);
+
+			this->layernorm_gamma = RowVectorXld::Ones(Input_size);
+			this->layernorm_beta = RowVectorXld::Zero(Input_size);
+			// теперь SimpleLSTM::Input_size = Number_states, Hidden_size = Hidden_size_
+
+			this->start_token = start_token_;   // эмбеддинг стартового токена (1 символ)
+			this->end_token = end_token_;     // матрица эмбеддингов финишного токена (несколько символов)
+			this->max_steps = max_steps_;    // ограничение на число шагов генерации
+		}
+		Decoder() = default;
+		void SetEncoderOutputs(const std::vector<MatrixXld>& encoder_outputs) {
+			this->encoder_outputs = encoder_outputs;
+		}
+
+		void Decode(const std::vector<MatrixXld>& encoder_outputs) {
+			this->SetEncoderOutputs(encoder_outputs);
+			this->All_state_Calculation();
+		}
+
+		const std::vector<MatrixXld> & GetOutputStates() const { return Output_state; }
 	protected:
 		bool IsEndToken(const RowVectorXld& vec) const {
 			for (int i = 0; i < end_token.rows(); ++i) {
@@ -230,7 +229,7 @@ public:
 
 	void Inference(const std::vector<MatrixXld>& input_sequence_batch);
 
-	const std::vector<MatrixXld>& GetOutputs() const;
+	const std::vector<MatrixXld> & GetOutputs() const;
 
 	void Save(std::string packname) {
 		std::filesystem::create_directories(packname);
@@ -250,7 +249,7 @@ private:
 	
 };
 
-class Seq2SeqWithAttention_ForTrain : public Seq2SeqWithAttention {
+class Seq2SeqWithAttention_ForTrain : public virtual Seq2SeqWithAttention {
 protected:
 	class Encoder : public BiLSTM_ForTrain {
 	public:
@@ -273,7 +272,7 @@ protected:
 		using Seq2SeqWithAttention::Decoder::Decoder;
 		Decoder() : Seq2SeqWithAttention::Decoder() {};
 
-		void All_state_Calculation() {
+		void All_state_Calculation() override {
 			if (this->encoder_outputs.empty()) return;
 
 			auto apply_layernorm = [this](const RowVectorXld& x) -> RowVectorXld {
@@ -340,6 +339,19 @@ protected:
 				RowVectorXld y_prev = start_token;
 				RowVectorXld h_prev = RowVectorXld::Zero(Hidden_size);
 				RowVectorXld c_prev = RowVectorXld::Zero(Hidden_size);
+
+				this->StatesForgrads.f[n] = MatrixXld::Zero(max_steps, Hidden_size);
+				this->StatesForgrads.i[n] = MatrixXld::Zero(max_steps, Hidden_size);
+				this->StatesForgrads.ccond[n] = MatrixXld::Zero(max_steps, Hidden_size);
+				this->StatesForgrads.o[n] = MatrixXld::Zero(max_steps, Hidden_size);
+				this->StatesForgrads.c[n] = MatrixXld::Zero(max_steps, Hidden_size);
+				this->StatesForgrads.h[n] = MatrixXld::Zero(max_steps, Hidden_size);
+
+				this->StatesForgrads.context[n] = MatrixXld::Zero(max_steps, Hidden_size);
+				this->StatesForgrads.x[n] = MatrixXld::Zero(max_steps, Hidden_size);
+				this->StatesForgrads.p[n] = MatrixXld::Zero(max_steps, Hidden_size);
+				this->StatesForgrads.p_[n] = MatrixXld::Zero(max_steps, Hidden_size);
+				this->StatesForgrads.z[n] = MatrixXld::Zero(max_steps, Hidden_size);
 
 				for (size_t t = 0; t < max_steps; ++t) {
 					RowVectorXld context = attention_->ComputeContext(enc_out, h_prev);
@@ -558,7 +570,13 @@ public:
 	Seq2SeqWithAttention_ForTrain(
 		Eigen::Index Input_size_, Eigen::Index Encoder_Hidden_size_,
 		Eigen::Index Decoder_Hidden_size_, Eigen::Index Attention_size_,
-		Eigen::Index Output_size, RowVectorXld start_token_, MatrixXld end_token_, size_t max_steps_, size_t batch_size);
+		Eigen::Index Output_size, RowVectorXld start_token_, MatrixXld end_token_, size_t max_steps_, size_t batch_size) {
+		std::unique_ptr<Seq2SeqWithAttention_ForTrain::Encoder> encoder__ = std::make_unique<Seq2SeqWithAttention_ForTrain::Encoder>(batch_size, Input_size_, Encoder_Hidden_size_);
+		std::unique_ptr<Seq2SeqWithAttention_ForTrain::Decoder> decoder__ = std::make_unique<Seq2SeqWithAttention_ForTrain::Decoder>(std::make_unique<BahdanauAttention>(Encoder_Hidden_size_, Decoder_Hidden_size_, Attention_size_),
+			Encoder_Hidden_size_, Decoder_Hidden_size_, Output_size, start_token_, end_token_, max_steps_);
+		this->encoder_ = std::move(encoder__);
+		this->decoder_ = std::move(decoder__);
+	}
 
 	void UpdateAdamOpt
 	(
@@ -587,10 +605,16 @@ public:
 		decoder_->load(packname + "/" + "Decoder");
 	}
 
+	void Inference();
+
+	void Inference(const std::vector<MatrixXld>& input_sequence_batch);
+
+	const std::vector<MatrixXld>& GetOutputs() const;
+
 protected:
 
 	//std::vector<MatrixXld> Target_outputs;  // [B][T_dec x Output_dim]
 
-	std::unique_ptr<Encoder> encoder_;
-	std::unique_ptr<Decoder> decoder_;
+	std::unique_ptr<Seq2SeqWithAttention_ForTrain::Encoder> encoder_;
+	std::unique_ptr<Seq2SeqWithAttention_ForTrain::Decoder> decoder_;
 };

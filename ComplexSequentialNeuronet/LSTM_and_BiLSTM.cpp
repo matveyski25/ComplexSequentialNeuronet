@@ -31,7 +31,7 @@ void SimpleLSTM::SetInput_states(const std::vector<MatrixXld>& Input_states_) {
 		}
 	}
 
-	Input_states = Input_states_;
+	this->Input_states = Input_states_;
 	//size_t steps = Input_states.rows();
 
 	// Корректная инициализация размеров
@@ -102,15 +102,15 @@ void SimpleLSTM::SetRandomWeights(long double a, long double b) {
 	auto random_init = [](size_t rows, size_t cols, long double a_, long double b_) { return ActivationFunctions::matrix_random(rows, cols, a_, b_); };
 	auto init_h = orthogonal_init;
 	auto init_i = xavier_init;
-	this->U_F = init_h(Hidden_size, Hidden_size);
-	this->U_I = init_h(Hidden_size, Hidden_size);
-	this->U_C = init_h(Hidden_size, Hidden_size);
-	this->U_O = init_h(Hidden_size, Hidden_size);
+	this->U_F = init_h(this->Hidden_size, this->Hidden_size);
+	this->U_I = init_h(this->Hidden_size, this->Hidden_size);
+	this->U_C = init_h(this->Hidden_size, this->Hidden_size);
+	this->U_O = init_h(this->Hidden_size, this->Hidden_size);
 
-	this->W_F = init_i(Hidden_size, Input_size);
-	this->W_I = init_i(Hidden_size, Input_size);
-	this->W_C = init_i(Hidden_size, Input_size);
-	this->W_O = init_i(Hidden_size, Input_size);
+	this->W_F = init_i(this->Input_size, this->Hidden_size);
+	this->W_I = init_i(this->Input_size, this->Hidden_size);
+	this->W_C = init_i(this->Input_size, this->Hidden_size);
+	this->W_O = init_i(this->Input_size, this->Hidden_size);
 
 	//Output_weights = ActivationFunctions::matrix_random(Hidden_size, 1, -0.1L, 0.1L);
 }
@@ -502,6 +502,38 @@ void SimpleLSTM_ForTrain::Batch_All_state_Сalculation() {
 	}
 
 
+void BiLSTM_ForTrain::SetInput_states(const std::vector<MatrixXld>& inputs) {
+	this->Common_Input_states = inputs;
+	this->Forward.SetInput_states(inputs);
+
+	std::vector<MatrixXld> reversed_inputs(inputs.size());
+	for (size_t i = 0; i < inputs.size(); ++i) {
+		MatrixXld reversed = inputs[i].colwise().reverse().eval(); // обратный порядок временных шагов
+		reversed_inputs[i] = reversed;
+	}
+	this->Backward.SetInput_states(reversed_inputs);
+}
+
+std::vector<RowVectorXld> BiLSTM_ForTrain::GetFinalHidden_ForwardBackward() const {
+	std::vector<RowVectorXld> out;
+	for (const auto& H : this->Common_Hidden_states) {
+		if (H.rows() > 0) {
+			out.push_back(H.row(H.rows() - 1)); // последний шаг
+		}
+	}
+	return out;
+}
+
+void BiLSTM_ForTrain::Save(const std::string& filename) {
+	auto addtofilename = [](const std::string& filename, const std::string& whatadd) {std::string ffilename;  for (const char a : filename) { if (a != '.') { ffilename += a; } else { ffilename += (whatadd + '.'); } } return ffilename; };
+	this->Forward.save(addtofilename(filename, "_Forward"));
+	this->Backward.save(addtofilename(filename, "_Backward"));
+}
+
+void BiLSTM_ForTrain::Load(const std::string& filename) {
+	this->Forward.load(filename + "_Forward");
+	this->Backward.load(filename + "_Backward");
+}
 
 BiLSTM_ForTrain::BiLSTM_ForTrain(size_t Batch_size_, Eigen::Index Number_states, Eigen::Index Hidden_size_)
 	: BiLSTM(Number_states, Hidden_size_),
@@ -572,7 +604,7 @@ BahdanauAttention::BahdanauAttention(Eigen::Index encoder_hidden_size, Eigen::In
 	attention_size_(attention_size)
 {
 	// Инициализация весов (Xavier)
-	SetRandomDisplacements(-1, 1);
+	SetRandomWeights(-1, 1);
 }
 
 // Вычисляет контекстный вектор и сохраняет внутренние веса
@@ -616,7 +648,8 @@ RowVectorXld BahdanauAttention::ComputeContext(const MatrixXld& encoder_outputs,
 	return context;
 }
 
-void BahdanauAttention::SetRandomDisplacements(long double a, long double b) {
+void BahdanauAttention::SetRandomWeights(long double a, long double b) {
 	this->W_encoder_ = ActivationFunctions::matrix_random(this->attention_size_, this->encoder_hidden_size_, a, b);
 	this->W_decoder_ = ActivationFunctions::matrix_random(this->attention_size_, this->decoder_hidden_size_, a, b);
+	this->attention_vector_ = ActivationFunctions::matrix_random(this->attention_size_, 1, a, b);
 }
