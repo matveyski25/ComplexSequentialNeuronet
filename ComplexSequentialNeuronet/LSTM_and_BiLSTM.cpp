@@ -58,15 +58,15 @@ void SimpleLSTM::SetWeights(const MatrixXld& weights_I_F, const MatrixXld& weigh
 		throw std::invalid_argument("Invalid weights dimensions");
 	}
 
-	this->W_F_I = weights_I_F;
-	this->W_I_I = weights_I_I;
-	this->W_C_I = weights_I_C;
-	this->W_O_I = weights_I_O;
+	this->W_F = weights_I_F;
+	this->W_I = weights_I_I;
+	this->W_C = weights_I_C;
+	this->W_O = weights_I_O;
 
-	this->W_F_H = weights_H_F;
-	this->W_I_H = weights_H_I;
-	this->W_C_H = weights_H_C;
-	this->W_O_H = weights_H_O;
+	this->U_F = weights_H_F;
+	this->U_I = weights_H_I;
+	this->U_C = weights_H_C;
+	this->U_O = weights_H_O;
 }
 
 void SimpleLSTM::SetDisplacements(const MatrixXld& displacements_FG, const MatrixXld& displacements_IG, const MatrixXld& displacements_CT, const MatrixXld& displacements_OG) {
@@ -102,15 +102,15 @@ void SimpleLSTM::SetRandomWeights(long double a, long double b) {
 	auto random_init = [](size_t rows, size_t cols, long double a_, long double b_) { return ActivationFunctions::matrix_random(rows, cols, a_, b_); };
 	auto init_h = orthogonal_init;
 	auto init_i = xavier_init;
-	this->W_F_H = init_h(Hidden_size, Hidden_size);
-	this->W_I_H = init_h(Hidden_size, Hidden_size);
-	this->W_C_H = init_h(Hidden_size, Hidden_size);
-	this->W_O_H = init_h(Hidden_size, Hidden_size);
+	this->U_F = init_h(Hidden_size, Hidden_size);
+	this->U_I = init_h(Hidden_size, Hidden_size);
+	this->U_C = init_h(Hidden_size, Hidden_size);
+	this->U_O = init_h(Hidden_size, Hidden_size);
 
-	this->W_F_I = init_i(Hidden_size, Input_size);
-	this->W_I_I = init_i(Hidden_size, Input_size);
-	this->W_C_I = init_i(Hidden_size, Input_size);
-	this->W_O_I = init_i(Hidden_size, Input_size);
+	this->W_F = init_i(Hidden_size, Input_size);
+	this->W_I = init_i(Hidden_size, Input_size);
+	this->W_C = init_i(Hidden_size, Input_size);
+	this->W_O = init_i(Hidden_size, Input_size);
 
 	//Output_weights = ActivationFunctions::matrix_random(Hidden_size, 1, -0.1L, 0.1L);
 }
@@ -127,10 +127,10 @@ void SimpleLSTM::SetRandomDisplacements(long double a, long double b) {
 void SimpleLSTM::All_state_Сalculation() {
 	// Подготовка весов вне цикла
 	MatrixXld W_x(this->Input_size, 4 * this->Hidden_size);
-	W_x << this->W_F_I, this->W_I_I, this->W_C_I, this->W_O_I;
+	W_x << this->W_F, this->W_I, this->W_C, this->W_O;
 
 	MatrixXld W_h(this->Hidden_size, 4 * this->Hidden_size);
-	W_h << this->W_F_H, this->W_I_H, this->W_C_H, this->W_O_H;
+	W_h << this->U_F, this->U_I, this->U_C, this->U_O;
 
 	RowVectorXld b(4 * this->Hidden_size);
 	b << this->B_F, this->B_I, this->B_C, this->B_O;
@@ -180,15 +180,15 @@ void SimpleLSTM::save(const std::string& filename) const {
 	file << this->Input_size << "\n" << this->Hidden_size << "\n";
 
 	// Сохраняем веса и смещения
-	save_matrix(file, this->W_F_H);
-	save_matrix(file, this->W_I_H);
-	save_matrix(file, this->W_C_H);
-	save_matrix(file, this->W_O_H);
+	save_matrix(file, this->U_F);
+	save_matrix(file, this->U_I);
+	save_matrix(file, this->U_C);
+	save_matrix(file, this->U_O);
 
-	save_matrix(file, this->W_F_I);
-	save_matrix(file, this->W_I_I);
-	save_matrix(file, this->W_C_I);
-	save_matrix(file, this->W_O_I);
+	save_matrix(file, this->W_F);
+	save_matrix(file, this->W_I);
+	save_matrix(file, this->W_C);
+	save_matrix(file, this->W_O);
 
 	save_matrix(file, this->B_F);
 	save_matrix(file, this->B_I);
@@ -202,15 +202,15 @@ void SimpleLSTM::load(const std::string& filename) {
 
 	file >> this->Input_size >> this->Hidden_size;
 
-	load_matrix(file, this->W_F_H);
-	load_matrix(file, this->W_I_H);
-	load_matrix(file, this->W_C_H);
-	load_matrix(file, this->W_O_H);
+	load_matrix(file, this->U_F);
+	load_matrix(file, this->U_I);
+	load_matrix(file, this->U_C);
+	load_matrix(file, this->U_O);
 
-	load_matrix(file, this->W_F_I);
-	load_matrix(file, this->W_I_I);
-	load_matrix(file, this->W_C_I);
-	load_matrix(file, this->W_O_I);
+	load_matrix(file, this->W_F);
+	load_matrix(file, this->W_I);
+	load_matrix(file, this->W_C);
+	load_matrix(file, this->W_O);
 
 	load_matrix(file, this->B_F);
 	load_matrix(file, this->B_I);
@@ -380,15 +380,15 @@ void SimpleLSTM_ForTrain::save(const std::string& filename) const {
 	file << this->Input_size << "\n" << this->Hidden_size << "\n" << this->Batch_size << "\n";
 
 	// Сохраняем веса и смещения
-	save_matrix(file, this->W_F_H);
-	save_matrix(file, this->W_I_H);
-	save_matrix(file, this->W_C_H);
-	save_matrix(file, this->W_O_H);
+	save_matrix(file, this->U_F);
+	save_matrix(file, this->U_I);
+	save_matrix(file, this->U_C);
+	save_matrix(file, this->U_O);
 
-	save_matrix(file, this->W_F_I);
-	save_matrix(file, this->W_I_I);
-	save_matrix(file, this->W_C_I);
-	save_matrix(file, this->W_O_I);
+	save_matrix(file, this->W_F);
+	save_matrix(file, this->W_I);
+	save_matrix(file, this->W_C);
+	save_matrix(file, this->W_O);
 
 	save_matrix(file, this->B_F);
 	save_matrix(file, this->B_I);
@@ -402,15 +402,15 @@ void SimpleLSTM_ForTrain::load(const std::string& filename) {
 
 	file >> this->Input_size >> this->Hidden_size >> this->Batch_size;
 
-	load_matrix(file, this->W_F_H);
-	load_matrix(file, this->W_I_H);
-	load_matrix(file, this->W_C_H);
-	load_matrix(file, this->W_O_H);
+	load_matrix(file, this->U_F);
+	load_matrix(file, this->U_I);
+	load_matrix(file, this->U_C);
+	load_matrix(file, this->U_O);
 
-	load_matrix(file, this->W_F_I);
-	load_matrix(file, this->W_I_I);
-	load_matrix(file, this->W_C_I);
-	load_matrix(file, this->W_O_I);
+	load_matrix(file, this->W_F);
+	load_matrix(file, this->W_I);
+	load_matrix(file, this->W_C);
+	load_matrix(file, this->W_O);
 
 	load_matrix(file, this->B_F);
 	load_matrix(file, this->B_I);
@@ -426,10 +426,10 @@ void SimpleLSTM_ForTrain::Batch_All_state_Сalculation() {
 
 		// Подготовка весов и смещений
 		MatrixXld W_x(this->Input_size, 4 * this->Hidden_size);
-		W_x << this->W_F_I, this->W_I_I, this->W_C_I, this->W_O_I;
+		W_x << this->W_F, this->W_I, this->W_C, this->W_O;
 
 		MatrixXld W_h(this->Hidden_size, 4 * this->Hidden_size);
-		W_h << this->W_F_H, this->W_I_H, this->W_C_H, this->W_O_H;
+		W_h << this->U_F, this->U_I, this->U_C, this->U_O;
 
 		RowVectorXld b(4 * this->Hidden_size);
 		b << this->B_F, this->B_I, this->B_C, this->B_O;
@@ -572,9 +572,7 @@ BahdanauAttention::BahdanauAttention(Eigen::Index encoder_hidden_size, Eigen::In
 	attention_size_(attention_size)
 {
 	// Инициализация весов (Xavier)
-	W_encoder_ = ActivationFunctions::matrix_random(attention_size_, encoder_hidden_size_, -1.0L, 1.0L); // [A x 2H]
-	W_decoder_ = ActivationFunctions::matrix_random(attention_size_, decoder_hidden_size_, -1.0L, 1.0L); // [A x H_dec]
-	attention_vector_ = ActivationFunctions::matrix_random(attention_size_, 1, -1.0L, 1.0L);              // [A x 1]
+	SetRandomDisplacements(-1, 1);
 }
 
 // Вычисляет контекстный вектор и сохраняет внутренние веса
@@ -602,9 +600,7 @@ RowVectorXld BahdanauAttention::ComputeContext(const MatrixXld& encoder_outputs,
 	}
 
 	// Softmax по e_{ti} → α_{ti}
-	VectorXld attention_weights = scores.array().exp();
-	long double sum_exp = attention_weights.sum() + 1e-8L;
-	attention_weights /= sum_exp;
+	VectorXld attention_weights = ActivationFunctions::Softmax(scores);
 
 	// Сохраняем веса и логиты
 	this->all_attention_weights_.push_back(attention_weights);
@@ -618,4 +614,9 @@ RowVectorXld BahdanauAttention::ComputeContext(const MatrixXld& encoder_outputs,
 	}
 
 	return context;
+}
+
+void BahdanauAttention::SetRandomDisplacements(long double a, long double b) {
+	this->W_encoder_ = ActivationFunctions::matrix_random(this->attention_size_, this->encoder_hidden_size_, a, b);
+	this->W_decoder_ = ActivationFunctions::matrix_random(this->attention_size_, this->decoder_hidden_size_, a, b);
 }

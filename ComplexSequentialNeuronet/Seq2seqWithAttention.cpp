@@ -34,23 +34,6 @@ void Seq2SeqWithAttention::Inference(const std::vector<MatrixXld>& input_sequenc
 		decoder_->Decode(encoder_->GetEncodedHiddenStates());
 	}
 
-const std::vector<MatrixXld>& Seq2SeqWithAttention::GetDecoderOutputs() const {
+const std::vector<MatrixXld>& Seq2SeqWithAttention::GetOutputs() const {
 		return decoder_->GetOutputStates();
 	}
-
-void Seq2SeqWithAttention::Save(std::string packname) {
-		std::filesystem::create_directories(packname);
-		encoder_->Save(packname + "/" + "Encoder");
-		decoder_->save(packname + "/" + "Decoder");
-	}
-
-void Seq2SeqWithAttention::Load(std::string packname) {
-		encoder_->Load(packname + "/" + "Encoder");
-		decoder_->load(packname + "/" + "Decoder");
-	}
-
-int main() {
-	setlocale(LC_ALL, "Russian");
-
-	return 0;
-}

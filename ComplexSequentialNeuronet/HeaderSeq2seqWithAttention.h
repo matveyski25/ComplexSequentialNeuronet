@@ -2,6 +2,11 @@
 
 #include "HeaderLSTM_and_BiLSTM.h"
 
+#include <math.h>
+#include <algorithm>
+#include <random>
+#include <chrono>
+
 /*void save_vector(std::ofstream& file, const std::vector<MatrixXld>& vec) const {
 	file << vec.size() << "\n";
 	for (const auto& m : vec) {
@@ -72,9 +77,10 @@ protected:
 			if (this->encoder_outputs.empty()) return;
 
 			auto apply_layernorm = [this](const RowVectorXld& x) -> RowVectorXld {
+				long double epsilon = 1e-5L;
 				long double mean = x.mean();
 				long double variance = (x.array() - mean).square().mean();
-				return ((x.array() - mean) / std::sqrt(variance + 1e-5L)).matrix().array() * layernorm_gamma.array() + layernorm_beta.array();
+				return ((x.array() - mean) / std::sqrt(variance + epsilon)).matrix().array() * layernorm_gamma.array() + layernorm_beta.array();
 				};
 
 			auto l2_normalize = [](const RowVectorXld& x) -> RowVectorXld {
@@ -101,10 +107,10 @@ protected:
 
 			// Общие веса
 			MatrixXld W_x(Input_size, 4 * Hidden_size);
-			W_x << W_F_I, W_I_I, W_C_I, W_O_I;
+			W_x << W_F, W_I, W_C, W_O;
 
 			MatrixXld W_h(Hidden_size, 4 * Hidden_size);
-			W_h << W_F_H, W_I_H, W_C_H, W_O_H;
+			W_h << U_F, U_I, U_C, U_O;
 
 			RowVectorXld b(4 * Hidden_size);
 			b << B_F, B_I, B_C, B_O;
@@ -224,11 +230,18 @@ public:
 
 	void Inference(const std::vector<MatrixXld>& input_sequence_batch);
 
-	const std::vector<MatrixXld>& GetDecoderOutputs() const;
+	const std::vector<MatrixXld>& GetOutputs() const;
 
-	void Save(std::string packname);
+	void Save(std::string packname) {
+		std::filesystem::create_directories(packname);
+		encoder_->Save(packname + "/" + "Encoder");
+		decoder_->save(packname + "/" + "Decoder");
+	}
 
-	void Load(std::string packname);
+	void Load(std::string packname) {
+		encoder_->Load(packname + "/" + "Encoder");
+		decoder_->load(packname + "/" + "Decoder");
+	}
 protected:
 	std::vector<MatrixXld> Input_States;
 private:
@@ -264,9 +277,10 @@ protected:
 			if (this->encoder_outputs.empty()) return;
 
 			auto apply_layernorm = [this](const RowVectorXld& x) -> RowVectorXld {
+				long double epsilon = 1e-5L;
 				long double mean = x.mean();
 				long double variance = (x.array() - mean).square().mean();
-				return ((x.array() - mean) / std::sqrt(variance + 1e-5L)).matrix().array() * layernorm_gamma.array() + layernorm_beta.array();
+				return ((x.array() - mean) / std::sqrt(variance + epsilon)).matrix().array() * layernorm_gamma.array() + layernorm_beta.array();
 				};
 
 			auto l2_normalize = [](const RowVectorXld& x) -> RowVectorXld {
@@ -311,10 +325,10 @@ protected:
 
 			// Общие веса
 			MatrixXld W_x(Input_size, 4 * Hidden_size);
-			W_x << W_F_I, W_I_I, W_C_I, W_O_I;
+			W_x << W_F, W_I, W_C, W_O;
 
 			MatrixXld W_h(Hidden_size, 4 * Hidden_size);
-			W_h << W_F_H, W_I_H, W_C_H, W_O_H;
+			W_h << U_F, U_I, U_C, U_O;
 
 			RowVectorXld b(4 * Hidden_size);
 			b << B_F, B_I, B_C, B_O;
@@ -396,8 +410,6 @@ protected:
 		};
 		states_forgrads StatesForgrads;
 	};
-public:
-	Seq2SeqWithAttention_ForTrain(std::unique_ptr<Encoder> encoder_train = std::make_unique<Encoder>(), std::unique_ptr<Decoder> decoder_train = std::make_unique<Decoder>());
 
 	struct grads_Seq2SeqWithAttention {
 		MatrixXld dW_out; MatrixXld dB_out;
@@ -420,6 +432,111 @@ public:
 		MatrixXld dW_i_back_enc, dU_i_back_enc; MatrixXld dB_i_back_enc;
 		MatrixXld dW_ccond_back_enc, dU_ccond_back_enc; MatrixXld dB_ccond_back_enc;
 		MatrixXld dW_o_back_enc, dU_o_back_enc; MatrixXld dB_o_back_enc;
+		void operator +=(const grads_Seq2SeqWithAttention& other) {
+			this->dW_out += other.dW_out;
+			this->dB_out += other.dB_out;
+
+			this->dW_gamma_layernorm += other.dW_gamma_layernorm;
+			this->dB_beta_layernorm += other.dB_beta_layernorm;
+
+			this->dV_a_attention += other.dV_a_attention;
+			this->dW_e_attention += other.dW_e_attention;
+			this->dW_d_attention += other.dW_d_attention;
+
+			this->dW_f_dec += other.dW_f_dec; this->dU_f_dec += other.dU_f_dec; this->dB_f_dec += other.dB_f_dec;
+			this->dW_i_dec += other.dW_i_dec; this->dU_i_dec += other.dU_i_dec; this->dB_i_dec += other.dB_i_dec;
+			this->dW_ccond_dec += other.dW_ccond_dec; this->dU_ccond_dec += other.dU_ccond_dec; this->dB_ccond_dec += other.dB_ccond_dec;
+			this->dW_o_dec += other.dW_o_dec; this->dU_o_dec += other.dU_o_dec; this->dB_o_dec += other.dB_o_dec;
+
+			this->dW_f_forw_enc += other.dW_f_forw_enc; this->dU_f_forw_enc += other.dU_f_forw_enc; this->dB_f_forw_enc += other.dB_f_forw_enc;
+			this->dW_i_forw_enc += other.dW_i_forw_enc; this->dU_i_forw_enc += other.dU_i_forw_enc; this->dB_i_forw_enc += other.dB_i_forw_enc;
+			this->dW_ccond_forw_enc += other.dW_ccond_forw_enc; this->dU_ccond_forw_enc += other.dU_ccond_forw_enc; this->dB_ccond_forw_enc += other.dB_ccond_forw_enc;
+			this->dW_o_forw_enc += other.dW_o_forw_enc; this->dU_o_forw_enc += other.dU_o_forw_enc; this->dB_o_forw_enc += other.dB_o_forw_enc;
+
+			this->dW_f_back_enc += other.dW_f_back_enc; this->dU_f_back_enc += other.dU_f_back_enc; this->dB_f_back_enc += other.dB_f_back_enc;
+			this->dW_i_back_enc += other.dW_i_back_enc; this->dU_i_back_enc += other.dU_i_back_enc; this->dB_i_back_enc += other.dB_i_back_enc;
+			this->dW_ccond_back_enc += other.dW_ccond_back_enc; this->dU_ccond_back_enc += other.dU_ccond_back_enc; this->dB_ccond_back_enc += other.dB_ccond_back_enc;
+			this->dW_o_back_enc += other.dW_o_back_enc; this->dU_o_back_enc += other.dU_o_back_enc; this->dB_o_back_enc += other.dB_o_back_enc;
+		}
+		void operator /=(const grads_Seq2SeqWithAttention& other) {
+			this->dW_out.array() /= other.dW_out.array();
+			this->dB_out.array() /= other.dB_out.array();
+
+			this->dW_gamma_layernorm.array() /= other.dW_gamma_layernorm.array();
+			this->dB_beta_layernorm.array() /= other.dB_beta_layernorm.array();
+
+			this->dV_a_attention.array() /= other.dV_a_attention.array();
+			this->dW_e_attention.array() /= other.dW_e_attention.array();
+			this->dW_d_attention.array() /= other.dW_d_attention.array();
+
+			this->dW_f_dec.array() /= other.dW_f_dec.array(); this->dU_f_dec.array() /= other.dU_f_dec.array(); this->dB_f_dec.array() /= other.dB_f_dec.array();
+			this->dW_i_dec.array() /= other.dW_i_dec.array(); this->dU_i_dec.array() /= other.dU_i_dec.array(); this->dB_i_dec.array() /= other.dB_i_dec.array();
+			this->dW_ccond_dec.array() /= other.dW_ccond_dec.array(); this->dU_ccond_dec.array() /= other.dU_ccond_dec.array(); this->dB_ccond_dec.array() /= other.dB_ccond_dec.array();
+			this->dW_o_dec.array() /= other.dW_o_dec.array(); this->dU_o_dec.array() /= other.dU_o_dec.array(); this->dB_o_dec.array() /= other.dB_o_dec.array();
+
+			this->dW_f_forw_enc.array() /= other.dW_f_forw_enc.array(); this->dU_f_forw_enc.array() /= other.dU_f_forw_enc.array(); this->dB_f_forw_enc.array() /= other.dB_f_forw_enc.array();
+			this->dW_i_forw_enc.array() /= other.dW_i_forw_enc.array(); this->dU_i_forw_enc.array() /= other.dU_i_forw_enc.array(); this->dB_i_forw_enc.array() /= other.dB_i_forw_enc.array();
+			this->dW_ccond_forw_enc.array() /= other.dW_ccond_forw_enc.array(); this->dU_ccond_forw_enc.array() /= other.dU_ccond_forw_enc.array(); this->dB_ccond_forw_enc.array() /= other.dB_ccond_forw_enc.array();
+			this->dW_o_forw_enc.array() /= other.dW_o_forw_enc.array(); this->dU_o_forw_enc.array() /= other.dU_o_forw_enc.array(); this->dB_o_forw_enc.array() /= other.dB_o_forw_enc.array();
+
+			this->dW_f_back_enc.array() /= other.dW_f_back_enc.array(); this->dU_f_back_enc.array() /= other.dU_f_back_enc.array(); this->dB_f_back_enc.array() /= other.dB_f_back_enc.array();
+			this->dW_i_back_enc.array() /= other.dW_i_back_enc.array(); this->dU_i_back_enc.array() /= other.dU_i_back_enc.array(); this->dB_i_back_enc.array() /= other.dB_i_back_enc.array();
+			this->dW_ccond_back_enc.array() /= other.dW_ccond_back_enc.array(); this->dU_ccond_back_enc.array() /= other.dU_ccond_back_enc.array(); this->dB_ccond_back_enc.array() /= other.dB_ccond_back_enc.array();
+			this->dW_o_back_enc.array() /= other.dW_o_back_enc.array(); this->dU_o_back_enc.array() /= other.dU_o_back_enc.array(); this->dB_o_back_enc.array() /= other.dB_o_back_enc.array();
+		}
+		void operator /=(const long double& val) {
+			this->dW_out /= val;
+			this->dB_out /= val;
+
+			this->dW_gamma_layernorm /= val;
+			this->dB_beta_layernorm /= val;
+
+			this->dV_a_attention /= val;
+			this->dW_e_attention /= val;
+			this->dW_d_attention /= val;
+
+			this->dW_f_dec /= val; this->dU_f_dec /= val; this->dB_f_dec /= val;
+			this->dW_i_dec /= val; this->dU_i_dec /= val; this->dB_i_dec /= val;
+			this->dW_ccond_dec /= val; this->dU_ccond_dec /= val; this->dB_ccond_dec /= val;
+			this->dW_o_dec /= val; this->dU_o_dec /= val; this->dB_o_dec /= val;
+
+			this->dW_f_forw_enc /= val; this->dU_f_forw_enc /= val; this->dB_f_forw_enc /= val;
+			this->dW_i_forw_enc /= val; this->dU_i_forw_enc /= val; this->dB_i_forw_enc /= val;
+			this->dW_ccond_forw_enc /= val; this->dU_ccond_forw_enc /= val; this->dB_ccond_forw_enc /= val;
+			this->dW_o_forw_enc /= val; this->dU_o_forw_enc /= val; this->dB_o_forw_enc /= val;
+
+			this->dW_f_back_enc /= val; this->dU_f_back_enc /= val; this->dB_f_back_enc /= val;
+			this->dW_i_back_enc /= val; this->dU_i_back_enc /= val; this->dB_i_back_enc /= val;
+			this->dW_ccond_back_enc /= val; this->dU_ccond_back_enc /= val; this->dB_ccond_back_enc /= val;
+			this->dW_o_back_enc /= val; this->dU_o_back_enc /= val; this->dB_o_back_enc /= val;
+		}
+
+		void SetZero() {
+			this->dW_out.setZero();
+			this->dB_out.setZero();
+
+			this->dW_gamma_layernorm.setZero();
+			this->dB_beta_layernorm.setZero();
+
+			this->dV_a_attention.setZero();
+			this->dW_e_attention.setZero();
+			this->dW_d_attention.setZero();
+
+			this->dW_f_dec.setZero(); this->dU_f_dec.setZero(); this->dB_f_dec.setZero();
+			this->dW_i_dec.setZero(); this->dU_i_dec.setZero(); this->dB_i_dec.setZero();
+			this->dW_ccond_dec.setZero(); this->dU_ccond_dec.setZero(); this->dB_ccond_dec.setZero();
+			this->dW_o_dec.setZero(); this->dU_o_dec.setZero(); this->dB_o_dec.setZero();
+
+			this->dW_f_forw_enc.setZero(); this->dU_f_forw_enc.setZero(); this->dB_f_forw_enc.setZero();
+			this->dW_i_forw_enc.setZero(); this->dU_i_forw_enc.setZero(); this->dB_i_forw_enc.setZero();
+			this->dW_ccond_forw_enc.setZero(); this->dU_ccond_forw_enc.setZero(); this->dB_ccond_forw_enc.setZero();
+			this->dW_o_forw_enc.setZero(); this->dU_o_forw_enc.setZero(); this->dB_o_forw_enc.setZero();
+
+			this->dW_f_back_enc.setZero(); this->dU_f_back_enc.setZero(); this->dB_f_back_enc.setZero();
+			this->dW_i_back_enc.setZero(); this->dU_i_back_enc.setZero(); this->dB_i_back_enc.setZero();
+			this->dW_ccond_back_enc.setZero(); this->dU_ccond_back_enc.setZero(); this->dB_ccond_back_enc.setZero();
+			this->dW_o_back_enc.setZero(); this->dU_o_back_enc.setZero(); this->dB_o_back_enc.setZero();
+		}
 	};
 
 	struct states_forgrads {
@@ -429,7 +546,50 @@ public:
 
 	grads_Seq2SeqWithAttention Backward(size_t Number_InputState, MatrixXld Y_True);
 
-	std::vector<MatrixXld> Target_outputs;  // [B][T_dec x Output_dim]
+	grads_Seq2SeqWithAttention BackwardWithLogging(size_t Number_InputState, MatrixXld Y_True);
+public:
+	Seq2SeqWithAttention_ForTrain(std::unique_ptr<Encoder> encoder_train = std::make_unique<Encoder>(), std::unique_ptr<Decoder> decoder_train = std::make_unique<Decoder>());
+
+	Seq2SeqWithAttention_ForTrain(
+		Eigen::Index Input_size_, Eigen::Index Encoder_Hidden_size_, Eigen::Index Decoder_Hidden_size_,
+		Eigen::Index Output_size, RowVectorXld start_token_, MatrixXld end_token_, size_t max_steps_,
+		std::unique_ptr<BahdanauAttention> attention_, size_t batch_size);
+
+	Seq2SeqWithAttention_ForTrain(
+		Eigen::Index Input_size_, Eigen::Index Encoder_Hidden_size_,
+		Eigen::Index Decoder_Hidden_size_, Eigen::Index Attention_size_,
+		Eigen::Index Output_size, RowVectorXld start_token_, MatrixXld end_token_, size_t max_steps_, size_t batch_size);
+
+	void UpdateAdamOpt
+	(
+		const std::vector<std::vector<MatrixXld>>& Target_input_output, /*std::vector<MatrixXld> Target_output,*/
+		size_t epochs, size_t optima_steps, size_t batch_size,
+		long double learning_rate = 0.001L, long double epsilon = 1e-8L,
+		long double beta1 = 0.9L, long double beta2 = 0.999L
+	);
+
+	void UpdateAdamOptWithLogging
+	(
+		const std::vector<std::vector<MatrixXld>>& Target_input_output, /*std::vector<MatrixXld> Target_output,*/
+		size_t epochs, size_t optima_steps, size_t batch_size,
+		long double learning_rate = 0.001L, long double epsilon = 1e-8L,
+		long double beta1 = 0.9L, long double beta2 = 0.999L
+	);
+
+	void Save(std::string packname) {
+		std::filesystem::create_directories(packname);
+		encoder_->Save(packname + "/" + "Encoder");
+		decoder_->save(packname + "/" + "Decoder");
+	}
+
+	void Load(std::string packname) {
+		encoder_->Load(packname + "/" + "Encoder");
+		decoder_->load(packname + "/" + "Decoder");
+	}
+
+protected:
+
+	//std::vector<MatrixXld> Target_outputs;  // [B][T_dec x Output_dim]
 
 	std::unique_ptr<Encoder> encoder_;
 	std::unique_ptr<Decoder> decoder_;
