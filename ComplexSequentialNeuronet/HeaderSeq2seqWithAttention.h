@@ -444,7 +444,58 @@ protected:
 		MatrixXld dW_i_back_enc, dU_i_back_enc; MatrixXld dB_i_back_enc;
 		MatrixXld dW_ccond_back_enc, dU_ccond_back_enc; MatrixXld dB_ccond_back_enc;
 		MatrixXld dW_o_back_enc, dU_o_back_enc; MatrixXld dB_o_back_enc;
+
 		void operator +=(const grads_Seq2SeqWithAttention& other) {
+			this->dW_out.conservativeResize(other.dW_out.rows(), other.dW_out.cols());
+			this->dB_out.conservativeResize(other.dB_out.rows(), other.dB_out.cols());
+
+			this->dW_gamma_layernorm.conservativeResize(other.dW_gamma_layernorm.rows(), other.dW_gamma_layernorm.cols());
+			this->dB_beta_layernorm.conservativeResize(other.dB_beta_layernorm.rows(), other.dB_beta_layernorm.cols());
+
+			this->dV_a_attention.conservativeResize(other.dV_a_attention.rows(), other.dV_a_attention.cols());
+			this->dW_e_attention.conservativeResize(other.dW_e_attention.rows(), other.dW_e_attention.cols());
+			this->dW_d_attention.conservativeResize(other.dW_d_attention.rows(), other.dW_d_attention.cols());
+
+			this->dW_f_dec.conservativeResize(other.dW_f_dec.rows(), other.dW_f_dec.cols()); 
+			this->dU_f_dec.conservativeResize(other.dU_f_dec.rows(), other.dU_f_dec.cols()); 
+			this->dB_f_dec.conservativeResize(other.dB_f_dec.rows(), other.dB_f_dec.cols());
+			this->dW_i_dec.conservativeResize(other.dW_i_dec.rows(), other.dW_i_dec.cols()); 
+			this->dU_i_dec.conservativeResize(other.dU_i_dec.rows(), other.dU_i_dec.cols()); 
+			this->dB_i_dec.conservativeResize(other.dB_i_dec.rows(), other.dB_i_dec.cols());
+			this->dW_ccond_dec.conservativeResize(other.dW_ccond_dec.rows(), other.dW_ccond_dec.cols()); 
+			this->dU_ccond_dec.conservativeResize(other.dU_ccond_dec.rows(), other.dU_ccond_dec.cols()); 
+			this->dB_ccond_dec.conservativeResize(other.dB_ccond_dec.rows(), other.dB_ccond_dec.cols());
+			this->dW_o_dec.conservativeResize(other.dW_o_dec.rows(), other.dW_o_dec.cols());
+			this->dU_o_dec.conservativeResize(other.dU_o_dec.rows(), other.dU_o_dec.cols());
+			this->dB_o_dec.conservativeResize(other.dB_o_dec.rows(), other.dB_o_dec.cols());
+
+			this->dW_f_forw_enc.conservativeResize(other.dW_f_forw_enc.rows(), other.dW_f_forw_enc.cols());
+			this->dU_f_forw_enc.conservativeResize(other.dU_f_forw_enc.rows(), other.dU_f_forw_enc.cols());
+			this->dB_f_forw_enc.conservativeResize(other.dB_f_forw_enc.rows(), other.dB_f_forw_enc.cols());
+			this->dW_i_forw_enc.conservativeResize(other.dW_i_forw_enc.rows(), other.dW_i_forw_enc.cols());
+			this->dU_i_forw_enc.conservativeResize(other.dU_i_forw_enc.rows(), other.dU_i_forw_enc.cols());
+			this->dB_i_forw_enc.conservativeResize(other.dB_i_forw_enc.rows(), other.dB_i_forw_enc.cols());
+			this->dW_ccond_forw_enc.conservativeResize(other.dW_ccond_forw_enc.rows(), other.dW_ccond_forw_enc.cols());
+			this->dU_ccond_forw_enc.conservativeResize(other.dU_ccond_forw_enc.rows(), other.dU_ccond_forw_enc.cols());
+			this->dB_ccond_forw_enc.conservativeResize(other.dB_ccond_forw_enc.rows(), other.dB_ccond_forw_enc.cols());
+			this->dW_o_forw_enc.conservativeResize(other.dW_o_forw_enc.rows(), other.dW_o_forw_enc.cols()); 
+			this->dU_o_forw_enc.conservativeResize(other.dU_o_forw_enc.rows(), other.dU_o_forw_enc.cols()); 
+			this->dB_o_forw_enc.conservativeResize(other.dB_o_forw_enc.rows(), other.dB_o_forw_enc.cols());
+
+			this->dW_f_back_enc.conservativeResize(other.dW_f_back_enc.rows(), other.dW_f_back_enc.cols());
+			this->dU_f_back_enc.conservativeResize(other.dU_f_back_enc.rows(), other.dU_f_back_enc.cols());
+			this->dB_f_back_enc.conservativeResize(other.dB_f_back_enc.rows(), other.dB_f_back_enc.cols());
+			this->dW_i_back_enc.conservativeResize(other.dW_i_back_enc.rows(), other.dW_i_back_enc.cols());
+			this->dU_i_back_enc.conservativeResize(other.dU_i_back_enc.rows(), other.dU_i_back_enc.cols());
+			this->dB_i_back_enc.conservativeResize(other.dB_i_back_enc.rows(), other.dB_i_back_enc.cols());
+			this->dW_ccond_back_enc.conservativeResize(other.dW_ccond_back_enc.rows(), other.dW_ccond_back_enc.cols());
+			this->dU_ccond_back_enc.conservativeResize(other.dU_ccond_back_enc.rows(), other.dU_ccond_back_enc.cols());
+			this->dB_ccond_back_enc.conservativeResize(other.dB_ccond_back_enc.rows(), other.dB_ccond_back_enc.cols());
+			this->dW_o_back_enc.conservativeResize(other.dW_o_back_enc.rows(), other.dW_o_back_enc.cols());
+			this->dU_o_back_enc.conservativeResize(other.dU_o_back_enc.rows(), other.dU_o_back_enc.cols());
+			this->dB_o_back_enc.conservativeResize(other.dB_o_back_enc.rows(), other.dB_o_back_enc.cols());
+
+
 			this->dW_out += other.dW_out;
 			this->dB_out += other.dB_out;
 
