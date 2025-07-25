@@ -26,7 +26,7 @@ public:
 
 	void SetDisplacements(const MatrixXld& displacements_FG, const MatrixXld& displacements_IG, const MatrixXld& displacements_CT, const MatrixXld& displacements_OG);
 
-	void SetRandomWeights(long double a = -0.2L, long double b = 0.2L);
+	void SetRandomWeights(long double a = -0.01, long double b = 0.01);
 
 	void SetRandomDisplacements(long double a = -0.5L, long double b = 0.5L);
 
@@ -249,7 +249,7 @@ public:
 	// Вычисляет контекстный вектор и сохраняет внутренние веса
 	RowVectorXld ComputeContext(const MatrixXld& encoder_outputs,
 		const RowVectorXld& decoder_prev_hidden) override;
-	void SetRandomWeights(long double a, long double b);
+	void SetRandomWeights(long double a = -0.01, long double b = 0.01);
 protected:
 	Eigen::Index encoder_hidden_size_;    // 2H
 	Eigen::Index decoder_hidden_size_;    // H_dec

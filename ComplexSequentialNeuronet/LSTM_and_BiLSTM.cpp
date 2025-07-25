@@ -155,7 +155,7 @@ void SimpleLSTM::All_state_Сalculation() {
 			RowVectorXld new_c_t = f_t.array() * c_t_l.array() + i_t.array() * c_t_bar.array();
 			RowVectorXld new_h_t = o_t.array() * ActivationFunctions::Tanh(new_c_t).array();
 
-			this->Hidden_states[nstep].col(timestep) = new_h_t;
+			this->Hidden_states[nstep].row(timestep) = new_h_t;
 			h_t_l = new_h_t;
 			c_t_l = new_c_t;
 		}
@@ -603,8 +603,8 @@ BahdanauAttention::BahdanauAttention(Eigen::Index encoder_hidden_size, Eigen::In
 	decoder_hidden_size_(decoder_hidden_size),
 	attention_size_(attention_size)
 {
-	// Инициализация весов (Xavier)
-	SetRandomWeights(-1, 1);
+	// Инициализация весов 
+	SetRandomWeights();
 }
 
 // Вычисляет контекстный вектор и сохраняет внутренние веса
