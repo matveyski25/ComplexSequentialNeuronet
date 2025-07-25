@@ -424,26 +424,26 @@ protected:
 	};
 
 	struct grads_Seq2SeqWithAttention {
-		MatrixXld dW_out; MatrixXld dB_out;
+		MatrixXld dW_out; RowVectorXld dB_out;
 
-		MatrixXld dW_gamma_layernorm; MatrixXld dB_beta_layernorm;
+		RowVectorXld dW_gamma_layernorm; RowVectorXld dB_beta_layernorm;
 
-		MatrixXld dV_a_attention, dW_e_attention, dW_d_attention;
+		MatrixXld dW_e_attention, dW_d_attention; VectorXld dV_a_attention;
 
-		MatrixXld dW_f_dec, dU_f_dec; MatrixXld dB_f_dec;
-		MatrixXld dW_i_dec, dU_i_dec; MatrixXld dB_i_dec;
-		MatrixXld dW_ccond_dec, dU_ccond_dec; MatrixXld dB_ccond_dec;
-		MatrixXld dW_o_dec, dU_o_dec; MatrixXld dB_o_dec;
+		MatrixXld dW_f_dec, dU_f_dec; RowVectorXld dB_f_dec;
+		MatrixXld dW_i_dec, dU_i_dec; RowVectorXld dB_i_dec;
+		MatrixXld dW_ccond_dec, dU_ccond_dec; RowVectorXld dB_ccond_dec;
+		MatrixXld dW_o_dec, dU_o_dec; RowVectorXld dB_o_dec;
 
-		MatrixXld dW_f_forw_enc, dU_f_forw_enc; MatrixXld dB_f_forw_enc;
-		MatrixXld dW_i_forw_enc, dU_i_forw_enc; MatrixXld dB_i_forw_enc;
-		MatrixXld dW_ccond_forw_enc, dU_ccond_forw_enc; MatrixXld dB_ccond_forw_enc;
-		MatrixXld dW_o_forw_enc, dU_o_forw_enc; MatrixXld dB_o_forw_enc;
+		MatrixXld dW_f_forw_enc, dU_f_forw_enc; RowVectorXld dB_f_forw_enc;
+		MatrixXld dW_i_forw_enc, dU_i_forw_enc; RowVectorXld dB_i_forw_enc;
+		MatrixXld dW_ccond_forw_enc, dU_ccond_forw_enc; RowVectorXld dB_ccond_forw_enc;
+		MatrixXld dW_o_forw_enc, dU_o_forw_enc; RowVectorXld dB_o_forw_enc;
 
-		MatrixXld dW_f_back_enc, dU_f_back_enc; MatrixXld dB_f_back_enc;
-		MatrixXld dW_i_back_enc, dU_i_back_enc; MatrixXld dB_i_back_enc;
-		MatrixXld dW_ccond_back_enc, dU_ccond_back_enc; MatrixXld dB_ccond_back_enc;
-		MatrixXld dW_o_back_enc, dU_o_back_enc; MatrixXld dB_o_back_enc;
+		MatrixXld dW_f_back_enc, dU_f_back_enc; RowVectorXld dB_f_back_enc;
+		MatrixXld dW_i_back_enc, dU_i_back_enc; RowVectorXld dB_i_back_enc;
+		MatrixXld dW_ccond_back_enc, dU_ccond_back_enc; RowVectorXld dB_ccond_back_enc;
+		MatrixXld dW_o_back_enc, dU_o_back_enc; RowVectorXld dB_o_back_enc;
 
 		void operator +=(const grads_Seq2SeqWithAttention& other) {
 			this->dW_out.conservativeResize(other.dW_out.rows(), other.dW_out.cols());

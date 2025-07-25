@@ -32,7 +32,7 @@ Seq2SeqWithAttention_ForTrain::Seq2SeqWithAttention_ForTrain(
 	decoder_(std::make_unique<Seq2SeqWithAttention_ForTrain::Decoder>(std::move(attention_), Encoder_Hidden_size_, Decoder_Hidden_size_, Output_size, start_token_, end_token_, max_steps_)) {
 }
   
-Seq2SeqWithAttention_ForTrain::grads_Seq2SeqWithAttention Seq2SeqWithAttention_ForTrain::Backward(size_t Number_InputState, MatrixXld Y_True) {
+/*Seq2SeqWithAttention_ForTrain::grads_Seq2SeqWithAttention Seq2SeqWithAttention_ForTrain::Backward(size_t Number_InputState, MatrixXld Y_True) {
 	grads_Seq2SeqWithAttention grads;
 	
 	Eigen::Index E = this->decoder_->output_size;
@@ -319,7 +319,7 @@ Seq2SeqWithAttention_ForTrain::grads_Seq2SeqWithAttention Seq2SeqWithAttention_F
 
 void Seq2SeqWithAttention_ForTrain::UpdateAdamOpt
 (
-	const std::vector<std::vector<MatrixXld>>& Target_input_output, /*std::vector<MatrixXld> Target_output,*/
+	const std::vector<std::vector<MatrixXld>>& Target_input_output, 
 	size_t epochs, size_t optima_steps, size_t batch_size,
 	long double learning_rate, long double epsilon,
 	long double beta1, long double beta2
@@ -329,67 +329,67 @@ void Seq2SeqWithAttention_ForTrain::UpdateAdamOpt
 		long double total_sq_norm = 0.0;
 
 		// -------- Decoder --------
-		total_sq_norm += grads.dW_out.squaredNorm();
-		total_sq_norm += grads.dB_out.squaredNorm();
+		total_sq_norm += grads.dW_out;
+		total_sq_norm += grads.dB_out;
 
-		total_sq_norm += grads.dW_f_dec.squaredNorm();
-		total_sq_norm += grads.dU_f_dec.squaredNorm();
-		total_sq_norm += grads.dB_f_dec.squaredNorm();
+		total_sq_norm += grads.dW_f_dec;
+		total_sq_norm += grads.dU_f_dec;
+		total_sq_norm += grads.dB_f_dec;
 
-		total_sq_norm += grads.dW_i_dec.squaredNorm();
-		total_sq_norm += grads.dU_i_dec.squaredNorm();
-		total_sq_norm += grads.dB_i_dec.squaredNorm();
+		total_sq_norm += grads.dW_i_dec;
+		total_sq_norm += grads.dU_i_dec;
+		total_sq_norm += grads.dB_i_dec;
 
-		total_sq_norm += grads.dW_ccond_dec.squaredNorm();
-		total_sq_norm += grads.dU_ccond_dec.squaredNorm();
-		total_sq_norm += grads.dB_ccond_dec.squaredNorm();
+		total_sq_norm += grads.dW_ccond_dec;
+		total_sq_norm += grads.dU_ccond_dec;
+		total_sq_norm += grads.dB_ccond_dec;
 
-		total_sq_norm += grads.dW_o_dec.squaredNorm();
-		total_sq_norm += grads.dU_o_dec.squaredNorm();
-		total_sq_norm += grads.dB_o_dec.squaredNorm();
+		total_sq_norm += grads.dW_o_dec;
+		total_sq_norm += grads.dU_o_dec;
+		total_sq_norm += grads.dB_o_dec;
 
 		// -------- LayerNorm --------
-		total_sq_norm += grads.dW_gamma_layernorm.squaredNorm();
-		total_sq_norm += grads.dB_beta_layernorm.squaredNorm();
+		total_sq_norm += grads.dW_gamma_layernorm;
+		total_sq_norm += grads.dB_beta_layernorm;
 
 		// -------- Attention --------
-		total_sq_norm += grads.dV_a_attention.squaredNorm();
-		total_sq_norm += grads.dW_e_attention.squaredNorm();
-		total_sq_norm += grads.dW_d_attention.squaredNorm();
+		total_sq_norm += grads.dV_a_attention;
+		total_sq_norm += grads.dW_e_attention;
+		total_sq_norm += grads.dW_d_attention;
 
 		// -------- Forward Encoder --------
-		total_sq_norm += grads.dW_f_forw_enc.squaredNorm();
-		total_sq_norm += grads.dU_f_forw_enc.squaredNorm();
-		total_sq_norm += grads.dB_f_forw_enc.squaredNorm();
+		total_sq_norm += grads.dW_f_forw_enc;
+		total_sq_norm += grads.dU_f_forw_enc;
+		total_sq_norm += grads.dB_f_forw_enc;
 
-		total_sq_norm += grads.dW_i_forw_enc.squaredNorm();
-		total_sq_norm += grads.dU_i_forw_enc.squaredNorm();
-		total_sq_norm += grads.dB_i_forw_enc.squaredNorm();
+		total_sq_norm += grads.dW_i_forw_enc;
+		total_sq_norm += grads.dU_i_forw_enc;
+		total_sq_norm += grads.dB_i_forw_enc;
 
-		total_sq_norm += grads.dW_ccond_forw_enc.squaredNorm();
-		total_sq_norm += grads.dU_ccond_forw_enc.squaredNorm();
-		total_sq_norm += grads.dB_ccond_forw_enc.squaredNorm();
+		total_sq_norm += grads.dW_ccond_forw_enc;
+		total_sq_norm += grads.dU_ccond_forw_enc;
+		total_sq_norm += grads.dB_ccond_forw_enc;
 
-		total_sq_norm += grads.dW_o_forw_enc.squaredNorm();
-		total_sq_norm += grads.dU_o_forw_enc.squaredNorm();
-		total_sq_norm += grads.dB_o_forw_enc.squaredNorm();
+		total_sq_norm += grads.dW_o_forw_enc;
+		total_sq_norm += grads.dU_o_forw_enc;
+		total_sq_norm += grads.dB_o_forw_enc;
 
 		// -------- Backward Encoder --------
-		total_sq_norm += grads.dW_f_back_enc.squaredNorm();
-		total_sq_norm += grads.dU_f_back_enc.squaredNorm();
-		total_sq_norm += grads.dB_f_back_enc.squaredNorm();
+		total_sq_norm += grads.dW_f_back_enc;
+		total_sq_norm += grads.dU_f_back_enc;
+		total_sq_norm += grads.dB_f_back_enc;
 
-		total_sq_norm += grads.dW_i_back_enc.squaredNorm();
-		total_sq_norm += grads.dU_i_back_enc.squaredNorm();
-		total_sq_norm += grads.dB_i_back_enc.squaredNorm();
+		total_sq_norm += grads.dW_i_back_enc;
+		total_sq_norm += grads.dU_i_back_enc;
+		total_sq_norm += grads.dB_i_back_enc;
 
-		total_sq_norm += grads.dW_ccond_back_enc.squaredNorm();
-		total_sq_norm += grads.dU_ccond_back_enc.squaredNorm();
-		total_sq_norm += grads.dB_ccond_back_enc.squaredNorm();
+		total_sq_norm += grads.dW_ccond_back_enc;
+		total_sq_norm += grads.dU_ccond_back_enc;
+		total_sq_norm += grads.dB_ccond_back_enc;
 
-		total_sq_norm += grads.dW_o_back_enc.squaredNorm();
-		total_sq_norm += grads.dU_o_back_enc.squaredNorm();
-		total_sq_norm += grads.dB_o_back_enc.squaredNorm();
+		total_sq_norm += grads.dW_o_back_enc;
+		total_sq_norm += grads.dU_o_back_enc;
+		total_sq_norm += grads.dB_o_back_enc;
 
 		long double global_norm = std::sqrt(total_sq_norm + 1e-8L);
 
@@ -826,6 +826,7 @@ void Seq2SeqWithAttention_ForTrain::UpdateAdamOpt
 		}
 	}
 }
+*/
 
 Seq2SeqWithAttention_ForTrain::grads_Seq2SeqWithAttention Seq2SeqWithAttention_ForTrain::BackwardWithLogging(size_t Number_InputState, MatrixXld Y_True) {
 	auto check_nan_inf = [](const MatrixXld& m, const std::string& name) {
@@ -859,26 +860,26 @@ Seq2SeqWithAttention_ForTrain::grads_Seq2SeqWithAttention Seq2SeqWithAttention_F
 	Eigen::Index X = E + C;
 	Eigen::Index HE = this->encoder_->Common_Hidden_size;
 	Eigen::Index EE = this->encoder_->Common_Input_size;
-	grads.dW_out.conservativeResize(E, D), grads.dB_out.conservativeResize(1, E);
+	grads.dW_out.conservativeResize(E, D), grads.dB_out.conservativeResize(E);
 
-	grads.dW_gamma_layernorm.conservativeResize(1, D), grads.dB_beta_layernorm.conservativeResize(1, D);
+	grads.dW_gamma_layernorm.conservativeResize(D), grads.dB_beta_layernorm.conservativeResize(D);
 
-	grads.dV_a_attention.conservativeResize(A, 1), grads.dW_e_attention.conservativeResize(A, C), grads.dW_d_attention.conservativeResize(A, H);
+	grads.dV_a_attention.conservativeResize(A), grads.dW_e_attention.conservativeResize(A, C), grads.dW_d_attention.conservativeResize(A, H);
 
-	grads.dW_f_dec.conservativeResize(H, X), grads.dU_f_dec.conservativeResize(H, H), grads.dB_f_dec.conservativeResize(1, H),
-	grads.dW_i_dec.conservativeResize(H, X), grads.dU_i_dec.conservativeResize(H, H), grads.dB_i_dec.conservativeResize(1, H),
-	grads.dW_ccond_dec.conservativeResize(H, X), grads.dU_ccond_dec.conservativeResize(H, H), grads.dB_ccond_dec.conservativeResize(1, H),
-	grads.dW_o_dec.conservativeResize(H, X), grads.dU_o_dec.conservativeResize(H, H), grads.dB_o_dec.conservativeResize(1, H);
+	grads.dW_f_dec.conservativeResize(H, X), grads.dU_f_dec.conservativeResize(H, H), grads.dB_f_dec.conservativeResize(H),
+	grads.dW_i_dec.conservativeResize(H, X), grads.dU_i_dec.conservativeResize(H, H), grads.dB_i_dec.conservativeResize(H),
+	grads.dW_ccond_dec.conservativeResize(H, X), grads.dU_ccond_dec.conservativeResize(H, H), grads.dB_ccond_dec.conservativeResize(H),
+	grads.dW_o_dec.conservativeResize(H, X), grads.dU_o_dec.conservativeResize(H, H), grads.dB_o_dec.conservativeResize(H);
 
-	grads.dW_f_forw_enc.conservativeResize(HE, EE), grads.dU_f_forw_enc.conservativeResize(HE, HE), grads.dB_f_forw_enc.conservativeResize(1, HE),
-	grads.dW_i_forw_enc.conservativeResize(HE, EE), grads.dU_i_forw_enc.conservativeResize(HE, HE), grads.dB_i_forw_enc.conservativeResize(1, HE),
-	grads.dW_ccond_forw_enc.conservativeResize(HE, EE), grads.dU_ccond_forw_enc.conservativeResize(HE, HE), grads.dB_ccond_forw_enc.conservativeResize(1, HE),
-	grads.dW_o_forw_enc.conservativeResize(HE, EE), grads.dU_o_forw_enc.conservativeResize(HE, HE), grads.dB_o_forw_enc.conservativeResize(1, HE);
+	grads.dW_f_forw_enc.conservativeResize(HE, EE), grads.dU_f_forw_enc.conservativeResize(HE, HE), grads.dB_f_forw_enc.conservativeResize(HE),
+	grads.dW_i_forw_enc.conservativeResize(HE, EE), grads.dU_i_forw_enc.conservativeResize(HE, HE), grads.dB_i_forw_enc.conservativeResize(HE),
+	grads.dW_ccond_forw_enc.conservativeResize(HE, EE), grads.dU_ccond_forw_enc.conservativeResize(HE, HE), grads.dB_ccond_forw_enc.conservativeResize(HE),
+	grads.dW_o_forw_enc.conservativeResize(HE, EE), grads.dU_o_forw_enc.conservativeResize(HE, HE), grads.dB_o_forw_enc.conservativeResize(HE);
 
-	grads.dW_f_back_enc.conservativeResize(HE, EE), grads.dU_f_back_enc.conservativeResize(HE, HE), grads.dB_f_back_enc.conservativeResize(1, HE),
-	grads.dW_i_back_enc.conservativeResize(HE, EE), grads.dU_i_back_enc.conservativeResize(HE, HE), grads.dB_i_back_enc.conservativeResize(1, HE),
-	grads.dW_ccond_back_enc.conservativeResize(HE, EE), grads.dU_ccond_back_enc.conservativeResize(HE, HE), grads.dB_ccond_back_enc.conservativeResize(1, HE),
-	grads.dW_o_back_enc.conservativeResize(HE, EE), grads.dU_o_back_enc.conservativeResize(HE, HE), grads.dB_o_back_enc.conservativeResize(1, HE);
+	grads.dW_f_back_enc.conservativeResize(HE, EE), grads.dU_f_back_enc.conservativeResize(HE, HE), grads.dB_f_back_enc.conservativeResize(HE),
+	grads.dW_i_back_enc.conservativeResize(HE, EE), grads.dU_i_back_enc.conservativeResize(HE, HE), grads.dB_i_back_enc.conservativeResize(HE),
+	grads.dW_ccond_back_enc.conservativeResize(HE, EE), grads.dU_ccond_back_enc.conservativeResize(HE, HE), grads.dB_ccond_back_enc.conservativeResize(HE),
+	grads.dW_o_back_enc.conservativeResize(HE, EE), grads.dU_o_back_enc.conservativeResize(HE, HE), grads.dB_o_back_enc.conservativeResize(HE);
 	
 	grads.SetZero();
 	
@@ -932,7 +933,7 @@ Seq2SeqWithAttention_ForTrain::grads_Seq2SeqWithAttention Seq2SeqWithAttention_F
 		else {
 			DU_dec_t = this->decoder_->StatesForgrads.h[Number_InputState].row(t - 1).transpose() * dGates_t;
 		}
-		VectorXld DB_dec_t = dGates_t;
+		RowVectorXld DB_dec_t = dGates_t;
 
 		_dC_t = dC_t.array() * F_t.array();
 		MatrixXld U(this->decoder_->Hidden_size, 4 * this->decoder_->Hidden_size);
@@ -1063,7 +1064,7 @@ Seq2SeqWithAttention_ForTrain::grads_Seq2SeqWithAttention Seq2SeqWithAttention_F
 			else {
 				DU_Enc_Forw_j = this->encoder_->Forward.statesForgrads.h[Number_InputState].row(j - 1).transpose() * dEnc_Forw_Gates_j;
 			}
-			VectorXld DB_Enc_Forw_j = dEnc_Forw_Gates_j;
+			RowVectorXld DB_Enc_Forw_j = dEnc_Forw_Gates_j;
 
 			Enc_Forw__dC_j = dEnc_Forw_C_j.array() * Enc_Forw_F_j.array();
 			MatrixXld U_enc_f(this->encoder_->Common_Hidden_size, 4 * this->encoder_->Common_Hidden_size);
@@ -1144,7 +1145,7 @@ Seq2SeqWithAttention_ForTrain::grads_Seq2SeqWithAttention Seq2SeqWithAttention_F
 			else {
 				DU_Enc_Back_j = this->encoder_->Backward.statesForgrads.h[Number_InputState].row(j - 1).transpose() * dEnc_Back_Gates_j;
 			}
-			VectorXld DB_Enc_Back_j = dEnc_Back_Gates_j;
+			RowVectorXld DB_Enc_Back_j = dEnc_Back_Gates_j;
 
 			Enc_Back__dC_j = dEnc_Back_C_j.array() * Enc_Back_F_j.array();
 			MatrixXld U_enc_b(this->encoder_->Common_Hidden_size, 4 * this->encoder_->Common_Hidden_size);
@@ -1418,6 +1419,9 @@ void Seq2SeqWithAttention_ForTrain::UpdateAdamOptWithLogging
 	std::vector<std::vector<MatrixXld>> shuffle_target = Target_input_output;
 	long double notceil_batch_steps_ = (long double)shuffle_target.size() / batch_size;
 	size_t batch_steps_ = (size_t)std::ceil(notceil_batch_steps_);
+	//std::cout << shuffle_target.size();
+	//std::cout << notceil_batch_steps_;
+	//std::cout << batch_steps_;
 
 	std::chrono::steady_clock::time_point start_time;
 	std::chrono::steady_clock::time_point end_time;
@@ -1506,6 +1510,13 @@ void Seq2SeqWithAttention_ForTrain::UpdateAdamOptWithLogging
 
 		grads_Seq2SeqWithAttention grads;
 
+		std::vector<std::vector<MatrixXld>> shuffle_(2, std::vector<MatrixXld>(shuffle_target.size()));
+		for (int i = 0; i < shuffle_target.size(); i++) {
+			shuffle_[0][i] = shuffle_target[i][0];
+			shuffle_[1][i] = shuffle_target[i][1];
+		}
+		shuffle_target = shuffle_;
+
 		Inference(shuffle_target[0]);
 
 		for (size_t batch_step = 0; batch_step < batch_steps_; batch_step++) {
@@ -1525,7 +1536,84 @@ void Seq2SeqWithAttention_ForTrain::UpdateAdamOptWithLogging
 			long double grad_norm = get_global_norm(grads);
 
 			if (!std::isfinite(grad_norm)) {
+				auto check_nan_inf = [](const MatrixXld& m, const std::string& name) {
+					if (!m.allFinite()) {
+						auto lyambda = [](const MatrixXld& m) {
+							int nan_count = 0;
+							int inf_count = 0;
+
+							for (int i = 0; i < m.size(); ++i) {
+								double val = *(m.data() + i);
+								if (std::isnan(val)) ++nan_count;
+								else if (std::isinf(val)) ++inf_count;
+							}
+
+							return std::make_pair(nan_count, inf_count);
+							};
+						//size_t nnan = 0;
+						//size_t ninf = 0;
+						auto [nan_count, inf_count] = lyambda(m);
+						std::cerr << "[ERROR] NaN or Inf detected in: " << name << "\tnan-inf: " << nan_count << "/" << inf_count << "\n";
+					}
+					};
 				std::cerr << "[WARNING] NaN/inf in gradients at batch " << batch_step << "\n";
+				check_nan_inf(grads.dW_out, "grads.dW_out");
+				check_nan_inf(grads.dB_out, "grads.dB_out");
+
+				check_nan_inf(grads.dW_f_dec, "grads.dW_f_dec");
+				check_nan_inf(grads.dU_f_dec, "grads.dU_f_dec");
+				check_nan_inf(grads.dB_f_dec, "grads.dB_f_dec");
+
+				check_nan_inf(grads.dW_i_dec, "grads.dW_i_dec");
+				check_nan_inf(grads.dU_i_dec, "grads.dU_i_dec");
+				check_nan_inf(grads.dB_i_dec, "grads.dB_i_dec");
+
+				check_nan_inf(grads.dW_ccond_dec, "grads.dW_ccond_dec");
+				check_nan_inf(grads.dU_ccond_dec, "grads.dU_ccond_dec");
+				check_nan_inf(grads.dB_ccond_dec, "grads.dB_ccond_dec");
+
+				check_nan_inf(grads.dW_o_dec, "grads.dW_o_dec");
+				check_nan_inf(grads.dU_o_dec, "grads.dU_o_dec");
+				check_nan_inf(grads.dB_o_dec, "grads.dB_o_dec");
+
+				check_nan_inf(grads.dW_gamma_layernorm, "grads.dW_gamma_layernorm");
+				check_nan_inf(grads.dB_beta_layernorm, "grads.dB_beta_layernorm");
+
+				check_nan_inf(grads.dV_a_attention, "grads.dV_a_attention");
+				check_nan_inf(grads.dW_e_attention, "grads.dW_e_attention");
+				check_nan_inf(grads.dW_d_attention, "grads.dW_d_attention");
+
+				check_nan_inf(grads.dW_f_forw_enc, "grads.dW_f_forw_enc");
+				check_nan_inf(grads.dU_f_forw_enc, "grads.dU_f_forw_enc");
+				check_nan_inf(grads.dB_f_forw_enc, "grads.dB_f_forw_enc");
+
+				check_nan_inf(grads.dW_i_forw_enc, "grads.dW_i_forw_enc");
+				check_nan_inf(grads.dU_i_forw_enc, "grads.dU_i_forw_enc");
+				check_nan_inf(grads.dB_i_forw_enc, "grads.dB_i_forw_enc");
+
+				check_nan_inf(grads.dW_ccond_forw_enc, "grads.dW_ccond_forw_enc");
+				check_nan_inf(grads.dU_ccond_forw_enc, "grads.dU_ccond_forw_enc");
+				check_nan_inf(grads.dB_ccond_forw_enc, "grads.dB_ccond_forw_enc");
+
+				check_nan_inf(grads.dW_o_forw_enc, "grads.dW_o_forw_enc");
+				check_nan_inf(grads.dU_o_forw_enc, "grads.dU_o_forw_enc");
+				check_nan_inf(grads.dB_o_forw_enc, "grads.dB_o_forw_enc");
+
+				check_nan_inf(grads.dW_f_back_enc, "grads.dW_f_back_enc");
+				check_nan_inf(grads.dU_f_back_enc, "grads.dU_f_back_enc");
+				check_nan_inf(grads.dB_f_back_enc, "grads.dB_f_back_enc");
+
+				check_nan_inf(grads.dW_i_back_enc, "grads.dW_i_back_enc");
+				check_nan_inf(grads.dU_i_back_enc, "grads.dU_i_back_enc");
+				check_nan_inf(grads.dB_i_back_enc, "grads.dB_i_back_enc");
+
+				check_nan_inf(grads.dW_ccond_back_enc, "grads.dW_ccond_back_enc");
+				check_nan_inf(grads.dU_ccond_back_enc, "grads.dU_ccond_back_enc");
+				check_nan_inf(grads.dB_ccond_back_enc, "grads.dB_ccond_back_enc");
+
+				check_nan_inf(grads.dW_o_back_enc, "grads.dW_o_back_enc");
+				check_nan_inf(grads.dU_o_back_enc, "grads.dU_o_back_enc");
+				check_nan_inf(grads.dB_o_back_enc, "grads.dB_o_back_enc");
 			}
 			else if (grad_norm > clip_threshold) {
 				std::cout << "[CLIP] Batch " << batch_step

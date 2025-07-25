@@ -100,11 +100,13 @@ int main() {
 		dic.getEmbedding("Ìä"), dic.getEmbedding("ÌÄ"), dic.getEmbedding("ìä"), dic.getEmbedding("ìÄ"),
 		dic.getEmbedding("Äì"), dic.getEmbedding("ÄÌ"), dic.getEmbedding("äì"), dic.getEmbedding("äÌ")
 		});
-	std::vector<MatrixXld> output(8, dic.getEmbedding("Ì<`>"));
+	std::vector<MatrixXld> output(1, dic.getEmbedding("Ì<`>"));
 
-	std::vector<std::vector<MatrixXld>> input_output({ input, output });
+    std::vector<std::vector<MatrixXld>> input_output({ {input[0], output[0]}, {input[1], output[0]}, 
+        {input[2], output[0]}, {input[3], output[0]}, { input[4], output[0] }, 
+        {input[5], output[0]}, { input[6], output[0] }, {input[7], output[0]} });
 
-	test.UpdateAdamOptWithLogging(input_output, 10000, 1000, 4);
+	test.UpdateAdamOptWithLogging(input_output, 100000, 10000, 4);
 
 	return 0;
 }
