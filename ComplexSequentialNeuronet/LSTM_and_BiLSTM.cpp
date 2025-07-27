@@ -88,10 +88,10 @@ void SimpleLSTM::SetDisplacements(const MatrixXld& displacements_FG, const Matri
 	B_O = displacements_OG;
 }
 
-void SimpleLSTM::SetRandomWeights(long double a, long double b) {
+void SimpleLSTM::SetRandomWeights(double a, double b) {
 	//ActivationFunctions::matrix_random(Hidden_size, Hidden_size, a, b);
-	auto xavier_init = [](size_t rows, size_t cols, long double c = 2.0L) {
-		long double range = sqrt(c / (rows + cols));
+	auto xavier_init = [](size_t rows, size_t cols, double c = 2.0L) {
+		double range = sqrt(c / (rows + cols));
 		return ActivationFunctions::matrix_random(rows, cols, -range, range);
 		};
 	auto orthogonal_init = [](size_t rows, size_t cols) {
@@ -99,7 +99,7 @@ void SimpleLSTM::SetRandomWeights(long double a, long double b) {
 		Eigen::HouseholderQR<MatrixXld> qr(mat);
 		return qr.householderQ() * MatrixXld::Identity(rows, cols);
 		};
-	auto random_init = [](size_t rows, size_t cols, long double a_, long double b_) { return ActivationFunctions::matrix_random(rows, cols, a_, b_); };
+	auto random_init = [](size_t rows, size_t cols, double a_, double b_) { return ActivationFunctions::matrix_random(rows, cols, a_, b_); };
 	auto init_h = orthogonal_init;
 	auto init_i = xavier_init;
 	this->U_F = init_h(this->Hidden_size, this->Hidden_size);
@@ -115,7 +115,7 @@ void SimpleLSTM::SetRandomWeights(long double a, long double b) {
 	//Output_weights = ActivationFunctions::matrix_random(Hidden_size, 1, -0.1L, 0.1L);
 }
 
-void SimpleLSTM::SetRandomDisplacements(long double a, long double b) {
+void SimpleLSTM::SetRandomDisplacements(double a, double b) {
 	this->B_F = MatrixXld::Constant(1, Hidden_size, 1.0L);
 	this->B_I = ActivationFunctions::matrix_random(1, Hidden_size, a, b);
 	this->B_C = ActivationFunctions::matrix_random(1, Hidden_size, a, b);
@@ -582,22 +582,6 @@ void BiLSTM_ForTrain::Batch_All_state_Сalculation() {
 }
 
 
-
-// Очистка накопленных значений
-void Attention::ClearCache() {
-	all_attention_weights_.clear();
-	all_scores_.clear();
-	all_tanh_outputs_.clear();
-}
-
-// Получение attention-весов по всем временным шагам
-const std::vector<VectorXld>& Attention::GetAllAttentionWeights() const { return all_attention_weights_; }
-
-// Получение сырых score-векторов (до softmax)
-const std::vector<VectorXld>& Attention::GetAllScores() const { return all_scores_; }
-
-
-
 BahdanauAttention::BahdanauAttention(Eigen::Index encoder_hidden_size, Eigen::Index decoder_hidden_size, Eigen::Index attention_size)
 	: encoder_hidden_size_(encoder_hidden_size),
 	decoder_hidden_size_(decoder_hidden_size),
@@ -608,47 +592,40 @@ BahdanauAttention::BahdanauAttention(Eigen::Index encoder_hidden_size, Eigen::In
 }
 
 // Вычисляет контекстный вектор и сохраняет внутренние веса
-RowVectorXld BahdanauAttention::ComputeContext(const MatrixXld& encoder_outputs,
-	const RowVectorXld& decoder_prev_hidden) {
-	const size_t time_steps_enc = encoder_outputs.rows();   // длина входной последовательности
-	const size_t hidden_size_enc = encoder_outputs.cols();  // размерность h_i (обычно 2H)
-	const size_t A = this->attention_size_;                 // размер attention-пространства
+BahdanauAttention::AttnOutput BahdanauAttention::ComputeContext(
+	const MatrixXld& encoder_outputs,
+	const RowVectorXld& decoder_prev_hidden
+) {
+    const size_t T_enc = encoder_outputs.rows();
+    const size_t H_enc = encoder_outputs.cols();
+    const size_t A     = attention_size_;
 
-	VectorXld scores(time_steps_enc);         // e_{ti}
-	std::vector<RowVectorXld> u_t;            // вектор для хранения u_{ti} на текущем шаге t
+    VectorXld scores(T_enc);
+    std::vector<RowVectorXld> u_t; u_t.reserve(T_enc);
 
-	for (size_t i = 0; i < time_steps_enc; ++i) {
-		RowVectorXld h_i = encoder_outputs.row(i); // [1 x 2H]
+    for (size_t i = 0; i < T_enc; ++i) {
+        RowVectorXld h_i = encoder_outputs.row(i);
+        // [1×A]
+        RowVectorXld combined = 
+            (W_encoder_ * h_i.transpose() + W_decoder_ * decoder_prev_hidden.transpose())
+            .transpose();
+        RowVectorXld u_ti = combined.array().tanh().matrix();
+        scores(i) = (u_ti * attention_vector_).value();
+        u_t.push_back(std::move(u_ti));
+    }
 
-		// [A x 1] = W_encoder * h_i^T + W_decoder * s_{t-1}^T
-		RowVectorXld combined_input =
-			(W_encoder_ * h_i.transpose() + W_decoder_ * decoder_prev_hidden.transpose()).transpose(); // [1 x A]
+    VectorXld alpha = ActivationFunctions::Softmax(scores);
 
-		RowVectorXld u_ti = combined_input.array().tanh().matrix();  // [1 x A]
+    // compute context vector
+    RowVectorXld context = RowVectorXld::Zero(H_enc);
+    for (size_t i = 0; i < T_enc; ++i) {
+        context += alpha(i) * encoder_outputs.row(i);
+    }
 
-		scores(i) = (u_ti * attention_vector_).value();  // e_{ti} = v^T u_{ti}
-
-		u_t.push_back(u_ti);  // сохраняем u_{ti} для текущего i
-	}
-
-	// Softmax по e_{ti} → α_{ti}
-	VectorXld attention_weights = ActivationFunctions::Softmax(scores);
-
-	// Сохраняем веса и логиты
-	this->all_attention_weights_.push_back(attention_weights);
-	this->all_scores_.push_back(scores);
-	this->all_tanh_outputs_.push_back(u_t);  // сохраняем все u_{ti} для текущего t
-
-	// Вычисляем контекст: c_t = ∑ α_{ti} * h_i
-	RowVectorXld context = RowVectorXld::Zero(hidden_size_enc);
-	for (size_t i = 0; i < time_steps_enc; ++i) {
-		context += attention_weights(i) * encoder_outputs.row(i);
-	}
-
-	return context;
+    return { std::move(context), std::move(u_t), std::move(alpha) };
 }
 
-void BahdanauAttention::SetRandomWeights(long double a, long double b) {
+void BahdanauAttention::SetRandomWeights(double a, double b) {
 	this->W_encoder_ = ActivationFunctions::matrix_random(this->attention_size_, this->encoder_hidden_size_, a, b);
 	this->W_decoder_ = ActivationFunctions::matrix_random(this->attention_size_, this->decoder_hidden_size_, a, b);
 	this->attention_vector_ = ActivationFunctions::matrix_random(this->attention_size_, 1, a, b);

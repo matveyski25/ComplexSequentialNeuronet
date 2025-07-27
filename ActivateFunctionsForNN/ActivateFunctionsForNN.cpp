@@ -1,7 +1,7 @@
 #include "HeaderActivateFunctionsForNN.h"
 
 namespace ActivationFunctions {
-	bool StepFunction(long double value, long double step) {
+	bool StepFunction(double value, double step) {
 		if (value >= step) {
 			return 1;
 		}
@@ -9,7 +9,7 @@ namespace ActivationFunctions {
 			return 0;
 		}
 	}
-	MatrixXld StepFunction(const MatrixXld& matx, long double step) {
+	MatrixXld StepFunction(const MatrixXld& matx, double step) {
 		MatrixXld result(matx.rows(), matx.cols());
 		for (Eigen::Index i = 0; i < matx.rows(); ++i) {
 			for (Eigen::Index j = 0; j < matx.cols(); ++j) {
@@ -18,31 +18,31 @@ namespace ActivationFunctions {
 		}
 		return result;
 	}
-	long double Sigmoid(long double value) {
+	double Sigmoid(double value) {
 		return 1.0L / (1.0L + std::exp(-value));
 	}
-	MatrixXld Sigmoid(const MatrixXld& matx, long double norm) {
-		return matx.unaryExpr([&](long double x) {
+	MatrixXld Sigmoid(const MatrixXld& matx, double norm) {
+		return matx.unaryExpr([&](double x) {
 			x = std::max(-norm, std::min(norm, x)); // Ограничение
-			return 1.0L / (1.0L + std::exp(-x));
+			return 1.0 / (1.0 + std::exp(-x));
 			});
 	}
-	long double Tanh(long double value) {
-		return std::tanhl(value);
+	double Tanh(double value) {
+		return std::tanh(value);
 	}
-	MatrixXld Tanh(const MatrixXld& matx, long double norm) {
-		return matx.unaryExpr([&](long double x) {
-			x = std::max<long double>(-norm, std::min<long double>(norm, x));
-			return std::tanhl(x);
+	MatrixXld Tanh(const MatrixXld& matx, double norm) {
+		return matx.unaryExpr([&](double x) {
+			x = std::max<double>(-norm, std::min<double>(norm, x));
+			return std::tanh(x);
 			});
 	}
-	long double ReLU(long double value) {
+	double ReLU(double value) {
 		return std::fmaxl(0, value);
 	}
 	MatrixXld ReLU(const MatrixXld& matx) {
-		return matx.unaryExpr([](auto x) { return std::fmaxl(0.0L, x); });
+		return matx.unaryExpr([](auto x) { return std::fmax(0.0, x); });
 	}
-	long double LeakyReLU(long double value, long double a) {
+	double LeakyReLU(double value, double a) {
 		if (value >= 0) {
 			return value;
 		}
@@ -58,29 +58,29 @@ namespace ActivationFunctions {
 		MatrixXld result(matx.rows(), matx.cols());
 		for (Eigen::Index i = 0; i < matx.rows(); ++i) {
 			for (Eigen::Index j = 0; j < matx.cols(); ++j) {
-				result(i, j) = (matx(i, j) >= 0.0L)
+				result(i, j) = (matx(i, j) >= 0.0)
 					? matx(i, j)
 					: a(i, j) * matx(i, j);
 			}
 		}
 		return result;
 	}
-	MatrixXld LeakyReLU(const MatrixXld& matx, long double a) {
+	MatrixXld LeakyReLU(const MatrixXld& matx, double a) {
 		MatrixXld result(matx.rows(), matx.cols());
 		for (Eigen::Index i = 0; i < matx.rows(); ++i) {
 			for (Eigen::Index j = 0; j < matx.cols(); ++j) {
-				result(i, j) = (matx(i, j) >= 0.0L)
+				result(i, j) = (matx(i, j) >= 0.0)
 					? matx(i, j)
 					: a * matx(i, j);
 			}
 		}
 		return result;
 	}
-	long double Swish(long double value, long double b) {
-		long double x = value * b;
+	double Swish(double value, double b) {
+		double x = value * b;
 		// Ограничение для предотвращения переполнения exp(x)
-		x = std::max(x, -700.0L);
-		x = std::min(x, 700.0L);
+		x = std::max(x, -700.0);
+		x = std::min(x, 700.0);
 		return value * (1.0L / (1.0L + std::exp(-x)));
 	}
 	MatrixXld Swish(const MatrixXld& matx, const MatrixXld& b) {
@@ -91,36 +91,36 @@ namespace ActivationFunctions {
 		MatrixXld result(matx.rows(), matx.cols());
 		for (Eigen::Index i = 0; i < matx.rows(); ++i) {
 			for (Eigen::Index j = 0; j < matx.cols(); ++j) {
-				long double x = matx(i, j) * b(i, j);
-				x = std::max(x, -700.0L);
-				x = std::min(x, 700.0L);
+				double x = matx(i, j) * b(i, j);
+				x = std::max(x, -700.0);
+				x = std::min(x, 700.0);
 				result(i, j) = matx(i, j) / (1.0L + std::exp(-x));
 			}
 		}
 		return result;
 	}
-	MatrixXld Swish(const MatrixXld& matx, long double b) {
+	MatrixXld Swish(const MatrixXld& matx, double b) {
 		MatrixXld result(matx.rows(), matx.cols());
 		for (Eigen::Index i = 0; i < matx.rows(); ++i) {
 			for (Eigen::Index j = 0; j < matx.cols(); ++j) {
-				long double x = matx(i, j) * b;
-				x = std::max(x, -700.0L);
-				x = std::min(x, 700.0L);
+				double x = matx(i, j) * b;
+				x = std::max(x, -700.0);
+				x = std::min(x, 700.0);
 				result(i, j) = matx(i, j) / (1.0L + std::exp(-x));
 			}
 		}
 		return result;
 	}
-	std::vector<long double> Softmax(const std::vector<long double>& values) {
+	std::vector<double> Softmax(const std::vector<double>& values) {
 		if (values.empty()) {
 			throw std::invalid_argument("Input vector is empty");
 		}
-		long double max_val = *std::max_element(values.begin(), values.end());
-		long double sum = 0.0;
-		std::vector<long double> result;
+		double max_val = *std::max_element(values.begin(), values.end());
+		double sum = 0.0;
+		std::vector<double> result;
 		result.reserve(values.size());
 		for (auto v : values) {
-			long double exp_val = std::exp(v - max_val);
+			double exp_val = std::exp(v - max_val);
 			sum += exp_val;
 			result.push_back(exp_val);
 		}
@@ -133,39 +133,39 @@ namespace ActivationFunctions {
 		}
 		return result;
 	}
-	VectorXld Softmax(const VectorXld& x, long double clamp_val, long double eps){
+	VectorXld Softmax(const VectorXld& x, double clamp_val, double eps){
 		// 1) Клэмпим входы
-		VectorXld x_clamped = x.unaryExpr([&](long double v) {
+		VectorXld x_clamped = x.unaryExpr([&](double v) {
 			return std::max(-clamp_val, std::min(clamp_val, v));
 			});
 
 		// 2) Вычисляем максимум
-		long double x_max = x_clamped.maxCoeff();
+		double x_max = x_clamped.maxCoeff();
 
 		// 3) Вычисляем экспоненты от (x - max)
-		VectorXld exp_x = x_clamped.unaryExpr([&](long double v) {
+		VectorXld exp_x = x_clamped.unaryExpr([&](double v) {
 			return std::exp(v - x_max);
 			});
 
 		// 4) Сумма с eps
-		long double sum_exp = exp_x.sum() + eps;
+		double sum_exp = exp_x.sum() + eps;
 
 		// 5) Нормировка
 		return exp_x.array() / sum_exp;
 	}
-	long double random(long double a, long double b) {
+	double random(double a, double b) {
 		if (a >= b) {
 			throw std::invalid_argument("a must be less than b");
 		}
 
 		static std::mt19937_64 generator(std::random_device{}());
-		std::uniform_real_distribution<long double> distribution(a, b);
+		std::uniform_real_distribution<double> distribution(a, b);
 		return distribution(generator);
 	}
-	MatrixXld matrix_random(size_t rows, size_t cols, long double a, long double b ) {
+	MatrixXld matrix_random(size_t rows, size_t cols, double a, double b ) {
 		return MatrixXld::Random(rows, cols) * (b - a) + MatrixXld::Constant(rows, cols, a);
 	}
-	MatrixXld matrix_random(const MatrixXld& matrix, long double a, long double b) {
+	MatrixXld matrix_random(const MatrixXld& matrix, double a, double b) {
 		return MatrixXld::Random(matrix.rows(), matrix.cols()) * (b - a) + MatrixXld::Constant(matrix.rows(), matrix.cols(), a);
 	}
 }

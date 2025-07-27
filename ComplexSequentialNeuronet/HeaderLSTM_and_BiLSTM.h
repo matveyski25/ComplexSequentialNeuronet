@@ -26,11 +26,11 @@ public:
 
 	void SetDisplacements(const MatrixXld& displacements_FG, const MatrixXld& displacements_IG, const MatrixXld& displacements_CT, const MatrixXld& displacements_OG);
 
-	void SetRandomWeights(long double a = -0.01, long double b = 0.01);
+	void SetRandomWeights(double a = -0.01, double b = 0.01);
 
-	void SetRandomDisplacements(long double a = -0.5L, long double b = 0.5L);
+	void SetRandomDisplacements(double a = -0.5L, double b = 0.5L);
 
-	void All_state_Сalculation();
+	virtual void All_state_Сalculation();
 
 	std::vector<RowVectorXld> GetLastOutputs() const;
 
@@ -54,12 +54,12 @@ public:
 
 	void load_matrix(std::ifstream& file, MatrixXld& m);
 
-protected:
+//protected:
 
 	Eigen::Index Input_size;
 	Eigen::Index Hidden_size;
 	std::vector<MatrixXld> Input_states;
-
+protected:
 	MatrixXld U_F;  // Forget gate hidden state weights
 	MatrixXld U_I;  // Input gate hidden state weights
 	MatrixXld U_C;  // Cell state hidden state weights
@@ -219,37 +219,32 @@ protected:
 
 class Attention {
 public:
+	struct AttnOutput {
+		RowVectorXld context;
+		std::vector<RowVectorXld> u_t;  // size = time_steps_enc
+		VectorXld      alpha;          // size = time_steps_enc
+	};
+
 	virtual ~Attention() = default;
 
 	// Абстрактный метод: вычисляет контекст по шагу
-	virtual RowVectorXld ComputeContext(const MatrixXld& encoder_outputs,
-		const RowVectorXld& decoder_prev_hidden) = 0;
-
-	// Очистка накопленных значений
-	virtual void ClearCache();
-
-	// Получение attention-весов по всем временным шагам
-	const std::vector<VectorXld>& GetAllAttentionWeights() const;
-
-	// Получение сырых score-векторов (до softmax)
-	const std::vector<VectorXld>& GetAllScores() const;
-
-protected:
-	// Вспомогательные буферы для накопления истории attention по всем шагам
-	std::vector<VectorXld> all_attention_weights_;  // α_t для всех t
-	std::vector<VectorXld> all_scores_;             // e_{t,i} для всех t
-	std::vector<std::vector<RowVectorXld>> all_tanh_outputs_;  // u_{ti} для всех t, i
-
+	virtual AttnOutput ComputeContext(
+		const MatrixXld& encoder_outputs,
+		const RowVectorXld& decoder_prev_hidden
+	) = 0;
 };
 
 class BahdanauAttention : public Attention {
 public:
 	friend class Seq2SeqWithAttention_ForTrain;////////////
 	BahdanauAttention(Eigen::Index encoder_hidden_size, Eigen::Index decoder_hidden_size, Eigen::Index attention_size);
-	// Вычисляет контекстный вектор и сохраняет внутренние веса
-	RowVectorXld ComputeContext(const MatrixXld& encoder_outputs,
-		const RowVectorXld& decoder_prev_hidden) override;
-	void SetRandomWeights(long double a = -0.01, long double b = 0.01);
+
+	AttnOutput ComputeContext(
+		const MatrixXld& encoder_outputs,
+		const RowVectorXld& decoder_prev_hidden
+	) override;
+
+	void SetRandomWeights(double a = -0.01, double b = 0.01);
 protected:
 	Eigen::Index encoder_hidden_size_;    // 2H
 	Eigen::Index decoder_hidden_size_;    // H_dec

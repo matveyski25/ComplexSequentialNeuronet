@@ -56,10 +56,10 @@ public:
 
     // ќбратное отображение: вектор -> ближайший символ
     char operator[](const RowVectorXld& vec_) const {
-        long double min_dist = std::numeric_limits<long double>::max();
+        double min_dist = std::numeric_limits<double>::max();
         int best_idx = -1;
         for (size_t i = 0; i < all_vectors.size(); ++i) {
-            long double dist = (all_vectors[i] - vec_).squaredNorm();
+            double dist = (all_vectors[i] - vec_).squaredNorm();
             if (dist < min_dist) {
                 min_dist = dist;
                 best_idx = static_cast<int>(i);
@@ -89,7 +89,7 @@ int main() {
 	dic.emb_size = 1;
 	int i = 0;
 	for(auto ch_ : "?<>/`јаЅб¬в√гƒд≈е®Є∆ж«з»и…й кЋлћмЌнќоѕп–р—с“т”у‘ф’х÷ц„чЎшўщЏъџы№ьЁэёюя€") {
-		RowVectorXld vec_({{(long double)i}});
+		RowVectorXld vec_({{(double)i}});
 		dic.push(ch_, vec_);
 		i++;
 	}
@@ -106,7 +106,7 @@ int main() {
         {input[2], output[0]}, {input[3], output[0]}, { input[4], output[0] }, 
         {input[5], output[0]}, { input[6], output[0] }, {input[7], output[0]} });
 
-	test.UpdateAdamOptWithLogging(input_output, 100000, 10000, 4);
+	test.UpdateAdamOptWithLogging(input_output, 100000, 1000, 4, 1.0);
 
 	return 0;
 }

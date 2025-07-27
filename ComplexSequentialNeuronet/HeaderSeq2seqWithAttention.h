@@ -21,6 +21,54 @@ void load_vector(std::ifstream& file, std::vector<MatrixXld>& vec) {
 	for (auto& m : vec) {
 		load_matrix(file, m);
 	}
+	this->dW_out.conservativeResize(other.dW_out.rows(), other.dW_out.cols());
+			this->dB_out.conservativeResize(other.dB_out.rows(), other.dB_out.cols());
+
+			this->dW_gamma_layernorm.conservativeResize(other.dW_gamma_layernorm.rows(), other.dW_gamma_layernorm.cols());
+			this->dB_beta_layernorm.conservativeResize(other.dB_beta_layernorm.rows(), other.dB_beta_layernorm.cols());
+
+			this->dV_a_attention.conservativeResize(other.dV_a_attention.rows(), other.dV_a_attention.cols());
+			this->dW_e_attention.conservativeResize(other.dW_e_attention.rows(), other.dW_e_attention.cols());
+			this->dW_d_attention.conservativeResize(other.dW_d_attention.rows(), other.dW_d_attention.cols());
+
+			this->dW_f_dec.conservativeResize(other.dW_f_dec.rows(), other.dW_f_dec.cols());
+			this->dU_f_dec.conservativeResize(other.dU_f_dec.rows(), other.dU_f_dec.cols());
+			this->dB_f_dec.conservativeResize(other.dB_f_dec.rows(), other.dB_f_dec.cols());
+			this->dW_i_dec.conservativeResize(other.dW_i_dec.rows(), other.dW_i_dec.cols());
+			this->dU_i_dec.conservativeResize(other.dU_i_dec.rows(), other.dU_i_dec.cols());
+			this->dB_i_dec.conservativeResize(other.dB_i_dec.rows(), other.dB_i_dec.cols());
+			this->dW_ccond_dec.conservativeResize(other.dW_ccond_dec.rows(), other.dW_ccond_dec.cols());
+			this->dU_ccond_dec.conservativeResize(other.dU_ccond_dec.rows(), other.dU_ccond_dec.cols());
+			this->dB_ccond_dec.conservativeResize(other.dB_ccond_dec.rows(), other.dB_ccond_dec.cols());
+			this->dW_o_dec.conservativeResize(other.dW_o_dec.rows(), other.dW_o_dec.cols());
+			this->dU_o_dec.conservativeResize(other.dU_o_dec.rows(), other.dU_o_dec.cols());
+			this->dB_o_dec.conservativeResize(other.dB_o_dec.rows(), other.dB_o_dec.cols());
+
+			this->dW_f_forw_enc.conservativeResize(other.dW_f_forw_enc.rows(), other.dW_f_forw_enc.cols());
+			this->dU_f_forw_enc.conservativeResize(other.dU_f_forw_enc.rows(), other.dU_f_forw_enc.cols());
+			this->dB_f_forw_enc.conservativeResize(other.dB_f_forw_enc.rows(), other.dB_f_forw_enc.cols());
+			this->dW_i_forw_enc.conservativeResize(other.dW_i_forw_enc.rows(), other.dW_i_forw_enc.cols());
+			this->dU_i_forw_enc.conservativeResize(other.dU_i_forw_enc.rows(), other.dU_i_forw_enc.cols());
+			this->dB_i_forw_enc.conservativeResize(other.dB_i_forw_enc.rows(), other.dB_i_forw_enc.cols());
+			this->dW_ccond_forw_enc.conservativeResize(other.dW_ccond_forw_enc.rows(), other.dW_ccond_forw_enc.cols());
+			this->dU_ccond_forw_enc.conservativeResize(other.dU_ccond_forw_enc.rows(), other.dU_ccond_forw_enc.cols());
+			this->dB_ccond_forw_enc.conservativeResize(other.dB_ccond_forw_enc.rows(), other.dB_ccond_forw_enc.cols());
+			this->dW_o_forw_enc.conservativeResize(other.dW_o_forw_enc.rows(), other.dW_o_forw_enc.cols());
+			this->dU_o_forw_enc.conservativeResize(other.dU_o_forw_enc.rows(), other.dU_o_forw_enc.cols());
+			this->dB_o_forw_enc.conservativeResize(other.dB_o_forw_enc.rows(), other.dB_o_forw_enc.cols());
+
+			this->dW_f_back_enc.conservativeResize(other.dW_f_back_enc.rows(), other.dW_f_back_enc.cols());
+			this->dU_f_back_enc.conservativeResize(other.dU_f_back_enc.rows(), other.dU_f_back_enc.cols());
+			this->dB_f_back_enc.conservativeResize(other.dB_f_back_enc.rows(), other.dB_f_back_enc.cols());
+			this->dW_i_back_enc.conservativeResize(other.dW_i_back_enc.rows(), other.dW_i_back_enc.cols());
+			this->dU_i_back_enc.conservativeResize(other.dU_i_back_enc.rows(), other.dU_i_back_enc.cols());
+			this->dB_i_back_enc.conservativeResize(other.dB_i_back_enc.rows(), other.dB_i_back_enc.cols());
+			this->dW_ccond_back_enc.conservativeResize(other.dW_ccond_back_enc.rows(), other.dW_ccond_back_enc.cols());
+			this->dU_ccond_back_enc.conservativeResize(other.dU_ccond_back_enc.rows(), other.dU_ccond_back_enc.cols());
+			this->dB_ccond_back_enc.conservativeResize(other.dB_ccond_back_enc.rows(), other.dB_ccond_back_enc.cols());
+			this->dW_o_back_enc.conservativeResize(other.dW_o_back_enc.rows(), other.dW_o_back_enc.cols());
+			this->dU_o_back_enc.conservativeResize(other.dU_o_back_enc.rows(), other.dU_o_back_enc.cols());
+			this->dB_o_back_enc.conservativeResize(other.dB_o_back_enc.rows(), other.dB_o_back_enc.cols());
 }*/
 
 
@@ -42,68 +90,61 @@ protected:
 	};
 	class Decoder : public SimpleLSTM {
 	public:
-		virtual void All_state_Calculation() {
+		void All_state_Сalculation() override {
 			if (this->encoder_outputs.empty()) return;
 
 			auto apply_layernorm = [this](const RowVectorXld& x) -> RowVectorXld {
-				long double epsilon = 1e-5L;
-				long double mean = x.mean();
-				long double variance = (x.array() - mean).square().mean();
-				return ((x.array() - mean) / std::sqrt(variance + epsilon)).matrix().array() * layernorm_gamma.array() + layernorm_beta.array();
+				double epsilon = 1e-5L;
+				double mean = x.mean();
+				double variance = (x.array() - mean).square().mean();
+				return ((x.array() - mean) / std::sqrt(variance + epsilon))
+					.matrix().array() * layernorm_gamma.array()
+					+ layernorm_beta.array();
 				};
 
 			auto l2_normalize = [](const RowVectorXld& x) -> RowVectorXld {
-				long double norm = std::sqrt(x.squaredNorm() + 1e-8L);
+				double norm = std::sqrt(x.squaredNorm() + 1e-8L);
 				return x / norm;
 				};
 
-			// --- Lambda: Масштабирование по max(abs)
 			auto normalize_scale = [](RowVectorXld& vec) {
-				long double maxval = vec.cwiseAbs().maxCoeff();
+				double maxval = vec.cwiseAbs().maxCoeff();
 				if (maxval > 0.0L) vec /= maxval;
 				};
 
 			// Очистка
 			Output_state.clear();
-			//context_vectors.clear();
-			//U_state.clear();
-			attention_->ClearCache();
 
 			size_t batch_size = encoder_outputs.size();
 			Output_state.resize(batch_size);
-			//context_vectors.resize(batch_size);
-			//U_state.resize(batch_size);
 
-			// Общие веса
-			MatrixXld W_x(this->Input_size, 4 * this->Hidden_size);
-			W_x << this->W_F, this->W_I, this->W_C, this->W_O;
+			MatrixXld W_x(Input_size, 4 * Hidden_size);
+			W_x << W_F, W_I, W_C, W_O;
 
-			MatrixXld W_h(this->Hidden_size, 4 * this->Hidden_size);
-			W_h << this->U_F, this->U_I, this->U_C, this->U_O;
+			MatrixXld W_h(Hidden_size, 4 * Hidden_size);
+			W_h << U_F, U_I, U_C, U_O;
 
-			RowVectorXld b(4 * this->Hidden_size);
-			b << this->B_F, this->B_I, this->B_C, this->B_O;
+			RowVectorXld b(4 * Hidden_size);
+			b << B_F, B_I, B_C, B_O;
 
 			for (size_t n = 0; n < batch_size; ++n) {
 				const auto& enc_out = encoder_outputs[n];
 				std::vector<RowVectorXld> y_sequence;
-				//std::vector<RowVectorXld> context_sequence;
-				//std::vector<RowVectorXld> u_sequence;
 
 				RowVectorXld y_prev = start_token;
 				RowVectorXld h_prev = RowVectorXld::Zero(Hidden_size);
 				RowVectorXld c_prev = RowVectorXld::Zero(Hidden_size);
 
 				for (size_t t = 0; t < max_steps; ++t) {
-					RowVectorXld context = attention_->ComputeContext(enc_out, h_prev);
-					//context_sequence.push_back(context);
+					// Новый вызов ComputeContext
+					BahdanauAttention::AttnOutput ao = attention_->ComputeContext(enc_out, h_prev);
+					RowVectorXld& context = ao.context;
 
-					RowVectorXld decoder_input(Input_size);//[]
-					decoder_input << y_prev, context;
-					decoder_input = l2_normalize(decoder_input);
+					RowVectorXld Decoderinput(Input_size);
+					Decoderinput << y_prev, context;
+					Decoderinput = l2_normalize(Decoderinput);
 
-					RowVectorXld Z = decoder_input * W_x + h_prev * W_h + b;
-
+					RowVectorXld Z = Decoderinput * W_x + h_prev * W_h + b;
 					RowVectorXld f_t = ActivationFunctions::Sigmoid(Z.leftCols(Hidden_size));
 					RowVectorXld i_t = ActivationFunctions::Sigmoid(Z.middleCols(Hidden_size, Hidden_size));
 					RowVectorXld c_bar = ActivationFunctions::Tanh(Z.middleCols(2 * Hidden_size, Hidden_size));
@@ -112,12 +153,11 @@ protected:
 					RowVectorXld c_t = f_t.array() * c_prev.array() + i_t.array() * c_bar.array();
 					RowVectorXld h_t = o_t.array() * ActivationFunctions::Tanh(c_t).array();
 
-					RowVectorXld proj_input(Hidden_size + context.size());
-					proj_input << h_t, context;
-					proj_input = apply_layernorm(proj_input);
+					RowVectorXld proj_input_(Hidden_size + context.size());
+					proj_input_ << h_t, context;
+					auto proj_input = apply_layernorm(proj_input_);
 
 					RowVectorXld y_t = proj_input * W_output.transpose() + b_output;
-					//u_sequence.push_back(proj_input);
 					y_sequence.push_back(y_t);
 
 					if (IsEndToken(y_t)) {
@@ -135,21 +175,15 @@ protected:
 					c_prev = c_t;
 				}
 
-				// Преобразуем в матрицы
-				Eigen::Index T = static_cast<Eigen::Index>(y_sequence.size());
+				Eigen::Index T_out = static_cast<Eigen::Index>(y_sequence.size());
 				Eigen::Index D = static_cast<Eigen::Index>(y_sequence[0].cols());
-
-				Output_state[n] = MatrixXld(T, D);
-				//U_state[n] = MatrixXld(T, u_sequence[0].cols());
-				//context_vectors[n] = MatrixXld(T, context_sequence[0].cols());
-
-				for (Eigen::Index t = 0; t < T; ++t) {
+				Output_state[n] = MatrixXld(T_out, D);
+				for (Eigen::Index t = 0; t < T_out; ++t) {
 					Output_state[n].row(t) = y_sequence[t];
-					//this->states[n].row(t) = u_sequence[t];
-					//context_vectors[n].row(t) = context_sequence[t];
 				}
 			}
 		}
+
 		Decoder(std::unique_ptr<BahdanauAttention> attention_module,
 			Eigen::Index hidden_size_encoder, Eigen::Index Hidden_size_, Eigen::Index embedding_dim_,
 			RowVectorXld start_token_, MatrixXld end_token_, size_t max_steps_)
@@ -176,7 +210,7 @@ protected:
 
 		void Decode(const std::vector<MatrixXld>& encoder_outputs) {
 			this->SetEncoderOutputs(encoder_outputs);
-			this->All_state_Calculation();
+			this->All_state_Сalculation();
 		}
 
 		const std::vector<MatrixXld> & GetOutputStates() const { return Output_state; }
@@ -249,7 +283,7 @@ private:
 	
 };
 
-class Seq2SeqWithAttention_ForTrain : public virtual Seq2SeqWithAttention {
+class Seq2SeqWithAttention_ForTrain : public Seq2SeqWithAttention {
 protected:
 	class Encoder : public BiLSTM_ForTrain {
 	public:
@@ -272,24 +306,25 @@ protected:
 		using Seq2SeqWithAttention::Decoder::Decoder;
 		Decoder() : Seq2SeqWithAttention::Decoder() {};
 
-		void All_state_Calculation() override {
+		void All_state_Сalculation() override {
 			if (this->encoder_outputs.empty()) return;
 
 			auto apply_layernorm = [this](const RowVectorXld& x) -> RowVectorXld {
-				long double epsilon = 1e-5L;
-				long double mean = x.mean();
-				long double variance = (x.array() - mean).square().mean();
-				return ((x.array() - mean) / std::sqrt(variance + epsilon)).matrix().array() * layernorm_gamma.array() + layernorm_beta.array();
+				double epsilon = 1e-5L;
+				double mean = x.mean();
+				double variance = (x.array() - mean).square().mean();
+				return ((x.array() - mean) / std::sqrt(variance + epsilon))
+					.matrix().array() * layernorm_gamma.array()
+					+ layernorm_beta.array();
 				};
 
 			auto l2_normalize = [](const RowVectorXld& x) -> RowVectorXld {
-				long double norm = std::sqrt(x.squaredNorm() + 1e-8L);
+				double norm = std::sqrt(x.squaredNorm() + 1e-8L);
 				return x / norm;
 				};
 
-			// --- Lambda: Масштабирование по max(abs)
 			auto normalize_scale = [](RowVectorXld& vec) {
-				long double maxval = vec.cwiseAbs().maxCoeff();
+				double maxval = vec.cwiseAbs().maxCoeff();
 				if (maxval > 0.0L) vec /= maxval;
 				};
 
@@ -299,14 +334,15 @@ protected:
 			this->StatesForgrads.x.clear();
 			this->StatesForgrads.p.clear();
 			this->StatesForgrads.p_.clear();
-			this->StatesForgrads.z.clear();
+			//this->StatesForgrads.z.clear();
 			this->StatesForgrads.f.clear();
 			this->StatesForgrads.i.clear();
 			this->StatesForgrads.o.clear();
 			this->StatesForgrads.ccond.clear();
 			this->StatesForgrads.c.clear();
 			this->StatesForgrads.h.clear();
-			attention_->ClearCache();
+			this->StatesForgrads.all_u.clear();
+			this->StatesForgrads.all_alpha.clear();
 
 			size_t batch_size = encoder_outputs.size();
 			Output_state.resize(batch_size);
@@ -314,22 +350,29 @@ protected:
 			this->StatesForgrads.x.resize(batch_size);
 			this->StatesForgrads.p.resize(batch_size);
 			this->StatesForgrads.p_.resize(batch_size);
-			this->StatesForgrads.z.resize(batch_size);
+			//this->StatesForgrads.z.resize(batch_size);
 			this->StatesForgrads.f.resize(batch_size);
 			this->StatesForgrads.i.resize(batch_size);
 			this->StatesForgrads.o.resize(batch_size);
 			this->StatesForgrads.ccond.resize(batch_size);
 			this->StatesForgrads.c.resize(batch_size);
 			this->StatesForgrads.h.resize(batch_size);
+			this->StatesForgrads.all_u.resize(batch_size);
+			this->StatesForgrads.all_alpha.resize(batch_size);
 
-			// Общие веса
-			MatrixXld W_x(Input_size, 4 * Hidden_size);
+			// Резерв под timesteps (необязательно, но желательно)
+			for (size_t n = 0; n < batch_size; ++n) {
+				this->StatesForgrads.all_u[n].reserve(max_steps);
+				this->StatesForgrads.all_alpha[n].reserve(max_steps);
+			}
+
+			MatrixXld W_x(this->Input_size, 4 * this->Hidden_size);
 			W_x << W_F, W_I, W_C, W_O;
 
-			MatrixXld W_h(Hidden_size, 4 * Hidden_size);
+			MatrixXld W_h(this->Hidden_size, 4 * this->Hidden_size);
 			W_h << U_F, U_I, U_C, U_O;
 
-			RowVectorXld b(4 * Hidden_size);
+			RowVectorXld b(4 * this->Hidden_size);
 			b << B_F, B_I, B_C, B_O;
 
 			for (size_t n = 0; n < batch_size; ++n) {
@@ -337,45 +380,55 @@ protected:
 				std::vector<RowVectorXld> y_sequence;
 
 				RowVectorXld y_prev = start_token;
-				RowVectorXld h_prev = RowVectorXld::Zero(Hidden_size);
-				RowVectorXld c_prev = RowVectorXld::Zero(Hidden_size);
+				RowVectorXld h_prev = RowVectorXld::Zero(this->Hidden_size);
+				RowVectorXld c_prev = RowVectorXld::Zero(this->Hidden_size);
 
-				this->StatesForgrads.f[n] = MatrixXld::Zero(max_steps, Hidden_size);
-				this->StatesForgrads.i[n] = MatrixXld::Zero(max_steps, Hidden_size);
-				this->StatesForgrads.ccond[n] = MatrixXld::Zero(max_steps, Hidden_size);
-				this->StatesForgrads.o[n] = MatrixXld::Zero(max_steps, Hidden_size);
-				this->StatesForgrads.c[n] = MatrixXld::Zero(max_steps, Hidden_size);
-				this->StatesForgrads.h[n] = MatrixXld::Zero(max_steps, Hidden_size);
+				this->StatesForgrads.f[n] = MatrixXld::Zero(max_steps, this->Hidden_size);
+				this->StatesForgrads.i[n] = MatrixXld::Zero(max_steps, this->Hidden_size);
+				this->StatesForgrads.ccond[n] = MatrixXld::Zero(max_steps, this->Hidden_size);
+				this->StatesForgrads.o[n] = MatrixXld::Zero(max_steps, this->Hidden_size);
+				this->StatesForgrads.c[n] = MatrixXld::Zero(max_steps, this->Hidden_size);
+				this->StatesForgrads.h[n] = MatrixXld::Zero(max_steps, this->Hidden_size);
 
-				this->StatesForgrads.context[n] = MatrixXld::Zero(max_steps, Hidden_size);
-				this->StatesForgrads.x[n] = MatrixXld::Zero(max_steps, Hidden_size);
-				this->StatesForgrads.p[n] = MatrixXld::Zero(max_steps, Hidden_size);
-				this->StatesForgrads.p_[n] = MatrixXld::Zero(max_steps, Hidden_size);
-				this->StatesForgrads.z[n] = MatrixXld::Zero(max_steps, Hidden_size);
+				this->StatesForgrads.context[n] = MatrixXld::Zero(max_steps, this->attention_->encoder_hidden_size_);
+				this->StatesForgrads.x[n] = MatrixXld::Zero(max_steps, this->Input_size);
+				this->StatesForgrads.p[n] = MatrixXld::Zero(max_steps, this->Input_size);
+				this->StatesForgrads.p_[n] = MatrixXld::Zero(max_steps, this->Input_size);
+				//this->StatesForgrads.z[n] = MatrixXld::Zero(max_steps, 4 * this->Hidden_size);
 
 				for (size_t t = 0; t < max_steps; ++t) {
-					RowVectorXld context = attention_->ComputeContext(enc_out, h_prev);
+					// Новый вызов ComputeContext
+					BahdanauAttention::AttnOutput ao = attention_->ComputeContext(enc_out, h_prev);
+					RowVectorXld& context = ao.context;
+					std::vector<RowVectorXld>& u_t = ao.u_t;
+					VectorXld& alpha = ao.alpha;
 
-					RowVectorXld Decoderinput(Input_size);
+					this->StatesForgrads.all_u[n].push_back(std::move(u_t));
+					this->StatesForgrads.all_alpha[n].push_back(std::move(alpha));
+
+					RowVectorXld Decoderinput(this->Input_size);
 					Decoderinput << y_prev, context;
 					Decoderinput = l2_normalize(Decoderinput);
 
 					RowVectorXld Z = Decoderinput * W_x + h_prev * W_h + b;
-
-					RowVectorXld f_t = ActivationFunctions::Sigmoid(Z.leftCols(Hidden_size));
-					RowVectorXld i_t = ActivationFunctions::Sigmoid(Z.middleCols(Hidden_size, Hidden_size));
-					RowVectorXld c_bar = ActivationFunctions::Tanh(Z.middleCols(2 * Hidden_size, Hidden_size));
-					RowVectorXld o_t = ActivationFunctions::Sigmoid(Z.rightCols(Hidden_size));
+					RowVectorXld f_t = ActivationFunctions::Sigmoid(Z.leftCols(this->Hidden_size));
+					RowVectorXld i_t = ActivationFunctions::Sigmoid(Z.middleCols(this->Hidden_size, this->Hidden_size));
+					RowVectorXld c_bar = ActivationFunctions::Tanh(Z.middleCols(2 * this->Hidden_size, this->Hidden_size));
+					RowVectorXld o_t = ActivationFunctions::Sigmoid(Z.rightCols(this->Hidden_size));
 
 					RowVectorXld c_t = f_t.array() * c_prev.array() + i_t.array() * c_bar.array();
 					RowVectorXld h_t = o_t.array() * ActivationFunctions::Tanh(c_t).array();
 
-					RowVectorXld proj_input_(Hidden_size + context.size());
+					RowVectorXld proj_input_(this->Hidden_size + context.size());
 					proj_input_ << h_t, context;
 					auto proj_input = apply_layernorm(proj_input_);
 
 					RowVectorXld y_t = proj_input * W_output.transpose() + b_output;
 					y_sequence.push_back(y_t);
+
+					if (Decoderinput.cols() != this->Input_size) {
+						throw std::abort;
+					}
 
 					this->StatesForgrads.f[n].row(t) = f_t;
 					this->StatesForgrads.i[n].row(t) = i_t;
@@ -388,37 +441,30 @@ protected:
 					this->StatesForgrads.x[n].row(t) = Decoderinput;
 					this->StatesForgrads.p[n].row(t) = proj_input_;
 					this->StatesForgrads.p_[n].row(t) = proj_input;
-					this->StatesForgrads.z[n].row(t) = Z;
+					//this->StatesForgrads.z[n].row(t) = Z;
 
-					if (IsEndToken(y_t)) {
-						/*size_t end_len = static_cast<size_t>(end_token.rows());
-						if (y_sequence.size() >= end_len - 1) {
-							y_sequence.resize(y_sequence.size() - (end_len - 1));
-							context_sequence.resize(context_sequence.size() - (end_len - 1));
-							u_sequence.resize(u_sequence.size() - (end_len - 1));
-						}*/
-						break;
-					}
+					if (IsEndToken(y_t)) break;
 
 					y_prev = y_t;
 					h_prev = h_t;
 					c_prev = c_t;
 				}
 
-				// Преобразуем в матрицы
-				Eigen::Index T = static_cast<Eigen::Index>(y_sequence.size());
+				Eigen::Index T_out = static_cast<Eigen::Index>(y_sequence.size());
 				Eigen::Index D = static_cast<Eigen::Index>(y_sequence[0].cols());
-
-				Output_state[n] = MatrixXld(T, D);
-
-				for (Eigen::Index t = 0; t < T; ++t) {
+				Output_state[n] = MatrixXld(T_out, D);
+				for (Eigen::Index t = 0; t < T_out; ++t) {
 					Output_state[n].row(t) = y_sequence[t];
 				}
 			}
 		}
+
+
 	protected:
 		struct states_forgrads {
-			std::vector<MatrixXld> f, i, o, ccond, c, h, context, z, x, p, p_;
+			std::vector<MatrixXld> f, i, o, ccond, c, h, context, /*z,*/ x, p, p_;
+			std::vector<std::vector<std::vector<RowVectorXld>>>  all_u;    // batch × time_steps × A
+			std::vector<std::vector<VectorXld>> all_alpha; // batch × time_steps
 		};
 		states_forgrads StatesForgrads;
 	};
@@ -445,57 +491,7 @@ protected:
 		MatrixXld dW_ccond_back_enc, dU_ccond_back_enc; RowVectorXld dB_ccond_back_enc;
 		MatrixXld dW_o_back_enc, dU_o_back_enc; RowVectorXld dB_o_back_enc;
 
-		void operator +=(const grads_Seq2SeqWithAttention& other) {
-			this->dW_out.conservativeResize(other.dW_out.rows(), other.dW_out.cols());
-			this->dB_out.conservativeResize(other.dB_out.rows(), other.dB_out.cols());
-
-			this->dW_gamma_layernorm.conservativeResize(other.dW_gamma_layernorm.rows(), other.dW_gamma_layernorm.cols());
-			this->dB_beta_layernorm.conservativeResize(other.dB_beta_layernorm.rows(), other.dB_beta_layernorm.cols());
-
-			this->dV_a_attention.conservativeResize(other.dV_a_attention.rows(), other.dV_a_attention.cols());
-			this->dW_e_attention.conservativeResize(other.dW_e_attention.rows(), other.dW_e_attention.cols());
-			this->dW_d_attention.conservativeResize(other.dW_d_attention.rows(), other.dW_d_attention.cols());
-
-			this->dW_f_dec.conservativeResize(other.dW_f_dec.rows(), other.dW_f_dec.cols()); 
-			this->dU_f_dec.conservativeResize(other.dU_f_dec.rows(), other.dU_f_dec.cols()); 
-			this->dB_f_dec.conservativeResize(other.dB_f_dec.rows(), other.dB_f_dec.cols());
-			this->dW_i_dec.conservativeResize(other.dW_i_dec.rows(), other.dW_i_dec.cols()); 
-			this->dU_i_dec.conservativeResize(other.dU_i_dec.rows(), other.dU_i_dec.cols()); 
-			this->dB_i_dec.conservativeResize(other.dB_i_dec.rows(), other.dB_i_dec.cols());
-			this->dW_ccond_dec.conservativeResize(other.dW_ccond_dec.rows(), other.dW_ccond_dec.cols()); 
-			this->dU_ccond_dec.conservativeResize(other.dU_ccond_dec.rows(), other.dU_ccond_dec.cols()); 
-			this->dB_ccond_dec.conservativeResize(other.dB_ccond_dec.rows(), other.dB_ccond_dec.cols());
-			this->dW_o_dec.conservativeResize(other.dW_o_dec.rows(), other.dW_o_dec.cols());
-			this->dU_o_dec.conservativeResize(other.dU_o_dec.rows(), other.dU_o_dec.cols());
-			this->dB_o_dec.conservativeResize(other.dB_o_dec.rows(), other.dB_o_dec.cols());
-
-			this->dW_f_forw_enc.conservativeResize(other.dW_f_forw_enc.rows(), other.dW_f_forw_enc.cols());
-			this->dU_f_forw_enc.conservativeResize(other.dU_f_forw_enc.rows(), other.dU_f_forw_enc.cols());
-			this->dB_f_forw_enc.conservativeResize(other.dB_f_forw_enc.rows(), other.dB_f_forw_enc.cols());
-			this->dW_i_forw_enc.conservativeResize(other.dW_i_forw_enc.rows(), other.dW_i_forw_enc.cols());
-			this->dU_i_forw_enc.conservativeResize(other.dU_i_forw_enc.rows(), other.dU_i_forw_enc.cols());
-			this->dB_i_forw_enc.conservativeResize(other.dB_i_forw_enc.rows(), other.dB_i_forw_enc.cols());
-			this->dW_ccond_forw_enc.conservativeResize(other.dW_ccond_forw_enc.rows(), other.dW_ccond_forw_enc.cols());
-			this->dU_ccond_forw_enc.conservativeResize(other.dU_ccond_forw_enc.rows(), other.dU_ccond_forw_enc.cols());
-			this->dB_ccond_forw_enc.conservativeResize(other.dB_ccond_forw_enc.rows(), other.dB_ccond_forw_enc.cols());
-			this->dW_o_forw_enc.conservativeResize(other.dW_o_forw_enc.rows(), other.dW_o_forw_enc.cols()); 
-			this->dU_o_forw_enc.conservativeResize(other.dU_o_forw_enc.rows(), other.dU_o_forw_enc.cols()); 
-			this->dB_o_forw_enc.conservativeResize(other.dB_o_forw_enc.rows(), other.dB_o_forw_enc.cols());
-
-			this->dW_f_back_enc.conservativeResize(other.dW_f_back_enc.rows(), other.dW_f_back_enc.cols());
-			this->dU_f_back_enc.conservativeResize(other.dU_f_back_enc.rows(), other.dU_f_back_enc.cols());
-			this->dB_f_back_enc.conservativeResize(other.dB_f_back_enc.rows(), other.dB_f_back_enc.cols());
-			this->dW_i_back_enc.conservativeResize(other.dW_i_back_enc.rows(), other.dW_i_back_enc.cols());
-			this->dU_i_back_enc.conservativeResize(other.dU_i_back_enc.rows(), other.dU_i_back_enc.cols());
-			this->dB_i_back_enc.conservativeResize(other.dB_i_back_enc.rows(), other.dB_i_back_enc.cols());
-			this->dW_ccond_back_enc.conservativeResize(other.dW_ccond_back_enc.rows(), other.dW_ccond_back_enc.cols());
-			this->dU_ccond_back_enc.conservativeResize(other.dU_ccond_back_enc.rows(), other.dU_ccond_back_enc.cols());
-			this->dB_ccond_back_enc.conservativeResize(other.dB_ccond_back_enc.rows(), other.dB_ccond_back_enc.cols());
-			this->dW_o_back_enc.conservativeResize(other.dW_o_back_enc.rows(), other.dW_o_back_enc.cols());
-			this->dU_o_back_enc.conservativeResize(other.dU_o_back_enc.rows(), other.dU_o_back_enc.cols());
-			this->dB_o_back_enc.conservativeResize(other.dB_o_back_enc.rows(), other.dB_o_back_enc.cols());
-
-
+		/*void operator +=(const grads_Seq2SeqWithAttention& other) {
 			this->dW_out += other.dW_out;
 			this->dB_out += other.dB_out;
 
@@ -547,7 +543,7 @@ protected:
 			this->dW_ccond_back_enc.array() /= other.dW_ccond_back_enc.array(); this->dU_ccond_back_enc.array() /= other.dU_ccond_back_enc.array(); this->dB_ccond_back_enc.array() /= other.dB_ccond_back_enc.array();
 			this->dW_o_back_enc.array() /= other.dW_o_back_enc.array(); this->dU_o_back_enc.array() /= other.dU_o_back_enc.array(); this->dB_o_back_enc.array() /= other.dB_o_back_enc.array();
 		}
-		void operator /=(const long double& val) {
+		void operator /=(const double& val) {
 			this->dW_out /= val;
 			this->dB_out /= val;
 
@@ -572,39 +568,121 @@ protected:
 			this->dW_i_back_enc /= val; this->dU_i_back_enc /= val; this->dB_i_back_enc /= val;
 			this->dW_ccond_back_enc /= val; this->dU_ccond_back_enc /= val; this->dB_ccond_back_enc /= val;
 			this->dW_o_back_enc /= val; this->dU_o_back_enc /= val; this->dB_o_back_enc /= val;
+		}*/
+
+		void check_nan(const std::string& name, const MatrixXld& mat) {
+			if (!mat.allFinite()) {
+				std::cerr << "[GRAD WARNING] NaN or Inf in: " << name << std::endl;
+				throw std::invalid_argument(name);
+			}
+		}
+		void operator +=(const grads_Seq2SeqWithAttention& other) {
+#define CHECK_ADD(name)check_nan(#name " (before+=)", this->name); check_nan(#name " (other.name)", other.name);  this->name.noalias() += other.name; check_nan(#name " (after+=)", this->name)
+
+			CHECK_ADD(dW_out); CHECK_ADD(dB_out);
+			CHECK_ADD(dW_gamma_layernorm); CHECK_ADD(dB_beta_layernorm);
+			CHECK_ADD(dV_a_attention); CHECK_ADD(dW_e_attention); CHECK_ADD(dW_d_attention);
+
+			CHECK_ADD(dW_f_dec); CHECK_ADD(dU_f_dec); CHECK_ADD(dB_f_dec);
+			CHECK_ADD(dW_i_dec); CHECK_ADD(dU_i_dec); CHECK_ADD(dB_i_dec);
+			CHECK_ADD(dW_ccond_dec); CHECK_ADD(dU_ccond_dec); CHECK_ADD(dB_ccond_dec);
+			CHECK_ADD(dW_o_dec); CHECK_ADD(dU_o_dec); CHECK_ADD(dB_o_dec);
+
+			CHECK_ADD(dW_f_forw_enc); CHECK_ADD(dU_f_forw_enc); CHECK_ADD(dB_f_forw_enc);
+			CHECK_ADD(dW_i_forw_enc); CHECK_ADD(dU_i_forw_enc); CHECK_ADD(dB_i_forw_enc);
+			CHECK_ADD(dW_ccond_forw_enc); CHECK_ADD(dU_ccond_forw_enc); CHECK_ADD(dB_ccond_forw_enc);
+			CHECK_ADD(dW_o_forw_enc); CHECK_ADD(dU_o_forw_enc); CHECK_ADD(dB_o_forw_enc);
+
+			CHECK_ADD(dW_f_back_enc); CHECK_ADD(dU_f_back_enc); CHECK_ADD(dB_f_back_enc);
+			CHECK_ADD(dW_i_back_enc); CHECK_ADD(dU_i_back_enc); CHECK_ADD(dB_i_back_enc);
+			CHECK_ADD(dW_ccond_back_enc); CHECK_ADD(dU_ccond_back_enc); CHECK_ADD(dB_ccond_back_enc);
+			CHECK_ADD(dW_o_back_enc); CHECK_ADD(dU_o_back_enc); CHECK_ADD(dB_o_back_enc);
+
+#undef CHECK_ADD
+		}
+		void operator /=(const grads_Seq2SeqWithAttention& other) {
+#define CHECK_DIV(name) check_nan(#name " (before/=)", this->name); this->name.array() /= other.name.array(); check_nan(#name " (after/=)", this->name)
+
+			CHECK_DIV(dW_out); CHECK_DIV(dB_out);
+			CHECK_DIV(dW_gamma_layernorm); CHECK_DIV(dB_beta_layernorm);
+			CHECK_DIV(dV_a_attention); CHECK_DIV(dW_e_attention); CHECK_DIV(dW_d_attention);
+
+			CHECK_DIV(dW_f_dec); CHECK_DIV(dU_f_dec); CHECK_DIV(dB_f_dec);
+			CHECK_DIV(dW_i_dec); CHECK_DIV(dU_i_dec); CHECK_DIV(dB_i_dec);
+			CHECK_DIV(dW_ccond_dec); CHECK_DIV(dU_ccond_dec); CHECK_DIV(dB_ccond_dec);
+			CHECK_DIV(dW_o_dec); CHECK_DIV(dU_o_dec); CHECK_DIV(dB_o_dec);
+
+			CHECK_DIV(dW_f_forw_enc); CHECK_DIV(dU_f_forw_enc); CHECK_DIV(dB_f_forw_enc);
+			CHECK_DIV(dW_i_forw_enc); CHECK_DIV(dU_i_forw_enc); CHECK_DIV(dB_i_forw_enc);
+			CHECK_DIV(dW_ccond_forw_enc); CHECK_DIV(dU_ccond_forw_enc); CHECK_DIV(dB_ccond_forw_enc);
+			CHECK_DIV(dW_o_forw_enc); CHECK_DIV(dU_o_forw_enc); CHECK_DIV(dB_o_forw_enc);
+
+			CHECK_DIV(dW_f_back_enc); CHECK_DIV(dU_f_back_enc); CHECK_DIV(dB_f_back_enc);
+			CHECK_DIV(dW_i_back_enc); CHECK_DIV(dU_i_back_enc); CHECK_DIV(dB_i_back_enc);
+			CHECK_DIV(dW_ccond_back_enc); CHECK_DIV(dU_ccond_back_enc); CHECK_DIV(dB_ccond_back_enc);
+			CHECK_DIV(dW_o_back_enc); CHECK_DIV(dU_o_back_enc); CHECK_DIV(dB_o_back_enc);
+
+#undef CHECK_DIV
+		}
+		void operator /=(const double& val) {
+#define CHECK_DIV_SCALAR(name) check_nan(#name " (before/=ld)", this->name); this->name /= val; check_nan(#name " (after/=ld)", this->name)
+
+			CHECK_DIV_SCALAR(dW_out); CHECK_DIV_SCALAR(dB_out);
+			CHECK_DIV_SCALAR(dW_gamma_layernorm); CHECK_DIV_SCALAR(dB_beta_layernorm);
+			CHECK_DIV_SCALAR(dV_a_attention); CHECK_DIV_SCALAR(dW_e_attention); CHECK_DIV_SCALAR(dW_d_attention);
+
+			CHECK_DIV_SCALAR(dW_f_dec); CHECK_DIV_SCALAR(dU_f_dec); CHECK_DIV_SCALAR(dB_f_dec);
+			CHECK_DIV_SCALAR(dW_i_dec); CHECK_DIV_SCALAR(dU_i_dec); CHECK_DIV_SCALAR(dB_i_dec);
+			CHECK_DIV_SCALAR(dW_ccond_dec); CHECK_DIV_SCALAR(dU_ccond_dec); CHECK_DIV_SCALAR(dB_ccond_dec);
+			CHECK_DIV_SCALAR(dW_o_dec); CHECK_DIV_SCALAR(dU_o_dec); CHECK_DIV_SCALAR(dB_o_dec);
+
+			CHECK_DIV_SCALAR(dW_f_forw_enc); CHECK_DIV_SCALAR(dU_f_forw_enc); CHECK_DIV_SCALAR(dB_f_forw_enc);
+			CHECK_DIV_SCALAR(dW_i_forw_enc); CHECK_DIV_SCALAR(dU_i_forw_enc); CHECK_DIV_SCALAR(dB_i_forw_enc);
+			CHECK_DIV_SCALAR(dW_ccond_forw_enc); CHECK_DIV_SCALAR(dU_ccond_forw_enc); CHECK_DIV_SCALAR(dB_ccond_forw_enc);
+			CHECK_DIV_SCALAR(dW_o_forw_enc); CHECK_DIV_SCALAR(dU_o_forw_enc); CHECK_DIV_SCALAR(dB_o_forw_enc);
+
+			CHECK_DIV_SCALAR(dW_f_back_enc); CHECK_DIV_SCALAR(dU_f_back_enc); CHECK_DIV_SCALAR(dB_f_back_enc);
+			CHECK_DIV_SCALAR(dW_i_back_enc); CHECK_DIV_SCALAR(dU_i_back_enc); CHECK_DIV_SCALAR(dB_i_back_enc);
+			CHECK_DIV_SCALAR(dW_ccond_back_enc); CHECK_DIV_SCALAR(dU_ccond_back_enc); CHECK_DIV_SCALAR(dB_ccond_back_enc);
+			CHECK_DIV_SCALAR(dW_o_back_enc); CHECK_DIV_SCALAR(dU_o_back_enc); CHECK_DIV_SCALAR(dB_o_back_enc);
+
+#undef CHECK_DIV_SCALAR
 		}
 
-		void SetZero() {
-			this->dW_out.setZero();
-			this->dB_out.setZero();
+		void SetZero(const Seq2SeqWithAttention_ForTrain * seq2seq) {
+			Eigen::Index E = seq2seq->decoder_->output_size;
+			Eigen::Index H = seq2seq->decoder_->Hidden_size;
+			Eigen::Index X = seq2seq->decoder_->Input_size;
+			Eigen::Index C = X - E;
+			Eigen::Index D = H + C;
+			Eigen::Index A = seq2seq->decoder_->attention_->attention_size_;
+			Eigen::Index HE = seq2seq->encoder_->Common_Hidden_size;
+			Eigen::Index EE = seq2seq->encoder_->Common_Input_size;
 
-			this->dW_gamma_layernorm.setZero();
-			this->dB_beta_layernorm.setZero();
+			this->dW_out = MatrixXld::Zero(E, D), this->dB_out = RowVectorXld::Zero(E);
 
-			this->dV_a_attention.setZero();
-			this->dW_e_attention.setZero();
-			this->dW_d_attention.setZero();
+			this->dW_gamma_layernorm = RowVectorXld::Zero(D), this->dB_beta_layernorm = RowVectorXld::Zero(D);
 
-			this->dW_f_dec.setZero(); this->dU_f_dec.setZero(); this->dB_f_dec.setZero();
-			this->dW_i_dec.setZero(); this->dU_i_dec.setZero(); this->dB_i_dec.setZero();
-			this->dW_ccond_dec.setZero(); this->dU_ccond_dec.setZero(); this->dB_ccond_dec.setZero();
-			this->dW_o_dec.setZero(); this->dU_o_dec.setZero(); this->dB_o_dec.setZero();
+			this->dV_a_attention = VectorXld::Zero(A), this->dW_e_attention = MatrixXld::Zero(A, C), this->dW_d_attention = MatrixXld::Zero(A, H);
 
-			this->dW_f_forw_enc.setZero(); this->dU_f_forw_enc.setZero(); this->dB_f_forw_enc.setZero();
-			this->dW_i_forw_enc.setZero(); this->dU_i_forw_enc.setZero(); this->dB_i_forw_enc.setZero();
-			this->dW_ccond_forw_enc.setZero(); this->dU_ccond_forw_enc.setZero(); this->dB_ccond_forw_enc.setZero();
-			this->dW_o_forw_enc.setZero(); this->dU_o_forw_enc.setZero(); this->dB_o_forw_enc.setZero();
+			this->dW_f_dec = MatrixXld::Zero(X, H), this->dU_f_dec = MatrixXld::Zero(H, H), this->dB_f_dec = RowVectorXld::Zero(H),
+			this->dW_i_dec = MatrixXld::Zero(X, H), this->dU_i_dec = MatrixXld::Zero(H, H), this->dB_i_dec = RowVectorXld::Zero(H),
+			this->dW_ccond_dec = MatrixXld::Zero(X, H), this->dU_ccond_dec = MatrixXld::Zero(H, H), this->dB_ccond_dec = RowVectorXld::Zero(H),
+			this->dW_o_dec = MatrixXld::Zero(X, H), this->dU_o_dec = MatrixXld::Zero(H, H), this->dB_o_dec = RowVectorXld::Zero(H);
 
-			this->dW_f_back_enc.setZero(); this->dU_f_back_enc.setZero(); this->dB_f_back_enc.setZero();
-			this->dW_i_back_enc.setZero(); this->dU_i_back_enc.setZero(); this->dB_i_back_enc.setZero();
-			this->dW_ccond_back_enc.setZero(); this->dU_ccond_back_enc.setZero(); this->dB_ccond_back_enc.setZero();
-			this->dW_o_back_enc.setZero(); this->dU_o_back_enc.setZero(); this->dB_o_back_enc.setZero();
+			this->dW_f_forw_enc = MatrixXld::Zero(EE, HE), this->dU_f_forw_enc = MatrixXld::Zero(HE, HE), this->dB_f_forw_enc = RowVectorXld::Zero(HE),
+			this->dW_i_forw_enc = MatrixXld::Zero(EE, HE), this->dU_i_forw_enc = MatrixXld::Zero(HE, HE), this->dB_i_forw_enc = RowVectorXld::Zero(HE),
+			this->dW_ccond_forw_enc = MatrixXld::Zero(EE, HE), this->dU_ccond_forw_enc = MatrixXld::Zero(HE, HE), this->dB_ccond_forw_enc = RowVectorXld::Zero(HE),
+			this->dW_o_forw_enc = MatrixXld::Zero(EE, HE), this->dU_o_forw_enc = MatrixXld::Zero(HE, HE), this->dB_o_forw_enc = RowVectorXld::Zero(HE);
+
+			this->dW_f_back_enc = MatrixXld::Zero(EE, HE), this->dU_f_back_enc = MatrixXld::Zero(HE, HE), this->dB_f_back_enc = RowVectorXld::Zero(HE),
+			this->dW_i_back_enc = MatrixXld::Zero(EE, HE), this->dU_i_back_enc = MatrixXld::Zero(HE, HE), this->dB_i_back_enc = RowVectorXld::Zero(HE),
+			this->dW_ccond_back_enc = MatrixXld::Zero(EE, HE), this->dU_ccond_back_enc = MatrixXld::Zero(HE, HE), this->dB_ccond_back_enc = RowVectorXld::Zero(HE),
+			this->dW_o_back_enc = MatrixXld::Zero(EE, HE), this->dU_o_back_enc = MatrixXld::Zero(HE, HE), this->dB_o_back_enc = RowVectorXld::Zero(HE);
+			//std::cout << "[TRACE] SetZero() called" << std::endl;//at:  << this 
+			//check_nan("dW_ccond_dec right after SetZero()", dW_ccond_dec );
+
 		}
-	};
-
-	struct states_forgrads {
-		MatrixXld f_enc_forw, i_enc_forw, ccond_enc_forw, o_enc_forw, c_enc_forw;
-		MatrixXld f_enc_back, i_enc_back, ccond_enc_back, o_enc_back, c_enc_back;
 	};
 
 	grads_Seq2SeqWithAttention Backward(size_t Number_InputState, MatrixXld Y_True);
@@ -633,16 +711,16 @@ public:
 	(
 		const std::vector<std::vector<MatrixXld>>& Target_input_output, /*std::vector<MatrixXld> Target_output,*/
 		size_t epochs, size_t optima_steps, size_t batch_size,
-		long double learning_rate = 0.001L, long double epsilon = 1e-8L,
-		long double beta1 = 0.9L, long double beta2 = 0.999L
+		double learning_rate = 0.001L, double epsilon = 1e-8L,
+		double beta1 = 0.9L, double beta2 = 0.999L
 	);
 
 	void UpdateAdamOptWithLogging
 	(
 		const std::vector<std::vector<MatrixXld>>& Target_input_output, /*std::vector<MatrixXld> Target_output,*/
 		size_t epochs, size_t optima_steps, size_t batch_size,
-		long double learning_rate = 0.001L, long double epsilon = 1e-8L,
-		long double beta1 = 0.9L, long double beta2 = 0.999L
+		double learning_rate = 0.001L, double epsilon = 1e-8L,
+		double beta1 = 0.9L, double beta2 = 0.999L
 	);
 
 	void Save(std::string packname) {

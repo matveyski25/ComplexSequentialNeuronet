@@ -142,14 +142,14 @@ Seq2SeqWithAttention_ForTrain::Seq2SeqWithAttention_ForTrain(
 			}
 
 
-			long double alpha_j = this->decoder_->attention_->all_attention_weights_[t](j);
-			long double dAlpha_j = dContext_t.dot(h_j);
+			double alpha_j = this->decoder_->attention_->all_attention_weights_[t](j);
+			double dAlpha_j = dContext_t.dot(h_j);
 
-			long double dE_tj = 0.0;
+			double dE_tj = 0.0;
 			for (int k = 0; k < N; ++k) {
-				long double alpha_k = this->decoder_->attention_->all_attention_weights_[t](k);
+				double alpha_k = this->decoder_->attention_->all_attention_weights_[t](k);
 				RowVectorXld h_k = this->encoder_->Common_Hidden_states[Number_InputState].row(k);
-				long double dAlpha_k = dContext_t.dot(h_k);
+				double dAlpha_k = dContext_t.dot(h_k);
 
 				dE_tj += dAlpha_k * alpha_k * ((j == k) - alpha_j);  // ∂α_k / ∂e_j
 			}
@@ -321,12 +321,12 @@ void Seq2SeqWithAttention_ForTrain::UpdateAdamOpt
 (
 	const std::vector<std::vector<MatrixXld>>& Target_input_output, 
 	size_t epochs, size_t optima_steps, size_t batch_size,
-	long double learning_rate, long double epsilon,
-	long double beta1, long double beta2
+	double learning_rate, double epsilon,
+	double beta1, double beta2
 )
 {
-	auto clip_by_global_norm = [](auto& grads, long double clip_value) {
-		long double total_sq_norm = 0.0;
+	auto clip_by_global_norm = [](auto& grads, double clip_value) {
+		double total_sq_norm = 0.0;
 
 		// -------- Decoder --------
 		total_sq_norm += grads.dW_out;
@@ -391,10 +391,10 @@ void Seq2SeqWithAttention_ForTrain::UpdateAdamOpt
 		total_sq_norm += grads.dU_o_back_enc;
 		total_sq_norm += grads.dB_o_back_enc;
 
-		long double global_norm = std::sqrt(total_sq_norm + 1e-8L);
+		double global_norm = std::sqrt(total_sq_norm + 1e-8L);
 
 		if (global_norm > clip_value) {
-			long double scale = clip_value / global_norm;
+			double scale = clip_value / global_norm;
 
 			// -------- Decoder --------
 			grads.dW_out *= scale;
@@ -461,7 +461,7 @@ void Seq2SeqWithAttention_ForTrain::UpdateAdamOpt
 };
 
 	std::vector<std::vector<MatrixXld>> shuffle_target = Target_input_output;
-	long double notceil_batch_steps_ = (long double)shuffle_target.size() / batch_size;
+	double notceil_batch_steps_ = (double)shuffle_target.size() / batch_size;
 	size_t batch_steps_ = (size_t)std::ceil(notceil_batch_steps_);
 	for (size_t epoch_ = 0; epoch_ < epochs; epoch_++) {
 		std::random_device rd;
@@ -838,7 +838,7 @@ Seq2SeqWithAttention_ForTrain::grads_Seq2SeqWithAttention Seq2SeqWithAttention_F
 				for (int i = 0; i < m.size(); ++i) {
 					double val = *(m.data() + i);
 					if (std::isnan(val)) ++nan_count;
-					else if (std::isinf(val)) ++inf_count;
+					if (std::isinf(val)) ++inf_count;
 				}
 
 				return std::make_pair(nan_count, inf_count);
@@ -846,46 +846,14 @@ Seq2SeqWithAttention_ForTrain::grads_Seq2SeqWithAttention Seq2SeqWithAttention_F
 			//size_t nnan = 0;
 			//size_t ninf = 0;
 			auto [nan_count, inf_count] = lyambda(m);
-			std::cerr << "[ERROR] NaN or Inf detected in: " << name << "\tnan-inf: " << nan_count << "/" << inf_count << "\n"
-			<< "[DEBUG] : " << m << "\n";
+			std::cerr << "[ERROR] NaN or Inf detected in: " << name << "\tnan-inf: " << nan_count << "/" << inf_count << "\n" << "[DEBUG] : " << m << "\n";
 		} 
 		};
 	grads_Seq2SeqWithAttention grads;
-	
-	Eigen::Index E = this->decoder_->output_size;
-	Eigen::Index H = this->decoder_->Hidden_size;
-	Eigen::Index C = this->decoder_->Input_size - E;
-	Eigen::Index D = H + C;
-	Eigen::Index A = this->decoder_->attention_->attention_size_;
-	Eigen::Index X = E + C;
-	Eigen::Index HE = this->encoder_->Common_Hidden_size;
-	Eigen::Index EE = this->encoder_->Common_Input_size;
-	grads.dW_out.conservativeResize(E, D), grads.dB_out.conservativeResize(E);
-
-	grads.dW_gamma_layernorm.conservativeResize(D), grads.dB_beta_layernorm.conservativeResize(D);
-
-	grads.dV_a_attention.conservativeResize(A), grads.dW_e_attention.conservativeResize(A, C), grads.dW_d_attention.conservativeResize(A, H);
-
-	grads.dW_f_dec.conservativeResize(H, X), grads.dU_f_dec.conservativeResize(H, H), grads.dB_f_dec.conservativeResize(H),
-	grads.dW_i_dec.conservativeResize(H, X), grads.dU_i_dec.conservativeResize(H, H), grads.dB_i_dec.conservativeResize(H),
-	grads.dW_ccond_dec.conservativeResize(H, X), grads.dU_ccond_dec.conservativeResize(H, H), grads.dB_ccond_dec.conservativeResize(H),
-	grads.dW_o_dec.conservativeResize(H, X), grads.dU_o_dec.conservativeResize(H, H), grads.dB_o_dec.conservativeResize(H);
-
-	grads.dW_f_forw_enc.conservativeResize(HE, EE), grads.dU_f_forw_enc.conservativeResize(HE, HE), grads.dB_f_forw_enc.conservativeResize(HE),
-	grads.dW_i_forw_enc.conservativeResize(HE, EE), grads.dU_i_forw_enc.conservativeResize(HE, HE), grads.dB_i_forw_enc.conservativeResize(HE),
-	grads.dW_ccond_forw_enc.conservativeResize(HE, EE), grads.dU_ccond_forw_enc.conservativeResize(HE, HE), grads.dB_ccond_forw_enc.conservativeResize(HE),
-	grads.dW_o_forw_enc.conservativeResize(HE, EE), grads.dU_o_forw_enc.conservativeResize(HE, HE), grads.dB_o_forw_enc.conservativeResize(HE);
-
-	grads.dW_f_back_enc.conservativeResize(HE, EE), grads.dU_f_back_enc.conservativeResize(HE, HE), grads.dB_f_back_enc.conservativeResize(HE),
-	grads.dW_i_back_enc.conservativeResize(HE, EE), grads.dU_i_back_enc.conservativeResize(HE, HE), grads.dB_i_back_enc.conservativeResize(HE),
-	grads.dW_ccond_back_enc.conservativeResize(HE, EE), grads.dU_ccond_back_enc.conservativeResize(HE, HE), grads.dB_ccond_back_enc.conservativeResize(HE),
-	grads.dW_o_back_enc.conservativeResize(HE, EE), grads.dU_o_back_enc.conservativeResize(HE, HE), grads.dB_o_back_enc.conservativeResize(HE);
-	
-	grads.SetZero();
-	
+	grads.SetZero(this);
 	
 	Eigen::Index T = std::min(this->GetOutputs()[Number_InputState].rows(), Y_True.rows());
-	Eigen::Index N = this->encoder_->Common_Input_states[Number_InputState].rows();
+	Eigen::Index N = this->encoder_->Common_Hidden_states[Number_InputState].rows();
 
 	RowVectorXld _dC_t = RowVectorXld::Zero(this->decoder_->Hidden_size);
 	RowVectorXld _dS_t = RowVectorXld::Zero(this->decoder_->Hidden_size);
@@ -968,26 +936,29 @@ Seq2SeqWithAttention_ForTrain::grads_Seq2SeqWithAttention Seq2SeqWithAttention_F
 		check_nan_inf(DB_dec_t, "DB_dec_t_" + std::to_string(t) + "\tstep : " + std::to_string(Number_InputState));
 
 		for (int64_t j = static_cast<int64_t>(N) - 1; j >= 0; j--) {
-			long double dE_tj = 0.0;
+			double dE_tj = 0.0;
 
-			const VectorXld& alpha = this->decoder_->attention_->all_attention_weights_[t];
+			const VectorXld& alpha = this->decoder_->StatesForgrads.all_alpha[Number_InputState][t];
+			if (Number_InputState >= this->decoder_->StatesForgrads.all_u.size()) {
+				throw std::runtime_error("Number_InputState out of range");
+			}
+			if (t >= this->decoder_->StatesForgrads.all_u[Number_InputState].size()) {
+				throw std::runtime_error("t out of range in all_u");
+			}
+			if (j >= this->decoder_->StatesForgrads.all_u[Number_InputState][t].size()) {
+				throw std::runtime_error("j out of range in all_u[t]");
+			}
+
+			RowVectorXld u_tj = this->decoder_->StatesForgrads.all_u[Number_InputState][t][j];
+
+
 			RowVectorXld h_j = this->encoder_->Common_Hidden_states[Number_InputState].row(j);
 			RowVectorXld s_t_1 = this->decoder_->StatesForgrads.h[Number_InputState].row(t == 0 ? 0 : t - 1);
-
-			if (!h_j.allFinite()) {
-				std::cerr << "[WARN] h_j is not finite at t=" << t << ", j=" << j << "\n";
-			}
-			if (!s_t_1.allFinite()) {
-				std::cerr << "[WARN] s_t_1 is not finite at t=" << t << ", j=" << j << "\n";
-			}
-			if (!dContext_t.allFinite()) {
-				std::cerr << "[WARN] dContext_t is not finite at t=" << t << ", j=" << j << "\n";
-			}
 
 			for (int k = 0; k < N; ++k) {
 				RowVectorXld h_k = this->encoder_->Common_Hidden_states[Number_InputState].row(k);
 
-				long double alpha_k = alpha(k);
+				double alpha_k = alpha(k);
 				if (!std::isfinite(alpha_k)) {
 					std::cerr << "[WARN] alpha(" << k << ") = " << alpha_k << " is not finite at t=" << t << ", j=" << j << "\n";
 					continue;
@@ -996,12 +967,12 @@ Seq2SeqWithAttention_ForTrain::grads_Seq2SeqWithAttention Seq2SeqWithAttention_F
 					std::cerr << "[WARN] h_k (k=" << k << ") is not finite at t=" << t << ", j=" << j << "\n";
 				}
 
-				long double dAlpha_k = dContext_t.dot(h_k);
+				double dAlpha_k = dContext_t.dot(h_k);
 				if (!std::isfinite(dAlpha_k)) {
 					std::cerr << "[WARN] dAlpha_k is not finite (dot of dContext_t and h_k) at t=" << t << ", j=" << j << ", k=" << k << "\n";
 				}
 
-				long double delta = (j == k) ? 1.0 : 0.0;
+				double delta = (j == k) ? 1.0 : 0.0;
 				dE_tj += dAlpha_k * alpha_k * (delta - alpha(j));
 			}
 
@@ -1009,13 +980,9 @@ Seq2SeqWithAttention_ForTrain::grads_Seq2SeqWithAttention Seq2SeqWithAttention_F
 				std::cerr << "[ERROR] dE_tj is NaN or Inf at t=" << t << ", j=" << j << "\n";
 			}
 
-			RowVectorXld u_tj = this->decoder_->attention_->all_tanh_outputs_[t][j];
-			if (!u_tj.allFinite()) {
-				std::cerr << "[WARN] u_tj is not finite at t=" << t << ", j=" << j << "\n";
-			}
-
 			RowVectorXld dU_tj = dE_tj * this->decoder_->attention_->attention_vector_.transpose();  // [1 x A]
 			RowVectorXld dPreact_tj = dU_tj.array() * (1.0 - u_tj.array().square());
+
 
 			MatrixXld DW_att_enc_tj = dPreact_tj.transpose() * h_j;
 			MatrixXld DW_att_dec_tj = dPreact_tj.transpose() * s_t_1;
@@ -1184,10 +1151,39 @@ Seq2SeqWithAttention_ForTrain::grads_Seq2SeqWithAttention Seq2SeqWithAttention_F
 		grads.dW_gamma_layernorm += DGamma_t;
 		grads.dB_beta_layernorm += DBeta_t;
 
-		grads.dW_f_dec += DW_dec_t.leftCols(this->decoder_->Hidden_size);
-		grads.dW_i_dec += DW_dec_t.middleCols(this->decoder_->Hidden_size, this->decoder_->Hidden_size);
-		grads.dW_ccond_dec += DW_dec_t.middleCols(2 * this->decoder_->Hidden_size, this->decoder_->Hidden_size);
-		grads.dW_o_dec += DW_dec_t.rightCols(this->decoder_->Hidden_size);
+		check_nan_inf(grads.dW_ccond_dec, "grads.dW_ccond_dec (before +=)");
+		check_nan_inf(grads.dW_o_dec, "grads.dW_o_dec (before +=)");
+
+		MatrixXld dO = DW_dec_t.rightCols(this->decoder_->Hidden_size);
+		MatrixXld dC = DW_dec_t.middleCols(2 * this->decoder_->Hidden_size, this->decoder_->Hidden_size);
+
+		assert(!grads.dW_ccond_dec.hasNaN() && !grads.dW_ccond_dec.hasInf());
+		assert(!dC.hasNaN() && !dC.hasInf());
+
+		assert(!grads.dW_o_dec.hasNaN() && !grads.dW_o_dec.hasInf());
+		assert(!dO.hasNaN() && !dO.hasInf());
+
+		check_nan_inf(dC, "C");
+		check_nan_inf(dO, "O");
+		if (grads.dW_ccond_dec.size() != dC.size() || grads.dW_o_dec.size() != dO.size()) {
+			std::cout  << "grads.dW_ccond_dec.rows() : " << grads.dW_ccond_dec.rows()
+				 << " dC.rows() : " << dC.rows()
+				<< "\ngrads.dW_o_dec.rows() : " << grads.dW_o_dec.rows() 
+				<< " dO.rows() : " << dO.rows() << "\ninput_size_x " << this->decoder_->StatesForgrads.x[Number_InputState].cols() << std::endl;
+			std::cout << "grads.dW_ccond_dec.cols() : " << grads.dW_ccond_dec.cols()
+				<< " dC.cols() : " << dC.cols()
+				<< "\ngrads.dW_o_dec.cols() : " << grads.dW_o_dec.cols()
+				<< " dO.cols() : " << dO.cols() << "\nhidden_size " << this->decoder_->Hidden_size << std::endl;
+			std::abort;
+		}
+		grads.dW_f_dec.noalias() += DW_dec_t.leftCols(this->decoder_->Hidden_size);
+		grads.dW_i_dec.noalias() += DW_dec_t.middleCols(this->decoder_->Hidden_size, this->decoder_->Hidden_size);
+		grads.dW_ccond_dec += dC;
+		grads.dW_o_dec += dO;
+
+		check_nan_inf(grads.dW_ccond_dec, "grads.dW_ccond_dec (after +=)");
+		check_nan_inf(grads.dW_o_dec, "grads.dW_o_dec (after +=)");
+
 
 		grads.dU_f_dec += DU_dec_t.leftCols(this->decoder_->Hidden_size);
 		grads.dU_i_dec += DU_dec_t.middleCols(this->decoder_->Hidden_size, this->decoder_->Hidden_size);
@@ -1206,12 +1202,12 @@ void Seq2SeqWithAttention_ForTrain::UpdateAdamOptWithLogging
 (
 	const std::vector<std::vector<MatrixXld>>& Target_input_output, /*std::vector<MatrixXld> Target_output,*/
 	size_t epochs, size_t optima_steps, size_t batch_size,
-	long double learning_rate, long double epsilon,
-	long double beta1, long double beta2
+	double learning_rate, double epsilon,
+	double beta1, double beta2
 )
 {
 	auto get_global_norm = [](auto& grads)  {
-		long double total_sq_norm = 0.0;
+		double total_sq_norm = 0.0;
 
 		// -------- Decoder --------
 		total_sq_norm += grads.dW_out.squaredNorm();
@@ -1276,13 +1272,13 @@ void Seq2SeqWithAttention_ForTrain::UpdateAdamOptWithLogging
 		total_sq_norm += grads.dU_o_back_enc.squaredNorm();
 		total_sq_norm += grads.dB_o_back_enc.squaredNorm();
 
-		long double global_norm = std::sqrt(total_sq_norm + 1e-8L);
+		double global_norm = std::sqrt(total_sq_norm + 1e-8L);
 
 		return global_norm;
 		};
 
-	auto clip_by_global_norm = [](auto& grads, long double clip_value) {
-		long double total_sq_norm = 0.0;
+	auto clip_by_global_norm = [](auto& grads, double clip_value) {
+		double total_sq_norm = 0.0;
 
 		// -------- Decoder --------
 		total_sq_norm += grads.dW_out.squaredNorm();
@@ -1347,10 +1343,10 @@ void Seq2SeqWithAttention_ForTrain::UpdateAdamOptWithLogging
 		total_sq_norm += grads.dU_o_back_enc.squaredNorm();
 		total_sq_norm += grads.dB_o_back_enc.squaredNorm();
 
-		long double global_norm = std::sqrt(total_sq_norm + 1e-8L);
+		double global_norm = std::sqrt(total_sq_norm + 1e-8L);
 
 		if (global_norm > clip_value) {
-			long double scale = clip_value / global_norm;
+			double scale = clip_value / global_norm;
 
 			// -------- Decoder --------
 			grads.dW_out *= scale;
@@ -1416,8 +1412,8 @@ void Seq2SeqWithAttention_ForTrain::UpdateAdamOptWithLogging
 		}
 		};
 
-	std::vector<std::vector<MatrixXld>> shuffle_target = Target_input_output;
-	long double notceil_batch_steps_ = (long double)shuffle_target.size() / batch_size;
+	std::vector<std::vector<MatrixXld>> shuffle_target;
+	double notceil_batch_steps_ = (double)Target_input_output.size() / batch_size;
 	size_t batch_steps_ = (size_t)std::ceil(notceil_batch_steps_);
 	//std::cout << shuffle_target.size();
 	//std::cout << notceil_batch_steps_;
@@ -1428,7 +1424,7 @@ void Seq2SeqWithAttention_ForTrain::UpdateAdamOptWithLogging
 
 	for (size_t epoch_ = 0; epoch_ < epochs; epoch_++) {
 		auto get_mean_grads = [](auto & grads) {
-			long double total_norm = 0.0;
+			double total_norm = 0.0;
 
 			// -------- Decoder --------
 			total_norm += grads.dW_out.sum();
@@ -1493,136 +1489,50 @@ void Seq2SeqWithAttention_ForTrain::UpdateAdamOptWithLogging
 			total_norm += grads.dU_o_back_enc.sum();
 			total_norm += grads.dB_o_back_enc.sum();
 
-			long double mean = total_norm / 43;
+			double mean = total_norm / 43;
 			return mean;
 			};
 
-		//long double start_avg_train_loss = 0;
-		//long double end_avg_train_loss = 0;
+		//double start_avg_train_loss = 0;
+		//double end_avg_train_loss = 0;
 
 		grads_Seq2SeqWithAttention grads_start_avg_train_loss;
 		grads_Seq2SeqWithAttention grads_end_avg_train_loss;
+		grads_start_avg_train_loss.SetZero(this);
+		grads_end_avg_train_loss.SetZero(this);
 
 		start_time = std::chrono::steady_clock::now();
+
+		shuffle_target = Target_input_output;
 
 		std::random_device rd;
 		std::shuffle(shuffle_target.begin(), shuffle_target.end(), std::mt19937(rd()));
 
 		grads_Seq2SeqWithAttention grads;
 
+		
 		std::vector<std::vector<MatrixXld>> shuffle_(2, std::vector<MatrixXld>(shuffle_target.size()));
 		for (int i = 0; i < shuffle_target.size(); i++) {
-			shuffle_[0][i] = shuffle_target[i][0];
-			shuffle_[1][i] = shuffle_target[i][1];
-		}
+				shuffle_[0][i] = shuffle_target[i][0];
+				shuffle_[1][i] = shuffle_target[i][1];
+			}
 		shuffle_target = shuffle_;
 
 		Inference(shuffle_target[0]);
 
+		double clip_threshold = 200L;
+
 		for (size_t batch_step = 0; batch_step < batch_steps_; batch_step++) {
-			grads.SetZero();
-			for (size_t i = batch_step * batch_size; i < (batch_step + 1) * batch_size && i < shuffle_target.size(); i++) {
-				auto grads_ = BackwardWithLogging(i, shuffle_target[1][i]);
-				grads += grads_;
+			grads.SetZero(this);
+
+			for (size_t i = batch_step * batch_size; i < (batch_step + 1) * batch_size && i < shuffle_target[0].size(); i++) {
+				grads += BackwardWithLogging(i, shuffle_target[1][i]);
 			}
 			grads /= (batch_step == batch_steps_) ? batch_size * (notceil_batch_steps_ - (int)notceil_batch_steps_) : batch_size;
 
-			grads_start_avg_train_loss += std::move(grads);
-
-			long double clip_threshold = 200L;
-
 			clip_by_global_norm(grads, clip_threshold);
 
-			long double grad_norm = get_global_norm(grads);
-
-			if (!std::isfinite(grad_norm)) {
-				auto check_nan_inf = [](const MatrixXld& m, const std::string& name) {
-					if (!m.allFinite()) {
-						auto lyambda = [](const MatrixXld& m) {
-							int nan_count = 0;
-							int inf_count = 0;
-
-							for (int i = 0; i < m.size(); ++i) {
-								double val = *(m.data() + i);
-								if (std::isnan(val)) ++nan_count;
-								else if (std::isinf(val)) ++inf_count;
-							}
-
-							return std::make_pair(nan_count, inf_count);
-							};
-						//size_t nnan = 0;
-						//size_t ninf = 0;
-						auto [nan_count, inf_count] = lyambda(m);
-						std::cerr << "[ERROR] NaN or Inf detected in: " << name << "\tnan-inf: " << nan_count << "/" << inf_count << "\n";
-					}
-					};
-				std::cerr << "[WARNING] NaN/inf in gradients at batch " << batch_step << "\n";
-				check_nan_inf(grads.dW_out, "grads.dW_out");
-				check_nan_inf(grads.dB_out, "grads.dB_out");
-
-				check_nan_inf(grads.dW_f_dec, "grads.dW_f_dec");
-				check_nan_inf(grads.dU_f_dec, "grads.dU_f_dec");
-				check_nan_inf(grads.dB_f_dec, "grads.dB_f_dec");
-
-				check_nan_inf(grads.dW_i_dec, "grads.dW_i_dec");
-				check_nan_inf(grads.dU_i_dec, "grads.dU_i_dec");
-				check_nan_inf(grads.dB_i_dec, "grads.dB_i_dec");
-
-				check_nan_inf(grads.dW_ccond_dec, "grads.dW_ccond_dec");
-				check_nan_inf(grads.dU_ccond_dec, "grads.dU_ccond_dec");
-				check_nan_inf(grads.dB_ccond_dec, "grads.dB_ccond_dec");
-
-				check_nan_inf(grads.dW_o_dec, "grads.dW_o_dec");
-				check_nan_inf(grads.dU_o_dec, "grads.dU_o_dec");
-				check_nan_inf(grads.dB_o_dec, "grads.dB_o_dec");
-
-				check_nan_inf(grads.dW_gamma_layernorm, "grads.dW_gamma_layernorm");
-				check_nan_inf(grads.dB_beta_layernorm, "grads.dB_beta_layernorm");
-
-				check_nan_inf(grads.dV_a_attention, "grads.dV_a_attention");
-				check_nan_inf(grads.dW_e_attention, "grads.dW_e_attention");
-				check_nan_inf(grads.dW_d_attention, "grads.dW_d_attention");
-
-				check_nan_inf(grads.dW_f_forw_enc, "grads.dW_f_forw_enc");
-				check_nan_inf(grads.dU_f_forw_enc, "grads.dU_f_forw_enc");
-				check_nan_inf(grads.dB_f_forw_enc, "grads.dB_f_forw_enc");
-
-				check_nan_inf(grads.dW_i_forw_enc, "grads.dW_i_forw_enc");
-				check_nan_inf(grads.dU_i_forw_enc, "grads.dU_i_forw_enc");
-				check_nan_inf(grads.dB_i_forw_enc, "grads.dB_i_forw_enc");
-
-				check_nan_inf(grads.dW_ccond_forw_enc, "grads.dW_ccond_forw_enc");
-				check_nan_inf(grads.dU_ccond_forw_enc, "grads.dU_ccond_forw_enc");
-				check_nan_inf(grads.dB_ccond_forw_enc, "grads.dB_ccond_forw_enc");
-
-				check_nan_inf(grads.dW_o_forw_enc, "grads.dW_o_forw_enc");
-				check_nan_inf(grads.dU_o_forw_enc, "grads.dU_o_forw_enc");
-				check_nan_inf(grads.dB_o_forw_enc, "grads.dB_o_forw_enc");
-
-				check_nan_inf(grads.dW_f_back_enc, "grads.dW_f_back_enc");
-				check_nan_inf(grads.dU_f_back_enc, "grads.dU_f_back_enc");
-				check_nan_inf(grads.dB_f_back_enc, "grads.dB_f_back_enc");
-
-				check_nan_inf(grads.dW_i_back_enc, "grads.dW_i_back_enc");
-				check_nan_inf(grads.dU_i_back_enc, "grads.dU_i_back_enc");
-				check_nan_inf(grads.dB_i_back_enc, "grads.dB_i_back_enc");
-
-				check_nan_inf(grads.dW_ccond_back_enc, "grads.dW_ccond_back_enc");
-				check_nan_inf(grads.dU_ccond_back_enc, "grads.dU_ccond_back_enc");
-				check_nan_inf(grads.dB_ccond_back_enc, "grads.dB_ccond_back_enc");
-
-				check_nan_inf(grads.dW_o_back_enc, "grads.dW_o_back_enc");
-				check_nan_inf(grads.dU_o_back_enc, "grads.dU_o_back_enc");
-				check_nan_inf(grads.dB_o_back_enc, "grads.dB_o_back_enc");
-			}
-			else if (grad_norm > clip_threshold) {
-				std::cout << "[CLIP] Batch " << batch_step
-					<< " gradient norm = " << grad_norm << " clipped\n";
-			}
-			else {
-				std::cout << "[INFO] Batch " << batch_step
-					<< " gradient norm = " << grad_norm << "\n";
-			}
+			grads_start_avg_train_loss += grads;
 
 			MatrixXld M_W_out = MatrixXld::Zero(grads.dW_out.rows(), grads.dW_out.cols());
 			MatrixXld M_B_out = MatrixXld::Zero(grads.dB_out.rows(), grads.dB_out.cols());
@@ -1742,132 +1652,224 @@ void Seq2SeqWithAttention_ForTrain::UpdateAdamOptWithLogging
 			MatrixXld V_U_o_back_enc = MatrixXld::Zero(grads.dU_o_back_enc.rows(), grads.dU_o_back_enc.cols());
 			MatrixXld V_B_o_back_enc = MatrixXld::Zero(grads.dB_o_back_enc.rows(), grads.dB_o_back_enc.cols());
 
-
 			for (size_t t_ = 0; t_ < optima_steps; t_++) {
-				grads.SetZero();
-				for (size_t i = batch_step * batch_size; i < (batch_step + 1) * batch_size && i < shuffle_target.size(); i++) {
-					grads += std::move(BackwardWithLogging(i, shuffle_target[1][i]));
+				grads.SetZero(this);
+				for (size_t i = batch_step * batch_size; i < (batch_step + 1) * batch_size && i < shuffle_target[0].size(); i++) {
+					grads += BackwardWithLogging(i, shuffle_target[1][i]);
 				}
 				grads /= (batch_step == batch_steps_) ? batch_size * (notceil_batch_steps_ - (int)notceil_batch_steps_) : batch_size;
+				
+				double grad_norm = get_global_norm(grads);
 
-				{
-					M_W_out = beta1 * M_W_out + (1 - beta1) * grads.dW_out;
-					M_B_out = beta1 * M_B_out + (1 - beta1) * grads.dB_out;
-					//
-					M_W_gamma_layernorm = beta1 * M_W_gamma_layernorm + (1 - beta1) * grads.dW_gamma_layernorm;
-					M_B_beta_layernorm = beta1 * M_B_beta_layernorm + (1 - beta1) * grads.dB_beta_layernorm;
-					//
-					M_V_a_attention = beta1 * M_V_a_attention + (1 - beta1) * grads.dV_a_attention;
-					M_W_e_attention = beta1 * M_W_e_attention + (1 - beta1) * grads.dW_e_attention;
-					M_W_d_attention = beta1 * M_W_d_attention + (1 - beta1) * grads.dW_d_attention;
-					//
-					M_W_f_dec = beta1 * M_W_f_dec + (1 - beta1) * grads.dW_f_dec;
-					M_U_f_dec = beta1 * M_U_f_dec + (1 - beta1) * grads.dU_f_dec;
-					M_B_f_dec = beta1 * M_B_f_dec + (1 - beta1) * grads.dB_f_dec;
+				clip_by_global_norm(grads, clip_threshold);
 
-					M_W_i_dec = beta1 * M_W_i_dec + (1 - beta1) * grads.dW_i_dec;
-					M_U_i_dec = beta1 * M_U_i_dec + (1 - beta1) * grads.dU_i_dec;
-					M_B_i_dec = beta1 * M_B_i_dec + (1 - beta1) * grads.dB_i_dec;
+				if (!std::isfinite(grad_norm)) {
+					auto check_nan_inf = [](const MatrixXld& m, const std::string& name) {
+						if (!m.allFinite()) {
+							auto lyambda = [](const MatrixXld& m) {
+								int nan_count = 0;
+								int inf_count = 0;
 
-					M_W_ccond_dec = beta1 * M_W_ccond_dec + (1 - beta1) * grads.dW_ccond_dec;
-					M_U_ccond_dec = beta1 * M_U_ccond_dec + (1 - beta1) * grads.dU_ccond_dec;
-					M_B_ccond_dec = beta1 * M_B_ccond_dec + (1 - beta1) * grads.dB_ccond_dec;
+								for (int i = 0; i < m.size(); ++i) {
+									double val = *(m.data() + i);
+									if (std::isnan(val)) ++nan_count;
+									else if (std::isinf(val)) ++inf_count;
+								}
 
-					M_W_o_dec = beta1 * M_W_o_dec + (1 - beta1) * grads.dW_o_dec;
-					M_U_o_dec = beta1 * M_U_o_dec + (1 - beta1) * grads.dU_o_dec;
-					M_B_o_dec = beta1 * M_B_o_dec + (1 - beta1) * grads.dB_o_dec;
-					//
-					M_W_f_forw_enc = beta1 * M_W_f_forw_enc + (1 - beta1) * grads.dW_f_forw_enc;
-					M_U_f_forw_enc = beta1 * M_U_f_forw_enc + (1 - beta1) * grads.dU_f_forw_enc;
-					M_B_f_forw_enc = beta1 * M_B_f_forw_enc + (1 - beta1) * grads.dB_f_forw_enc;
+								return std::make_pair(nan_count, inf_count);
+								};
+							//size_t nnan = 0;
+							//size_t ninf = 0;
+							auto [nan_count, inf_count] = lyambda(m);
+							std::cerr << "[ERROR] NaN or Inf detected in: " << name << "\tnan-inf: " << nan_count << "/" << inf_count << "\n";
+						}
+						};
+					std::cerr << "[WARNING] NaN/inf in gradients at batch " << batch_step << "\n";
+					check_nan_inf(grads.dW_out, "grads.dW_out");
+					check_nan_inf(grads.dB_out, "grads.dB_out");
 
-					M_W_i_forw_enc = beta1 * M_W_i_forw_enc + (1 - beta1) * grads.dW_i_forw_enc;
-					M_U_i_forw_enc = beta1 * M_U_i_forw_enc + (1 - beta1) * grads.dU_i_forw_enc;
-					M_B_i_forw_enc = beta1 * M_B_i_forw_enc + (1 - beta1) * grads.dB_i_forw_enc;
+					check_nan_inf(grads.dW_f_dec, "grads.dW_f_dec");
+					check_nan_inf(grads.dU_f_dec, "grads.dU_f_dec");
+					check_nan_inf(grads.dB_f_dec, "grads.dB_f_dec");
 
-					M_W_ccond_forw_enc = beta1 * M_W_ccond_forw_enc + (1 - beta1) * grads.dW_ccond_forw_enc;
-					M_U_ccond_forw_enc = beta1 * M_U_ccond_forw_enc + (1 - beta1) * grads.dU_ccond_forw_enc;
-					M_B_ccond_forw_enc = beta1 * M_B_ccond_forw_enc + (1 - beta1) * grads.dB_ccond_forw_enc;
+					check_nan_inf(grads.dW_i_dec, "grads.dW_i_dec");
+					check_nan_inf(grads.dU_i_dec, "grads.dU_i_dec");
+					check_nan_inf(grads.dB_i_dec, "grads.dB_i_dec");
 
-					M_W_o_forw_enc = beta1 * M_W_o_forw_enc + (1 - beta1) * grads.dW_o_forw_enc;
-					M_U_o_forw_enc = beta1 * M_U_o_forw_enc + (1 - beta1) * grads.dU_o_forw_enc;
-					M_B_o_forw_enc = beta1 * M_B_o_forw_enc + (1 - beta1) * grads.dB_o_forw_enc;
-					//
-					M_W_f_back_enc = beta1 * M_W_f_back_enc + (1 - beta1) * grads.dW_f_back_enc;
-					M_U_f_back_enc = beta1 * M_U_f_back_enc + (1 - beta1) * grads.dU_f_back_enc;
-					M_B_f_back_enc = beta1 * M_B_f_back_enc + (1 - beta1) * grads.dB_f_back_enc;
+					check_nan_inf(grads.dW_ccond_dec, "grads.dW_ccond_dec");
+					check_nan_inf(grads.dU_ccond_dec, "grads.dU_ccond_dec");
+					check_nan_inf(grads.dB_ccond_dec, "grads.dB_ccond_dec");
 
-					M_W_i_back_enc = beta1 * M_W_i_back_enc + (1 - beta1) * grads.dW_i_back_enc;
-					M_U_i_back_enc = beta1 * M_U_i_back_enc + (1 - beta1) * grads.dU_i_back_enc;
-					M_B_i_back_enc = beta1 * M_B_i_back_enc + (1 - beta1) * grads.dB_i_back_enc;
+					check_nan_inf(grads.dW_o_dec, "grads.dW_o_dec");
+					check_nan_inf(grads.dU_o_dec, "grads.dU_o_dec");
+					check_nan_inf(grads.dB_o_dec, "grads.dB_o_dec");
 
-					M_W_ccond_back_enc = beta1 * M_W_ccond_back_enc + (1 - beta1) * grads.dW_ccond_back_enc;
-					M_U_ccond_back_enc = beta1 * M_U_ccond_back_enc + (1 - beta1) * grads.dU_ccond_back_enc;
-					M_B_ccond_back_enc = beta1 * M_B_ccond_back_enc + (1 - beta1) * grads.dB_ccond_back_enc;
+					check_nan_inf(grads.dW_gamma_layernorm, "grads.dW_gamma_layernorm");
+					check_nan_inf(grads.dB_beta_layernorm, "grads.dB_beta_layernorm");
 
-					M_W_o_back_enc = beta1 * M_W_o_back_enc + (1 - beta1) * grads.dW_o_back_enc;
-					M_U_o_back_enc = beta1 * M_U_o_back_enc + (1 - beta1) * grads.dU_o_back_enc;
-					M_B_o_back_enc = beta1 * M_B_o_back_enc + (1 - beta1) * grads.dB_o_back_enc;
-					//
-					//
-					V_W_out = beta2 * V_W_out.array() + (1 - beta2) * grads.dW_out.array() * grads.dW_out.array();
-					V_B_out = beta2 * V_B_out.array() + (1 - beta2) * grads.dB_out.array() * grads.dB_out.array();
-					//
-					V_W_gamma_layernorm = beta2 * V_W_gamma_layernorm.array() + (1 - beta2) * grads.dW_gamma_layernorm.array() * grads.dW_gamma_layernorm.array();
-					V_B_beta_layernorm = beta2 * V_B_beta_layernorm.array() + (1 - beta2) * grads.dB_beta_layernorm.array() * grads.dB_beta_layernorm.array();
-					//
-					V_V_a_attention = beta2 * V_V_a_attention.array() + (1 - beta2) * grads.dV_a_attention.array() * grads.dV_a_attention.array();
-					V_W_e_attention = beta2 * V_W_e_attention.array() + (1 - beta2) * grads.dW_e_attention.array() * grads.dW_e_attention.array();
-					V_W_d_attention = beta2 * V_W_d_attention.array() + (1 - beta2) * grads.dW_d_attention.array() * grads.dW_d_attention.array();
-					//
-					V_W_f_dec = beta2 * V_W_f_dec.array() + (1 - beta2) * grads.dW_f_dec.array() * grads.dW_f_dec.array();
-					V_U_f_dec = beta2 * V_U_f_dec.array() + (1 - beta2) * grads.dU_f_dec.array() * grads.dU_f_dec.array();
-					V_B_f_dec = beta2 * V_B_f_dec.array() + (1 - beta2) * grads.dB_f_dec.array() * grads.dB_f_dec.array();
+					check_nan_inf(grads.dV_a_attention, "grads.dV_a_attention");
+					check_nan_inf(grads.dW_e_attention, "grads.dW_e_attention");
+					check_nan_inf(grads.dW_d_attention, "grads.dW_d_attention");
 
-					V_W_i_dec = beta2 * V_W_i_dec.array() + (1 - beta2) * grads.dW_i_dec.array() * grads.dW_i_dec.array();
-					V_U_i_dec = beta2 * V_U_i_dec.array() + (1 - beta2) * grads.dU_i_dec.array() * grads.dU_i_dec.array();
-					V_B_i_dec = beta2 * V_B_i_dec.array() + (1 - beta2) * grads.dB_i_dec.array() * grads.dB_i_dec.array();
+					check_nan_inf(grads.dW_f_forw_enc, "grads.dW_f_forw_enc");
+					check_nan_inf(grads.dU_f_forw_enc, "grads.dU_f_forw_enc");
+					check_nan_inf(grads.dB_f_forw_enc, "grads.dB_f_forw_enc");
 
-					V_W_ccond_dec = beta2 * V_W_ccond_dec.array() + (1 - beta2) * grads.dW_ccond_dec.array() * grads.dW_ccond_dec.array();
-					V_U_ccond_dec = beta2 * V_U_ccond_dec.array() + (1 - beta2) * grads.dU_ccond_dec.array() * grads.dU_ccond_dec.array();
-					V_B_ccond_dec = beta2 * V_B_ccond_dec.array() + (1 - beta2) * grads.dB_ccond_dec.array() * grads.dB_ccond_dec.array();
+					check_nan_inf(grads.dW_i_forw_enc, "grads.dW_i_forw_enc");
+					check_nan_inf(grads.dU_i_forw_enc, "grads.dU_i_forw_enc");
+					check_nan_inf(grads.dB_i_forw_enc, "grads.dB_i_forw_enc");
 
-					V_W_o_dec = beta2 * V_W_o_dec.array() + (1 - beta2) * grads.dW_o_dec.array() * grads.dW_o_dec.array();
-					V_U_o_dec = beta2 * V_U_o_dec.array() + (1 - beta2) * grads.dU_o_dec.array() * grads.dU_o_dec.array();
-					V_B_o_dec = beta2 * V_B_o_dec.array() + (1 - beta2) * grads.dB_o_dec.array() * grads.dB_o_dec.array();
-					//
-					V_W_f_forw_enc = beta2 * V_W_f_forw_enc.array() + (1 - beta2) * grads.dW_f_forw_enc.array() * grads.dW_f_forw_enc.array();
-					V_U_f_forw_enc = beta2 * V_U_f_forw_enc.array() + (1 - beta2) * grads.dU_f_forw_enc.array() * grads.dU_f_forw_enc.array();
-					V_B_f_forw_enc = beta2 * V_B_f_forw_enc.array() + (1 - beta2) * grads.dB_f_forw_enc.array() * grads.dB_f_forw_enc.array();
+					check_nan_inf(grads.dW_ccond_forw_enc, "grads.dW_ccond_forw_enc");
+					check_nan_inf(grads.dU_ccond_forw_enc, "grads.dU_ccond_forw_enc");
+					check_nan_inf(grads.dB_ccond_forw_enc, "grads.dB_ccond_forw_enc");
 
-					V_W_i_forw_enc = beta2 * V_W_i_forw_enc.array() + (1 - beta2) * grads.dW_i_forw_enc.array() * grads.dW_i_forw_enc.array();
-					V_U_i_forw_enc = beta2 * V_U_i_forw_enc.array() + (1 - beta2) * grads.dU_i_forw_enc.array() * grads.dU_i_forw_enc.array();
-					V_B_i_forw_enc = beta2 * V_B_i_forw_enc.array() + (1 - beta2) * grads.dB_i_forw_enc.array() * grads.dB_i_forw_enc.array();
+					check_nan_inf(grads.dW_o_forw_enc, "grads.dW_o_forw_enc");
+					check_nan_inf(grads.dU_o_forw_enc, "grads.dU_o_forw_enc");
+					check_nan_inf(grads.dB_o_forw_enc, "grads.dB_o_forw_enc");
 
-					V_W_ccond_forw_enc = beta2 * V_W_ccond_forw_enc.array() + (1 - beta2) * grads.dW_ccond_forw_enc.array() * grads.dW_ccond_forw_enc.array();
-					V_U_ccond_forw_enc = beta2 * V_U_ccond_forw_enc.array() + (1 - beta2) * grads.dU_ccond_forw_enc.array() * grads.dU_ccond_forw_enc.array();
-					V_B_ccond_forw_enc = beta2 * V_B_ccond_forw_enc.array() + (1 - beta2) * grads.dB_ccond_forw_enc.array() * grads.dB_ccond_forw_enc.array();
+					check_nan_inf(grads.dW_f_back_enc, "grads.dW_f_back_enc");
+					check_nan_inf(grads.dU_f_back_enc, "grads.dU_f_back_enc");
+					check_nan_inf(grads.dB_f_back_enc, "grads.dB_f_back_enc");
 
-					V_W_o_forw_enc = beta2 * V_W_o_forw_enc.array() + (1 - beta2) * grads.dW_o_forw_enc.array() * grads.dW_o_forw_enc.array();
-					V_U_o_forw_enc = beta2 * V_U_o_forw_enc.array() + (1 - beta2) * grads.dU_o_forw_enc.array() * grads.dU_o_forw_enc.array();
-					V_B_o_forw_enc = beta2 * V_B_o_forw_enc.array() + (1 - beta2) * grads.dB_o_forw_enc.array() * grads.dB_o_forw_enc.array();
-					//
-					V_W_f_back_enc = beta2 * V_W_f_back_enc.array() + (1 - beta2) * grads.dW_f_back_enc.array() * grads.dW_f_back_enc.array();
-					V_U_f_back_enc = beta2 * V_U_f_back_enc.array() + (1 - beta2) * grads.dU_f_back_enc.array() * grads.dU_f_back_enc.array();
-					V_B_f_back_enc = beta2 * V_B_f_back_enc.array() + (1 - beta2) * grads.dB_f_back_enc.array() * grads.dB_f_back_enc.array();
+					check_nan_inf(grads.dW_i_back_enc, "grads.dW_i_back_enc");
+					check_nan_inf(grads.dU_i_back_enc, "grads.dU_i_back_enc");
+					check_nan_inf(grads.dB_i_back_enc, "grads.dB_i_back_enc");
 
-					V_W_i_back_enc = beta2 * V_W_i_back_enc.array() + (1 - beta2) * grads.dW_i_back_enc.array() * grads.dW_i_back_enc.array();
-					V_U_i_back_enc = beta2 * V_U_i_back_enc.array() + (1 - beta2) * grads.dU_i_back_enc.array() * grads.dU_i_back_enc.array();
-					V_B_i_back_enc = beta2 * V_B_i_back_enc.array() + (1 - beta2) * grads.dB_i_back_enc.array() * grads.dB_i_back_enc.array();
+					check_nan_inf(grads.dW_ccond_back_enc, "grads.dW_ccond_back_enc");
+					check_nan_inf(grads.dU_ccond_back_enc, "grads.dU_ccond_back_enc");
+					check_nan_inf(grads.dB_ccond_back_enc, "grads.dB_ccond_back_enc");
 
-					V_W_ccond_back_enc = beta2 * V_W_ccond_back_enc.array() + (1 - beta2) * grads.dW_ccond_back_enc.array() * grads.dW_ccond_back_enc.array();
-					V_U_ccond_back_enc = beta2 * V_U_ccond_back_enc.array() + (1 - beta2) * grads.dU_ccond_back_enc.array() * grads.dU_ccond_back_enc.array();
-					V_B_ccond_back_enc = beta2 * V_B_ccond_back_enc.array() + (1 - beta2) * grads.dB_ccond_back_enc.array() * grads.dB_ccond_back_enc.array();
-
-					V_W_o_back_enc = beta2 * V_W_o_back_enc.array() + (1 - beta2) * grads.dW_o_back_enc.array() * grads.dW_o_back_enc.array();
-					V_U_o_back_enc = beta2 * V_U_o_back_enc.array() + (1 - beta2) * grads.dU_o_back_enc.array() * grads.dU_o_back_enc.array();
-					V_B_o_back_enc = beta2 * V_B_o_back_enc.array() + (1 - beta2) * grads.dB_o_back_enc.array() * grads.dB_o_back_enc.array();
+					check_nan_inf(grads.dW_o_back_enc, "grads.dW_o_back_enc");
+					check_nan_inf(grads.dU_o_back_enc, "grads.dU_o_back_enc");
+					check_nan_inf(grads.dB_o_back_enc, "grads.dB_o_back_enc");
 				}
+				else if (grad_norm > clip_threshold) {
+					std::cout << "[CLIP] Batch " << batch_step
+						<< " gradient norm = " << grad_norm << " clipped\n";
+				}
+				else {
+					std::cout << "[INFO] Batch " << batch_step
+						<< " gradient norm = " << grad_norm << "\n";
+				}
+
+				
+				M_W_out = beta1 * M_W_out + (1 - beta1) * grads.dW_out;
+				M_B_out = beta1 * M_B_out + (1 - beta1) * grads.dB_out;
+				//
+				M_W_gamma_layernorm = beta1 * M_W_gamma_layernorm + (1 - beta1) * grads.dW_gamma_layernorm;
+				M_B_beta_layernorm = beta1 * M_B_beta_layernorm + (1 - beta1) * grads.dB_beta_layernorm;
+				//
+				M_V_a_attention = beta1 * M_V_a_attention + (1 - beta1) * grads.dV_a_attention;
+				M_W_e_attention = beta1 * M_W_e_attention + (1 - beta1) * grads.dW_e_attention;
+				M_W_d_attention = beta1 * M_W_d_attention + (1 - beta1) * grads.dW_d_attention;
+				//
+				M_W_f_dec = beta1 * M_W_f_dec + (1 - beta1) * grads.dW_f_dec;
+				M_U_f_dec = beta1 * M_U_f_dec + (1 - beta1) * grads.dU_f_dec;
+				M_B_f_dec = beta1 * M_B_f_dec + (1 - beta1) * grads.dB_f_dec;
+
+				M_W_i_dec = beta1 * M_W_i_dec + (1 - beta1) * grads.dW_i_dec;
+				M_U_i_dec = beta1 * M_U_i_dec + (1 - beta1) * grads.dU_i_dec;
+				M_B_i_dec = beta1 * M_B_i_dec + (1 - beta1) * grads.dB_i_dec;
+
+				M_W_ccond_dec = beta1 * M_W_ccond_dec + (1 - beta1) * grads.dW_ccond_dec;
+				M_U_ccond_dec = beta1 * M_U_ccond_dec + (1 - beta1) * grads.dU_ccond_dec;
+				M_B_ccond_dec = beta1 * M_B_ccond_dec + (1 - beta1) * grads.dB_ccond_dec;
+
+				M_W_o_dec = beta1 * M_W_o_dec + (1 - beta1) * grads.dW_o_dec;
+				M_U_o_dec = beta1 * M_U_o_dec + (1 - beta1) * grads.dU_o_dec;
+				M_B_o_dec = beta1 * M_B_o_dec + (1 - beta1) * grads.dB_o_dec;
+				//
+				M_W_f_forw_enc = beta1 * M_W_f_forw_enc + (1 - beta1) * grads.dW_f_forw_enc;
+				M_U_f_forw_enc = beta1 * M_U_f_forw_enc + (1 - beta1) * grads.dU_f_forw_enc;
+				M_B_f_forw_enc = beta1 * M_B_f_forw_enc + (1 - beta1) * grads.dB_f_forw_enc;
+
+				M_W_i_forw_enc = beta1 * M_W_i_forw_enc + (1 - beta1) * grads.dW_i_forw_enc;
+				M_U_i_forw_enc = beta1 * M_U_i_forw_enc + (1 - beta1) * grads.dU_i_forw_enc;
+				M_B_i_forw_enc = beta1 * M_B_i_forw_enc + (1 - beta1) * grads.dB_i_forw_enc;
+
+				M_W_ccond_forw_enc = beta1 * M_W_ccond_forw_enc + (1 - beta1) * grads.dW_ccond_forw_enc;
+				M_U_ccond_forw_enc = beta1 * M_U_ccond_forw_enc + (1 - beta1) * grads.dU_ccond_forw_enc;
+				M_B_ccond_forw_enc = beta1 * M_B_ccond_forw_enc + (1 - beta1) * grads.dB_ccond_forw_enc;
+
+				M_W_o_forw_enc = beta1 * M_W_o_forw_enc + (1 - beta1) * grads.dW_o_forw_enc;
+				M_U_o_forw_enc = beta1 * M_U_o_forw_enc + (1 - beta1) * grads.dU_o_forw_enc;
+				M_B_o_forw_enc = beta1 * M_B_o_forw_enc + (1 - beta1) * grads.dB_o_forw_enc;
+				//
+				M_W_f_back_enc = beta1 * M_W_f_back_enc + (1 - beta1) * grads.dW_f_back_enc;
+				M_U_f_back_enc = beta1 * M_U_f_back_enc + (1 - beta1) * grads.dU_f_back_enc;
+				M_B_f_back_enc = beta1 * M_B_f_back_enc + (1 - beta1) * grads.dB_f_back_enc;
+
+				M_W_i_back_enc = beta1 * M_W_i_back_enc + (1 - beta1) * grads.dW_i_back_enc;
+				M_U_i_back_enc = beta1 * M_U_i_back_enc + (1 - beta1) * grads.dU_i_back_enc;
+				M_B_i_back_enc = beta1 * M_B_i_back_enc + (1 - beta1) * grads.dB_i_back_enc;
+
+				M_W_ccond_back_enc = beta1 * M_W_ccond_back_enc + (1 - beta1) * grads.dW_ccond_back_enc;
+				M_U_ccond_back_enc = beta1 * M_U_ccond_back_enc + (1 - beta1) * grads.dU_ccond_back_enc;
+				M_B_ccond_back_enc = beta1 * M_B_ccond_back_enc + (1 - beta1) * grads.dB_ccond_back_enc;
+
+				M_W_o_back_enc = beta1 * M_W_o_back_enc + (1 - beta1) * grads.dW_o_back_enc;
+				M_U_o_back_enc = beta1 * M_U_o_back_enc + (1 - beta1) * grads.dU_o_back_enc;
+				M_B_o_back_enc = beta1 * M_B_o_back_enc + (1 - beta1) * grads.dB_o_back_enc;
+				//
+				//
+				V_W_out = beta2 * V_W_out.array() + (1 - beta2) * grads.dW_out.array() * grads.dW_out.array();
+				V_B_out = beta2 * V_B_out.array() + (1 - beta2) * grads.dB_out.array() * grads.dB_out.array();
+				//
+				V_W_gamma_layernorm = beta2 * V_W_gamma_layernorm.array() + (1 - beta2) * grads.dW_gamma_layernorm.array() * grads.dW_gamma_layernorm.array();
+				V_B_beta_layernorm = beta2 * V_B_beta_layernorm.array() + (1 - beta2) * grads.dB_beta_layernorm.array() * grads.dB_beta_layernorm.array();
+				//
+				V_V_a_attention = beta2 * V_V_a_attention.array() + (1 - beta2) * grads.dV_a_attention.array() * grads.dV_a_attention.array();
+				V_W_e_attention = beta2 * V_W_e_attention.array() + (1 - beta2) * grads.dW_e_attention.array() * grads.dW_e_attention.array();
+				V_W_d_attention = beta2 * V_W_d_attention.array() + (1 - beta2) * grads.dW_d_attention.array() * grads.dW_d_attention.array();
+				//
+				V_W_f_dec = beta2 * V_W_f_dec.array() + (1 - beta2) * grads.dW_f_dec.array() * grads.dW_f_dec.array();
+				V_U_f_dec = beta2 * V_U_f_dec.array() + (1 - beta2) * grads.dU_f_dec.array() * grads.dU_f_dec.array();
+				V_B_f_dec = beta2 * V_B_f_dec.array() + (1 - beta2) * grads.dB_f_dec.array() * grads.dB_f_dec.array();
+
+				V_W_i_dec = beta2 * V_W_i_dec.array() + (1 - beta2) * grads.dW_i_dec.array() * grads.dW_i_dec.array();
+				V_U_i_dec = beta2 * V_U_i_dec.array() + (1 - beta2) * grads.dU_i_dec.array() * grads.dU_i_dec.array();
+				V_B_i_dec = beta2 * V_B_i_dec.array() + (1 - beta2) * grads.dB_i_dec.array() * grads.dB_i_dec.array();
+
+				V_W_ccond_dec = beta2 * V_W_ccond_dec.array() + (1 - beta2) * grads.dW_ccond_dec.array() * grads.dW_ccond_dec.array();
+				V_U_ccond_dec = beta2 * V_U_ccond_dec.array() + (1 - beta2) * grads.dU_ccond_dec.array() * grads.dU_ccond_dec.array();
+				V_B_ccond_dec = beta2 * V_B_ccond_dec.array() + (1 - beta2) * grads.dB_ccond_dec.array() * grads.dB_ccond_dec.array();
+
+				V_W_o_dec = beta2 * V_W_o_dec.array() + (1 - beta2) * grads.dW_o_dec.array() * grads.dW_o_dec.array();
+				V_U_o_dec = beta2 * V_U_o_dec.array() + (1 - beta2) * grads.dU_o_dec.array() * grads.dU_o_dec.array();
+				V_B_o_dec = beta2 * V_B_o_dec.array() + (1 - beta2) * grads.dB_o_dec.array() * grads.dB_o_dec.array();
+				//
+				V_W_f_forw_enc = beta2 * V_W_f_forw_enc.array() + (1 - beta2) * grads.dW_f_forw_enc.array() * grads.dW_f_forw_enc.array();
+				V_U_f_forw_enc = beta2 * V_U_f_forw_enc.array() + (1 - beta2) * grads.dU_f_forw_enc.array() * grads.dU_f_forw_enc.array();
+				V_B_f_forw_enc = beta2 * V_B_f_forw_enc.array() + (1 - beta2) * grads.dB_f_forw_enc.array() * grads.dB_f_forw_enc.array();
+
+				V_W_i_forw_enc = beta2 * V_W_i_forw_enc.array() + (1 - beta2) * grads.dW_i_forw_enc.array() * grads.dW_i_forw_enc.array();
+				V_U_i_forw_enc = beta2 * V_U_i_forw_enc.array() + (1 - beta2) * grads.dU_i_forw_enc.array() * grads.dU_i_forw_enc.array();
+				V_B_i_forw_enc = beta2 * V_B_i_forw_enc.array() + (1 - beta2) * grads.dB_i_forw_enc.array() * grads.dB_i_forw_enc.array();
+
+				V_W_ccond_forw_enc = beta2 * V_W_ccond_forw_enc.array() + (1 - beta2) * grads.dW_ccond_forw_enc.array() * grads.dW_ccond_forw_enc.array();
+				V_U_ccond_forw_enc = beta2 * V_U_ccond_forw_enc.array() + (1 - beta2) * grads.dU_ccond_forw_enc.array() * grads.dU_ccond_forw_enc.array();
+				V_B_ccond_forw_enc = beta2 * V_B_ccond_forw_enc.array() + (1 - beta2) * grads.dB_ccond_forw_enc.array() * grads.dB_ccond_forw_enc.array();
+
+				V_W_o_forw_enc = beta2 * V_W_o_forw_enc.array() + (1 - beta2) * grads.dW_o_forw_enc.array() * grads.dW_o_forw_enc.array();
+				V_U_o_forw_enc = beta2 * V_U_o_forw_enc.array() + (1 - beta2) * grads.dU_o_forw_enc.array() * grads.dU_o_forw_enc.array();
+				V_B_o_forw_enc = beta2 * V_B_o_forw_enc.array() + (1 - beta2) * grads.dB_o_forw_enc.array() * grads.dB_o_forw_enc.array();
+				//
+				V_W_f_back_enc = beta2 * V_W_f_back_enc.array() + (1 - beta2) * grads.dW_f_back_enc.array() * grads.dW_f_back_enc.array();
+				V_U_f_back_enc = beta2 * V_U_f_back_enc.array() + (1 - beta2) * grads.dU_f_back_enc.array() * grads.dU_f_back_enc.array();
+				V_B_f_back_enc = beta2 * V_B_f_back_enc.array() + (1 - beta2) * grads.dB_f_back_enc.array() * grads.dB_f_back_enc.array();
+
+				V_W_i_back_enc = beta2 * V_W_i_back_enc.array() + (1 - beta2) * grads.dW_i_back_enc.array() * grads.dW_i_back_enc.array();
+				V_U_i_back_enc = beta2 * V_U_i_back_enc.array() + (1 - beta2) * grads.dU_i_back_enc.array() * grads.dU_i_back_enc.array();
+				V_B_i_back_enc = beta2 * V_B_i_back_enc.array() + (1 - beta2) * grads.dB_i_back_enc.array() * grads.dB_i_back_enc.array();
+
+				V_W_ccond_back_enc = beta2 * V_W_ccond_back_enc.array() + (1 - beta2) * grads.dW_ccond_back_enc.array() * grads.dW_ccond_back_enc.array();
+				V_U_ccond_back_enc = beta2 * V_U_ccond_back_enc.array() + (1 - beta2) * grads.dU_ccond_back_enc.array() * grads.dU_ccond_back_enc.array();
+				V_B_ccond_back_enc = beta2 * V_B_ccond_back_enc.array() + (1 - beta2) * grads.dB_ccond_back_enc.array() * grads.dB_ccond_back_enc.array();
+
+				V_W_o_back_enc = beta2 * V_W_o_back_enc.array() + (1 - beta2) * grads.dW_o_back_enc.array() * grads.dW_o_back_enc.array();
+				V_U_o_back_enc = beta2 * V_U_o_back_enc.array() + (1 - beta2) * grads.dU_o_back_enc.array() * grads.dU_o_back_enc.array();
+				V_B_o_back_enc = beta2 * V_B_o_back_enc.array() + (1 - beta2) * grads.dB_o_back_enc.array() * grads.dB_o_back_enc.array();
+				
 				/////
 				/////
 				/////
