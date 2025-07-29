@@ -246,7 +246,7 @@ public:
 
 	void SetRandomWeights(double a = -0.01, double b = 0.01);
 protected:
-	Eigen::Index encoder_hidden_size_;    // 2H
+	Eigen::Index duo_encoder_hidden_size_;    // 2H
 	Eigen::Index decoder_hidden_size_;    // H_dec
 	Eigen::Index attention_size_;         // A
 

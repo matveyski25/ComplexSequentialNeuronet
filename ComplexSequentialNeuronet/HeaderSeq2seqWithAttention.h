@@ -97,8 +97,7 @@ protected:
 				double epsilon = 1e-5L;
 				double mean = x.mean();
 				double variance = (x.array() - mean).square().mean();
-				return ((x.array() - mean) / std::sqrt(variance + epsilon))
-					.matrix().array() * layernorm_gamma.array()
+				return ((x.array() - mean) / std::sqrt(variance + epsilon)).matrix().array() * layernorm_gamma.array()
 					+ layernorm_beta.array();
 				};
 
@@ -157,7 +156,7 @@ protected:
 					proj_input_ << h_t, context;
 					auto proj_input = apply_layernorm(proj_input_);
 
-					RowVectorXld y_t = proj_input * W_output.transpose() + b_output;
+					RowVectorXld y_t = proj_input * W_output.transpose() + B_output;
 					y_sequence.push_back(y_t);
 
 					if (IsEndToken(y_t)) {
@@ -192,11 +191,11 @@ protected:
 			this->output_size = embedding_dim_;
 			//размер контекста = 2 * Hidden_size_encoder = Number_states - embedding_dim
 			size_t context_size = 2 * hidden_size_encoder;
-			W_output = ActivationFunctions::matrix_random(output_size, Hidden_size_ + context_size);
-			b_output = RowVectorXld::Zero(output_size);
+			W_output = ActivationFunctions::matrix_random(output_size, Hidden_size_ + context_size, 0.0, 1.0);
+			B_output = RowVectorXld::Zero(output_size);
 
-			this->layernorm_gamma = RowVectorXld::Ones(Input_size);
-			this->layernorm_beta = RowVectorXld::Zero(Input_size);
+			this->layernorm_gamma = RowVectorXld::Ones(Hidden_size_ + context_size);
+			this->layernorm_beta = RowVectorXld::Zero(Hidden_size_ + context_size);
 			// теперь SimpleLSTM::Input_size = Number_states, Hidden_size = Hidden_size_
 
 			this->start_token = start_token_;   // эмбеддинг стартового токена (1 символ)
@@ -236,7 +235,7 @@ protected:
 		std::vector<MatrixXld> Output_state;
 		// --- Обновляемый выходной слой ---
 		MatrixXld W_output;      // [output_size x (hidden_size + context_size)]
-		RowVectorXld b_output;   // [1 x output_size]
+		RowVectorXld B_output;   // [1 x output_size]
 
 		size_t output_size;
 		//size_t embedding_dim;
@@ -309,12 +308,13 @@ protected:
 		void All_state_Сalculation() override {
 			if (this->encoder_outputs.empty()) return;
 
-			auto apply_layernorm = [this](const RowVectorXld& x) -> RowVectorXld {
+			auto apply_layernorm = [this](const RowVectorXld& x, size_t n, size_t t) -> RowVectorXld {
 				double epsilon = 1e-5L;
 				double mean = x.mean();
 				double variance = (x.array() - mean).square().mean();
-				return ((x.array() - mean) / std::sqrt(variance + epsilon))
-					.matrix().array() * layernorm_gamma.array()
+				RowVectorXld x_lnorm = ((x.array() - mean) / std::sqrt(variance + epsilon));
+				this->StatesForgrads.p_[n].row(t) = x_lnorm;
+				return  x_lnorm.array() * layernorm_gamma.array()
 					+ layernorm_beta.array();
 				};
 
@@ -332,8 +332,9 @@ protected:
 			Output_state.clear();
 			this->StatesForgrads.context.clear();
 			this->StatesForgrads.x.clear();
-			this->StatesForgrads.p.clear();
+			//this->StatesForgrads.p.clear();
 			this->StatesForgrads.p_.clear();
+			this->StatesForgrads.p__.clear();
 			//this->StatesForgrads.z.clear();
 			this->StatesForgrads.f.clear();
 			this->StatesForgrads.i.clear();
@@ -348,8 +349,9 @@ protected:
 			Output_state.resize(batch_size);
 			this->StatesForgrads.context.resize(batch_size);
 			this->StatesForgrads.x.resize(batch_size);
-			this->StatesForgrads.p.resize(batch_size);
+			//this->StatesForgrads.p.resize(batch_size);
 			this->StatesForgrads.p_.resize(batch_size);
+			this->StatesForgrads.p__.resize(batch_size);
 			//this->StatesForgrads.z.resize(batch_size);
 			this->StatesForgrads.f.resize(batch_size);
 			this->StatesForgrads.i.resize(batch_size);
@@ -390,10 +392,11 @@ protected:
 				this->StatesForgrads.c[n] = MatrixXld::Zero(max_steps, this->Hidden_size);
 				this->StatesForgrads.h[n] = MatrixXld::Zero(max_steps, this->Hidden_size);
 
-				this->StatesForgrads.context[n] = MatrixXld::Zero(max_steps, this->attention_->encoder_hidden_size_);
+				this->StatesForgrads.context[n] = MatrixXld::Zero(max_steps, this->attention_->duo_encoder_hidden_size_);
 				this->StatesForgrads.x[n] = MatrixXld::Zero(max_steps, this->Input_size);
-				this->StatesForgrads.p[n] = MatrixXld::Zero(max_steps, this->Input_size);
-				this->StatesForgrads.p_[n] = MatrixXld::Zero(max_steps, this->Input_size);
+				//this->StatesForgrads.p[n] = MatrixXld::Zero(max_steps, this->Hidden_size + this->attention_->duo_encoder_hidden_size_);
+				this->StatesForgrads.p_[n] = MatrixXld::Zero(max_steps, this->Hidden_size + this->attention_->duo_encoder_hidden_size_);
+				this->StatesForgrads.p__[n] = MatrixXld::Zero(max_steps, this->Hidden_size + this->attention_->duo_encoder_hidden_size_);
 				//this->StatesForgrads.z[n] = MatrixXld::Zero(max_steps, 4 * this->Hidden_size);
 
 				for (size_t t = 0; t < max_steps; ++t) {
@@ -421,14 +424,12 @@ protected:
 
 					RowVectorXld proj_input_(this->Hidden_size + context.size());
 					proj_input_ << h_t, context;
-					auto proj_input = apply_layernorm(proj_input_);
+					auto proj_input = apply_layernorm(proj_input_, n, t);
 
-					RowVectorXld y_t = proj_input * W_output.transpose() + b_output;
+
+					RowVectorXld y_t = proj_input * W_output.transpose() + B_output;
 					y_sequence.push_back(y_t);
 
-					if (Decoderinput.cols() != this->Input_size) {
-						throw std::abort;
-					}
 
 					this->StatesForgrads.f[n].row(t) = f_t;
 					this->StatesForgrads.i[n].row(t) = i_t;
@@ -439,8 +440,8 @@ protected:
 
 					this->StatesForgrads.context[n].row(t) = context;
 					this->StatesForgrads.x[n].row(t) = Decoderinput;
-					this->StatesForgrads.p[n].row(t) = proj_input_;
-					this->StatesForgrads.p_[n].row(t) = proj_input;
+					//this->StatesForgrads.p[n].row(t) = proj_input_;
+					this->StatesForgrads.p__[n].row(t) = proj_input;
 					//this->StatesForgrads.z[n].row(t) = Z;
 
 					if (IsEndToken(y_t)) break;
@@ -462,7 +463,7 @@ protected:
 
 	protected:
 		struct states_forgrads {
-			std::vector<MatrixXld> f, i, o, ccond, c, h, context, /*z,*/ x, p, p_;
+			std::vector<MatrixXld> f, i, o, ccond, c, h, context, /*z,*/ x, /*p,*/ p_, p__;
 			std::vector<std::vector<std::vector<RowVectorXld>>>  all_u;    // batch × time_steps × A
 			std::vector<std::vector<VectorXld>> all_alpha; // batch × time_steps
 		};
@@ -570,7 +571,7 @@ protected:
 			this->dW_o_back_enc /= val; this->dU_o_back_enc /= val; this->dB_o_back_enc /= val;
 		}*/
 
-		void check_nan(const std::string& name, const MatrixXld& mat) {
+		static void check_nan(const std::string& name, const MatrixXld& mat) {
 			if (!mat.allFinite()) {
 				std::cerr << "[GRAD WARNING] NaN or Inf in: " << name << std::endl;
 				throw std::invalid_argument(name);

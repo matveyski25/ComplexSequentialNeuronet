@@ -1,21 +1,25 @@
 #pragma once
 
-#include <iostream>
+#include <stdexcept>
 
+// Переопределяем eigen_assert, чтобы бросать исключения вместо assert()
+#undef eigen_assert
+#define eigen_assert(x) \
+  do { if (!(x)) throw std::runtime_error("Eigen assertion failed: " #x); } while(false)
+
+#include <iostream>
 #include <vector>
 #include <random>
 
-//#define EIGEN_NO_DEBUG
+//#define EIGEN_NO_DEBUG  // оставляем отключённым, чтобы runtime-проверки были активны
 
 #ifdef _MSC_VER
-// Отключаем только специфичные warning'и, которые возникают из-за Eigen
 #pragma warning(push)
-#pragma warning(disable : 26495 6255 6294)  // Только эти номера, только на время include
+#pragma warning(disable : 26495 6255 6294)
 #endif
 
-#include <eigen-3.4.0/Eigen/Dense>
 #include <eigen-3.4.0/Eigen/Core>
-
+#include <eigen-3.4.0/Eigen/Dense>
 
 #ifdef _MSC_VER
 #pragma warning(pop)

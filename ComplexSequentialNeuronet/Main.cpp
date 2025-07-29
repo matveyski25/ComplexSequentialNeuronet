@@ -106,7 +106,9 @@ int main() {
         {input[2], output[0]}, {input[3], output[0]}, { input[4], output[0] }, 
         {input[5], output[0]}, { input[6], output[0] }, {input[7], output[0]} });
 
-	test.UpdateAdamOptWithLogging(input_output, 100000, 1000, 4, 1.0);
+	test.UpdateAdamOptWithLogging(input_output, 1000, 1000, 8, 1e-4);
+
+    test.Save("Test2");
 
 	return 0;
 }

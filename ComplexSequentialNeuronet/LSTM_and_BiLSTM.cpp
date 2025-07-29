@@ -21,7 +21,7 @@ SimpleLSTM::SimpleLSTM(Eigen::Index Number_states, Eigen::Index Hidden_size_) {
 }
 
 SimpleLSTM::~SimpleLSTM() {
-	save("LSTM_state.txt");
+	//save("LSTM_state.txt");
 }
 
 void SimpleLSTM::SetInput_states(const std::vector<MatrixXld>& Input_states_) {
@@ -263,7 +263,7 @@ BiLSTM::BiLSTM(Eigen::Index Number_states, Eigen::Index Hidden_size_) {
 }
 
 BiLSTM::~BiLSTM() {
-	this->Save("BiLSTM_state.txt");
+	//this->Save("BiLSTM_state.txt");
 }
 
 void BiLSTM::All_state_Сalculation() {
@@ -346,7 +346,7 @@ SimpleLSTM_ForTrain::SimpleLSTM_ForTrain(size_t Batch_size_, Eigen::Index Number
 }
 
 SimpleLSTM_ForTrain::~SimpleLSTM_ForTrain() {
-	save("LSTM_state_ForTrain.txt");
+	//save("LSTM_state_ForTrain.txt");
 }
 
 void SimpleLSTM_ForTrain::SetInput_states(const std::vector<MatrixXld>& Input_states_) {
@@ -561,7 +561,7 @@ BiLSTM_ForTrain::BiLSTM_ForTrain(size_t Batch_size_, Eigen::Index Number_states,
 }
 
 BiLSTM_ForTrain::~BiLSTM_ForTrain() {
-	this->Save("BiLSTM_state_ForTrain.txt");
+	//this->Save("BiLSTM_state_ForTrain.txt");
 }
 
 void BiLSTM_ForTrain::Batch_All_state_Сalculation() {
@@ -583,7 +583,7 @@ void BiLSTM_ForTrain::Batch_All_state_Сalculation() {
 
 
 BahdanauAttention::BahdanauAttention(Eigen::Index encoder_hidden_size, Eigen::Index decoder_hidden_size, Eigen::Index attention_size)
-	: encoder_hidden_size_(encoder_hidden_size),
+	: duo_encoder_hidden_size_(2 * encoder_hidden_size),
 	decoder_hidden_size_(decoder_hidden_size),
 	attention_size_(attention_size)
 {
@@ -606,9 +606,7 @@ BahdanauAttention::AttnOutput BahdanauAttention::ComputeContext(
     for (size_t i = 0; i < T_enc; ++i) {
         RowVectorXld h_i = encoder_outputs.row(i);
         // [1×A]
-        RowVectorXld combined = 
-            (W_encoder_ * h_i.transpose() + W_decoder_ * decoder_prev_hidden.transpose())
-            .transpose();
+        RowVectorXld combined = (W_encoder_ * h_i.transpose() + W_decoder_ * decoder_prev_hidden.transpose()) .transpose();
         RowVectorXld u_ti = combined.array().tanh().matrix();
         scores(i) = (u_ti * attention_vector_).value();
         u_t.push_back(std::move(u_ti));
@@ -626,7 +624,7 @@ BahdanauAttention::AttnOutput BahdanauAttention::ComputeContext(
 }
 
 void BahdanauAttention::SetRandomWeights(double a, double b) {
-	this->W_encoder_ = ActivationFunctions::matrix_random(this->attention_size_, this->encoder_hidden_size_, a, b);
+	this->W_encoder_ = ActivationFunctions::matrix_random(this->attention_size_, this->duo_encoder_hidden_size_, a, b);
 	this->W_decoder_ = ActivationFunctions::matrix_random(this->attention_size_, this->decoder_hidden_size_, a, b);
 	this->attention_vector_ = ActivationFunctions::matrix_random(this->attention_size_, 1, a, b);
 }
