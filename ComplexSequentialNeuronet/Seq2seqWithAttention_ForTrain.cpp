@@ -66,7 +66,7 @@ Seq2SeqWithAttention_ForTrain::grads_Seq2SeqWithAttention Seq2SeqWithAttention_F
 	RowVectorXld dY_ = RowVectorXld::Zero(Y_True.cols());
 	for (int64_t t = static_cast<int64_t>(T) - 1; t >= 0; t--) {
 		RowVectorXld dY_t = this->GetOutputs()[Number_InputState].row(t) - Y_True.row(t); //Y_t - Y_true
-		dY_ += dY_t;
+		dY_ += dY_t.array().abs().matrix();
 		check_nan_inf(Y_True.row(t), "Y_True");
 		check_nan_inf(this->GetOutputs()[Number_InputState].row(t), "Y_t");
 		MatrixXld DW_out_t = dY_t.transpose() * this->decoder_->StatesForgrads.p__[Number_InputState].row(t);
@@ -398,7 +398,7 @@ Seq2SeqWithAttention_ForTrain::grads_Seq2SeqWithAttention Seq2SeqWithAttention_F
 		grads.dB_ccond_dec += DB_dec_t.middleCols(2 * this->decoder_->Hidden_size, this->decoder_->Hidden_size);
 		grads.dB_o_dec += DB_dec_t.rightCols(this->decoder_->Hidden_size);
 	}
-	//std::cout << "dY_norm : " << dY_.norm() << std::endl;
+	std::cout << "dY_sum : " << dY_.sum() << std::endl;
 	return grads;
 }
 

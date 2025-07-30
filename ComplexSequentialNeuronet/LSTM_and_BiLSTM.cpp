@@ -309,7 +309,23 @@ std::vector<RowVectorXld> BiLSTM::GetFinalHidden_ForwardBackward() const {
 }
 
 void BiLSTM::Save(const std::string& filename) {
-	auto addtofilename = [](const std::string& filename, const std::string& whatadd) {std::string ffilename;  for (const char a : filename) { if (a != '.') { ffilename += a; } else { ffilename += (whatadd + '.'); } } return ffilename; };
+	auto addtofilename = [](const std::string& filename, const std::string& whatadd) {
+		std::string ffilename;  
+		if(filename.find(".") != std::string::npos) {
+			for (const char a : filename) {
+				if (a != '.') {
+					ffilename += a;
+				}
+				else {
+					ffilename += (whatadd + '.');
+				}
+			}
+		}
+		else {
+			ffilename = filename + whatadd;
+		}
+		return ffilename; 
+	};
 	this->Forward.save(addtofilename(filename, "_Forward"));
 	this->Backward.save(addtofilename(filename, "_Backward"));
 }
@@ -525,7 +541,23 @@ std::vector<RowVectorXld> BiLSTM_ForTrain::GetFinalHidden_ForwardBackward() cons
 }
 
 void BiLSTM_ForTrain::Save(const std::string& filename) {
-	auto addtofilename = [](const std::string& filename, const std::string& whatadd) {std::string ffilename;  for (const char a : filename) { if (a != '.') { ffilename += a; } else { ffilename += (whatadd + '.'); } } return ffilename; };
+	auto addtofilename = [](const std::string& filename, const std::string& whatadd) {
+		std::string ffilename;
+		if (filename.find(".") != std::string::npos) {
+			for (const char a : filename) {
+				if (a != '.') {
+					ffilename += a;
+				}
+				else {
+					ffilename += (whatadd + '.');
+				}
+			}
+		}
+		else {
+			ffilename = filename + whatadd;
+		}
+		return ffilename;
+		};
 	this->Forward.save(addtofilename(filename, "_Forward"));
 	this->Backward.save(addtofilename(filename, "_Backward"));
 }

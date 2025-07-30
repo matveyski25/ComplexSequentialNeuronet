@@ -4,6 +4,7 @@
 
 #include <fstream>
 #include <filesystem>
+#include <string>
 
 using ActivationFunctions::MatrixXld;
 using ActivationFunctions::RowVectorXld; // Вектор-строка
