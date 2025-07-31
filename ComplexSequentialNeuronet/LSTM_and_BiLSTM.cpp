@@ -190,10 +190,10 @@ void SimpleLSTM::save(const std::string& filename) const {
 	save_matrix(file, this->W_C);
 	save_matrix(file, this->W_O);
 
-	save_matrix(file, this->B_F);
-	save_matrix(file, this->B_I);
-	save_matrix(file, this->B_C);
-	save_matrix(file, this->B_O);
+	save_vector(file, this->B_F);
+	save_vector(file, this->B_I);
+	save_vector(file, this->B_C);
+	save_vector(file, this->B_O);
 }
 
 void SimpleLSTM::load(const std::string& filename) {
@@ -212,10 +212,10 @@ void SimpleLSTM::load(const std::string& filename) {
 	load_matrix(file, this->W_C);
 	load_matrix(file, this->W_O);
 
-	load_matrix(file, this->B_F);
-	load_matrix(file, this->B_I);
-	load_matrix(file, this->B_C);
-	load_matrix(file, this->B_O);
+	load_vector(file, this->B_F);
+	load_vector(file, this->B_I);
+	load_vector(file, this->B_C);
+	load_vector(file, this->B_O);
 }
 
 void SimpleLSTM::save_matrix(std::ofstream& file, const MatrixXld& m) const {
@@ -239,6 +239,39 @@ void SimpleLSTM::load_matrix(std::ifstream& file, MatrixXld& m) {
 	}
 }
 
+void SimpleLSTM::save_vector(std::ofstream& file, const VectorXld& vec) const {
+	file << vec.rows() << "\n";
+	for (Eigen::Index i = 0; i < vec.rows(); ++i) {
+		file << vec(i) << " ";
+	}
+	file << "\n";
+}
+
+void SimpleLSTM::load_vector(std::ifstream& file, VectorXld& vec) {
+	Eigen::Index rows;
+	file >> rows;
+	vec = VectorXld(rows);
+	for (Eigen::Index i = 0; i < rows; ++i) {
+		file >> vec(i);
+	}
+}
+
+void SimpleLSTM::save_vector(std::ofstream& file, const RowVectorXld& vec) const {
+	file << vec.cols() << "\n";
+	for (Eigen::Index i = 0; i < vec.cols(); ++i) {
+		file << vec(i) << " ";
+	}
+	file << "\n";
+}
+
+void SimpleLSTM::load_vector(std::ifstream& file, RowVectorXld& vec) {
+	Eigen::Index cols;
+	file >> cols;
+	vec = VectorXld(cols);
+	for (Eigen::Index i = 0; i < cols; ++i) {
+		file >> vec(i);
+	}
+}
 
 
 BiLSTM::BiLSTM(Eigen::Index Number_states, Eigen::Index Hidden_size_) {
@@ -406,10 +439,10 @@ void SimpleLSTM_ForTrain::save(const std::string& filename) const {
 	save_matrix(file, this->W_C);
 	save_matrix(file, this->W_O);
 
-	save_matrix(file, this->B_F);
-	save_matrix(file, this->B_I);
-	save_matrix(file, this->B_C);
-	save_matrix(file, this->B_O);
+	save_vector(file, this->B_F);
+	save_vector(file, this->B_I);
+	save_vector(file, this->B_C);
+	save_vector(file, this->B_O);
 }
 
 void SimpleLSTM_ForTrain::load(const std::string& filename) {
@@ -428,10 +461,10 @@ void SimpleLSTM_ForTrain::load(const std::string& filename) {
 	load_matrix(file, this->W_C);
 	load_matrix(file, this->W_O);
 
-	load_matrix(file, this->B_F);
-	load_matrix(file, this->B_I);
-	load_matrix(file, this->B_C);
-	load_matrix(file, this->B_O);
+	load_vector(file, this->B_F);
+	load_vector(file, this->B_I);
+	load_vector(file, this->B_C);
+	load_vector(file, this->B_O);
 }
 
 void SimpleLSTM_ForTrain::Batch_All_state_Сalculation() {
@@ -558,11 +591,23 @@ void BiLSTM_ForTrain::Save(const std::string& filename) {
 		}
 		return ffilename;
 		};
+
+	std::ofstream file(filename, std::ios::trunc); // Используйте trunc для перезаписи
+	if (!file) throw std::runtime_error("Cannot open file for writing");
+
+	// Сохраняем только актуальные параметры
+	file << this->Common_Input_size << "\n" << this->Common_Hidden_size << "\n" << this->Common_Batch_size << "\n";
+
 	this->Forward.save(addtofilename(filename, "_Forward"));
 	this->Backward.save(addtofilename(filename, "_Backward"));
 }
 
 void BiLSTM_ForTrain::Load(const std::string& filename) {
+	std::ifstream file(filename);
+	if (!file) throw std::runtime_error("Cannot open file for reading");
+
+	file >> this->Common_Input_size >> this->Common_Hidden_size >> this->Common_Batch_size;
+
 	this->Forward.load(filename + "_Forward");
 	this->Backward.load(filename + "_Backward");
 }

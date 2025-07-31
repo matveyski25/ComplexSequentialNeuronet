@@ -156,10 +156,10 @@ protected:
 					proj_input_ << h_t, context;
 					auto proj_input = apply_layernorm(proj_input_);
 
-					RowVectorXld y_t = proj_input * W_output.transpose() + B_output;
+					RowVectorXld y_t = proj_input * W_Output.transpose() + B_Output;
 					y_sequence.push_back(y_t);
 
-					if (IsEndToken(y_t)) {
+					if (IsEndToken(y_sequence)) {
 						size_t end_len = static_cast<size_t>(end_token.rows());
 						if (y_sequence.size() >= end_len - 1) {
 							y_sequence.resize(y_sequence.size() - (end_len - 1));
@@ -191,8 +191,8 @@ protected:
 			this->output_size = embedding_dim_;
 			//размер контекста = 2 * Hidden_size_encoder = Number_states - embedding_dim
 			size_t context_size = 2 * hidden_size_encoder;
-			W_output = ActivationFunctions::matrix_random(output_size, Hidden_size_ + context_size, 0.0, 1.0);
-			B_output = RowVectorXld::Zero(output_size);
+			W_Output = ActivationFunctions::matrix_random(output_size, Hidden_size_ + context_size, 0.0, 1.0);
+			B_Output = RowVectorXld::Zero(output_size);
 
 			this->layernorm_gamma = RowVectorXld::Ones(Hidden_size_ + context_size);
 			this->layernorm_beta = RowVectorXld::Zero(Hidden_size_ + context_size);
@@ -202,7 +202,9 @@ protected:
 			this->end_token = end_token_;     // матрица эмбеддингов финишного токена (несколько символов)
 			this->max_steps = max_steps_;    // ограничение на число шагов генерации
 		}
+
 		Decoder() = default;
+
 		void SetEncoderOutputs(const std::vector<MatrixXld>& encoder_outputs) {
 			this->encoder_outputs = encoder_outputs;
 		}
@@ -213,12 +215,91 @@ protected:
 		}
 
 		const std::vector<MatrixXld> & GetOutputStates() const { return Output_state; }
+
+		void Save(const std::string& filename) const {
+			std::ofstream file(filename, std::ios::trunc); // Используйте trunc для перезаписи
+			if (!file) throw std::runtime_error("Cannot open file for writing");
+
+			// Сохраняем только актуальные параметры
+			file << this->Input_size << "\n" << this->Hidden_size << "\n" << this->output_size << "\n" << this->max_steps << "\n"
+				<< this->attention_->attention_size_ << "\n" << this->attention_->duo_encoder_hidden_size_ << "\n" << this->attention_->decoder_hidden_size_ << "\n";
+
+			// Сохраняем веса и смещения
+			save_matrix(file, this->U_F);
+			save_matrix(file, this->U_I);
+			save_matrix(file, this->U_C);
+			save_matrix(file, this->U_O);
+
+			save_matrix(file, this->W_F);
+			save_matrix(file, this->W_I);
+			save_matrix(file, this->W_C);
+			save_matrix(file, this->W_O);
+
+			save_vector(file, this->B_F);
+			save_vector(file, this->B_I);
+			save_vector(file, this->B_C);
+			save_vector(file, this->B_O);
+
+			save_vector(file, this->attention_->attention_vector_);
+			save_matrix(file, this->attention_->W_decoder_);
+			save_matrix(file, this->attention_->W_encoder_);
+
+			save_vector(file, this->layernorm_gamma);
+			save_vector(file, this->layernorm_beta);
+
+			save_matrix(file, this->W_Output);
+			save_vector(file, this->B_Output);
+
+			save_matrix(file, this->end_token);
+			save_vector(file, this->start_token);
+		}
+		void Load(const std::string& filename) {
+			std::ifstream file(filename);
+			if (!file) throw std::runtime_error("Cannot open file for reading");
+
+			file >> this->Input_size >> this->Hidden_size >> this->output_size >> this->max_steps
+				>> this->attention_->attention_size_ >> this->attention_->duo_encoder_hidden_size_ >> this->attention_->decoder_hidden_size_;
+
+			// Сохраняем веса и смещения
+			load_matrix(file, this->U_F);
+			load_matrix(file, this->U_I);
+			load_matrix(file, this->U_C);
+			load_matrix(file, this->U_O);
+
+			load_matrix(file, this->W_F);
+			load_matrix(file, this->W_I);
+			load_matrix(file, this->W_C);
+			load_matrix(file, this->W_O);
+
+			load_vector(file, this->B_F);
+			load_vector(file, this->B_I);
+			load_vector(file, this->B_C);
+			load_vector(file, this->B_O);
+
+			load_vector(file, this->attention_->attention_vector_);
+			load_matrix(file, this->attention_->W_decoder_);
+			load_matrix(file, this->attention_->W_encoder_);
+
+			load_vector(file, this->layernorm_gamma);
+			load_vector(file, this->layernorm_beta);
+
+			load_matrix(file, this->W_Output);
+			load_vector(file, this->B_Output);
+
+			load_matrix(file, this->end_token);
+			load_vector(file, this->start_token);
+		}
 	protected:
-		bool IsEndToken(const RowVectorXld& vec) const {
-			for (int i = 0; i < end_token.rows(); ++i) {
-				if ((vec - end_token.row(i)).norm() < 1e-6L) return true;
+		bool IsEndToken(const std::vector<RowVectorXld>& vec) const {
+			if(vec.size() >= this->end_token.rows()){
+				for (size_t i = vec.size() - this->end_token.rows(), j = 0; i < vec.size(); i++, j++) {
+					if ((vec[i] - this->end_token.row(j)).norm() > 1e-3) return false;
+				}
+				return true;
 			}
-			return false;
+			else {
+				return false;
+			}
 		}
 
 		RowVectorXld start_token;   // эмбеддинг стартового токена (1 символ)
@@ -234,8 +315,8 @@ protected:
 
 		std::vector<MatrixXld> Output_state;
 		// --- Обновляемый выходной слой ---
-		MatrixXld W_output;      // [output_size x (hidden_size + context_size)]
-		RowVectorXld B_output;   // [1 x output_size]
+		MatrixXld W_Output;      // [output_size x (hidden_size + context_size)]
+		RowVectorXld B_Output;   // [1 x output_size]
 
 		size_t output_size;
 		//size_t embedding_dim;
@@ -427,7 +508,7 @@ protected:
 					auto proj_input = apply_layernorm(proj_input_, n, t);
 
 
-					RowVectorXld y_t = proj_input * W_output.transpose() + B_output;
+					RowVectorXld y_t = proj_input * W_Output.transpose() + B_Output;
 					y_sequence.push_back(y_t);
 
 
@@ -444,7 +525,7 @@ protected:
 					this->StatesForgrads.p__[n].row(t) = proj_input;
 					//this->StatesForgrads.z[n].row(t) = Z;
 
-					if (IsEndToken(y_t)) break;
+					if (IsEndToken(y_sequence)) break;
 
 					y_prev = y_t;
 					h_prev = h_t;
@@ -685,12 +766,14 @@ protected:
 
 		}
 	};
+public:
 
 	grads_Seq2SeqWithAttention Backward(size_t Number_InputState, MatrixXld Y_True);
 
 	grads_Seq2SeqWithAttention BackwardWithLogging(size_t Number_InputState, MatrixXld Y_True);
 public:
-	Seq2SeqWithAttention_ForTrain(std::unique_ptr<Encoder> encoder_train = std::make_unique<Encoder>(), std::unique_ptr<Decoder> decoder_train = std::make_unique<Decoder>());
+	Seq2SeqWithAttention_ForTrain(std::unique_ptr<Encoder> encoder_train = std::make_unique<Encoder>(), 
+		std::unique_ptr<Decoder> decoder_train = std::make_unique<Decoder>(std::make_unique<BahdanauAttention>(), 0, 1, 0, VectorXld(), MatrixXld(), 0));
 
 	Seq2SeqWithAttention_ForTrain(
 		Eigen::Index Input_size_, Eigen::Index Encoder_Hidden_size_, Eigen::Index Decoder_Hidden_size_,
@@ -707,7 +790,6 @@ public:
 		this->encoder_ = std::move(encoder__);
 		this->decoder_ = std::move(decoder__);
 	}
-
 	void UpdateAdamOpt
 	(
 		const std::vector<std::vector<MatrixXld>>& Target_input_output, /*std::vector<MatrixXld> Target_output,*/
@@ -719,7 +801,7 @@ public:
 	void UpdateAdamOptWithLogging
 	(
 		const std::vector<std::vector<MatrixXld>>& Target_input_output, /*std::vector<MatrixXld> Target_output,*/
-		size_t epochs, size_t optima_steps, size_t batch_size,
+		size_t epochs, size_t optima_steps, size_t batch_size, std::string packname_forsave,
 		double learning_rate = 0.001L, double epsilon = 1e-8L,
 		double beta1 = 0.9L, double beta2 = 0.999L
 	);
@@ -727,12 +809,12 @@ public:
 	void Save(std::string packname) {
 		std::filesystem::create_directories(packname);
 		encoder_->Save(packname + "/" + "Encoder");
-		decoder_->save(packname + "/" + "Decoder");
+		decoder_->Save(packname + "/" + "Decoder");
 	}
 
 	void Load(std::string packname) {
 		encoder_->Load(packname + "/" + "Encoder");
-		decoder_->load(packname + "/" + "Decoder");
+		decoder_->Load(packname + "/" + "Decoder");
 	}
 
 	void Inference();

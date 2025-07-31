@@ -32,7 +32,9 @@ Seq2SeqWithAttention_ForTrain::Seq2SeqWithAttention_ForTrain(
 	decoder_(std::make_unique<Seq2SeqWithAttention_ForTrain::Decoder>(std::move(attention_), Encoder_Hidden_size_, Decoder_Hidden_size_, Output_size, start_token_, end_token_, max_steps_)) {
 }
 
-Seq2SeqWithAttention_ForTrain::grads_Seq2SeqWithAttention Seq2SeqWithAttention_ForTrain::BackwardWithLogging(size_t Number_InputState, MatrixXld Y_True) {
+Seq2SeqWithAttention_ForTrain::grads_Seq2SeqWithAttention Seq2SeqWithAttention_ForTrain::BackwardWithLogging(size_t Number_InputState, MatrixXld Y_True_) {
+	MatrixXld Y_True(Y_True_.rows() + this->decoder_->end_token.rows(), Y_True_.cols());
+	Y_True.transpose() << Y_True_.transpose(), this->decoder_->end_token.transpose();
 	auto check_nan_inf = [](const MatrixXld& m, const std::string& name) {
 		if (!m.allFinite()) {
 			auto lyambda = [](const MatrixXld& m) {
@@ -70,8 +72,8 @@ Seq2SeqWithAttention_ForTrain::grads_Seq2SeqWithAttention Seq2SeqWithAttention_F
 		check_nan_inf(Y_True.row(t), "Y_True");
 		check_nan_inf(this->GetOutputs()[Number_InputState].row(t), "Y_t");
 		MatrixXld DW_out_t = dY_t.transpose() * this->decoder_->StatesForgrads.p__[Number_InputState].row(t);
-		//RowVectorXld dp__t = this->decoder_->W_output.transpose() * dY_t;
-		RowVectorXld dp_proj = dY_t * this->decoder_->W_output;
+		//RowVectorXld dp__t = this->decoder_->W_Output.transpose() * dY_t;
+		RowVectorXld dp_proj = dY_t * this->decoder_->W_Output;
 		RowVectorXld DB_out_t = dY_t;
 
 		RowVectorXld d_p_ = dp_proj.array() * this->decoder_->layernorm_gamma.array();
@@ -147,8 +149,8 @@ Seq2SeqWithAttention_ForTrain::grads_Seq2SeqWithAttention Seq2SeqWithAttention_F
 		check_nan_inf(dGates_t, "dGates_t_" + std::to_string(t) + "\tstep : " + std::to_string(Number_InputState));
 		check_nan_inf(dY_t, "dY_t_" + std::to_string(t) + "\tstep : " + std::to_string(Number_InputState));
 		check_nan_inf(this->decoder_->StatesForgrads.p_[Number_InputState].row(t).transpose(), "p__t_" + std::to_string(t) + "\tstep : " + std::to_string(Number_InputState));
-		check_nan_inf(this->decoder_->W_output, "W_Output" + std::to_string(t) + "\tstep : " + std::to_string(Number_InputState));
-		check_nan_inf(this->decoder_->B_output, "B_Output" + std::to_string(t) + "\tstep : " + std::to_string(Number_InputState));
+		check_nan_inf(this->decoder_->W_Output, "W_Output" + std::to_string(t) + "\tstep : " + std::to_string(Number_InputState));
+		check_nan_inf(this->decoder_->B_Output, "B_Output" + std::to_string(t) + "\tstep : " + std::to_string(Number_InputState));
 		
 		check_nan_inf(d_p_, "d_p_" + std::to_string(t) + "\tstep : " + std::to_string(Number_InputState));
 		check_nan_inf(dS_t, "dS_t_" + std::to_string(t) + "\tstep : " + std::to_string(Number_InputState));
@@ -405,7 +407,7 @@ Seq2SeqWithAttention_ForTrain::grads_Seq2SeqWithAttention Seq2SeqWithAttention_F
 void Seq2SeqWithAttention_ForTrain::UpdateAdamOptWithLogging
 (
 	const std::vector<std::vector<MatrixXld>>& Target_input_output, /*std::vector<MatrixXld> Target_output,*/
-	size_t epochs, size_t optima_steps, size_t batch_size,
+	size_t epochs, size_t optima_steps, size_t batch_size, std::string packname_forsave,
 	double learning_rate, double epsilon,
 	double beta1, double beta2
 )
@@ -864,7 +866,7 @@ void Seq2SeqWithAttention_ForTrain::UpdateAdamOptWithLogging
 				
 				double grad_norm = get_global_norm(grads);
 
-				clip_by_global_norm(grads, clip_threshold);
+				//clip_by_global_norm(grads, clip_threshold);
 
 				if (!std::isfinite(grad_norm)) {
 					auto check_nan_inf = [](const MatrixXld& m, const std::string& name) {
@@ -954,6 +956,8 @@ void Seq2SeqWithAttention_ForTrain::UpdateAdamOptWithLogging
 					std::cout << "[INFO] Batch " << batch_step
 						<< " gradient norm = " << grad_norm << "\n";
 				}
+				std::cout << "Epoch : " << epoch_ << "  step_optimisation : " << t_ << std::endl;
+
 
 				
 				M_W_out = beta1 * M_W_out + (1 - beta1) * grads.dW_out;
@@ -1198,8 +1202,8 @@ void Seq2SeqWithAttention_ForTrain::UpdateAdamOptWithLogging
 				/////
 				/////
 				/////
-				this->decoder_->W_output.array() -= learning_rate * _M_W_out.array() / (_V_W_out.array().sqrt() + epsilon);
-				this->decoder_->B_output.array() -= learning_rate * _M_B_out.array() / (_V_B_out.array().sqrt() + epsilon);
+				this->decoder_->W_Output.array() -= learning_rate * _M_W_out.array() / (_V_W_out.array().sqrt() + epsilon);
+				this->decoder_->B_Output.array() -= learning_rate * _M_B_out.array() / (_V_B_out.array().sqrt() + epsilon);
 				//
 				this->decoder_->layernorm_gamma.array() -= learning_rate * _M_W_gamma_layernorm.array() / (_V_W_gamma_layernorm.array().sqrt() + epsilon);
 				this->decoder_->layernorm_beta.array() -= learning_rate * _M_B_beta_layernorm.array() / (_V_B_beta_layernorm.array().sqrt() + epsilon);
@@ -1261,6 +1265,8 @@ void Seq2SeqWithAttention_ForTrain::UpdateAdamOptWithLogging
 			grads_end_avg_train_loss += grads;
 		}
 
+		this->Save(packname_forsave);
+
 		grads_start_avg_train_loss /= batch_steps_;
 		grads_end_avg_train_loss /= batch_steps_;
 
@@ -1318,8 +1324,8 @@ void Seq2SeqWithAttention_ForTrain::UpdateAdamOptWithLogging
 	for (int64_t t = static_cast<int64_t>(T) - 1; t >= 0; t--) {
 		RowVectorXld dY_t = Y_True.row(t) - this->GetOutputs()[Number_InputState].row(t); //Y_true_t - Y_t
 		MatrixXld DW_out_t = dY_t.transpose() * this->decoder_->StatesForgrads.p_[Number_InputState].row(t);
-		//RowVectorXld dp__t = this->decoder_->W_output.transpose() * dY_t;
-		RowVectorXld dp_proj = dY_t * this->decoder_->W_output;
+		//RowVectorXld dp__t = this->decoder_->W_Output.transpose() * dY_t;
+		RowVectorXld dp_proj = dY_t * this->decoder_->W_Output;
 		RowVectorXld DB_out_t = std::move(dY_t);
 
 		RowVectorXld d_p_ = dp_proj.array() * this->decoder_->layernorm_gamma.array();

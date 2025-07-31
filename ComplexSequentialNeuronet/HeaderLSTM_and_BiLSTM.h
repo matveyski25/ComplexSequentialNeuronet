@@ -55,6 +55,14 @@ public:
 
 	void load_matrix(std::ifstream& file, MatrixXld& m);
 
+	void save_vector(std::ofstream& file, const VectorXld& vec) const;
+
+	void load_vector(std::ifstream& file, VectorXld& vec);
+
+	void save_vector(std::ofstream& file, const RowVectorXld& vec) const;
+
+	void load_vector(std::ifstream& file, RowVectorXld& vec);
+
 //protected:
 
 	Eigen::Index Input_size;
@@ -71,10 +79,10 @@ protected:
 	MatrixXld W_C;  // Cell state input weights
 	MatrixXld W_O;  // Output gate input weights
 
-	MatrixXld B_F;  // Матрица 1xHidden_size
-	MatrixXld B_I;  // Матрица 1xHidden_size
-	MatrixXld B_C;  // Матрица 1xHidden_size
-	MatrixXld B_O;  // Матрица 1xHidden_size
+	RowVectorXld B_F;  // Матрица 1xHidden_size
+	RowVectorXld B_I;  // Матрица 1xHidden_size
+	RowVectorXld B_C;  // Матрица 1xHidden_size
+	RowVectorXld B_O;  // Матрица 1xHidden_size
 
 	//MatrixXld Output_weights; // (Hidden_size x 1)
 	//MatrixXld Output_bias;    // (1 x 1)
@@ -238,7 +246,10 @@ public:
 class BahdanauAttention : public Attention {
 public:
 	friend class Seq2SeqWithAttention_ForTrain;////////////
+	friend class Seq2SeqWithAttention;
 	BahdanauAttention(Eigen::Index encoder_hidden_size, Eigen::Index decoder_hidden_size, Eigen::Index attention_size);
+
+	BahdanauAttention() = default;
 
 	AttnOutput ComputeContext(
 		const MatrixXld& encoder_outputs,
@@ -246,6 +257,13 @@ public:
 	) override;
 
 	void SetRandomWeights(double a = -0.01, double b = 0.01);
+
+	/*void Save(const std::string& filename) const {
+		
+	}
+	void Load(const std::string& filename) {
+
+	}*/
 protected:
 	Eigen::Index duo_encoder_hidden_size_;    // 2H
 	Eigen::Index decoder_hidden_size_;    // H_dec

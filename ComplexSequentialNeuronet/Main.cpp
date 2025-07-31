@@ -1,6 +1,9 @@
 #include "HeaderSeq2seqWithAttention.h"
 #include <unordered_map>
-
+#include <windows.h>
+#ifdef max
+#undef max
+#endif 
 
 class Dictionary {
 public:
@@ -82,8 +85,8 @@ private:
 
 
 int main() {
-	setlocale(LC_ALL, "Russian");
-
+    SetConsoleOutputCP(1251);
+    SetConsoleCP(1251);
 	Dictionary dic;
 
 	dic.emb_size = 1;
@@ -94,21 +97,53 @@ int main() {
 		i++;
 	}
 
-	Seq2SeqWithAttention_ForTrain test(1, 16, 16, 8, 1, dic.getEmbedding("/"), dic.getEmbedding("<`>"), 10, 4);
+	/*Seq2SeqWithAttention_ForTrain test(1, 16, 16, 8, 1, dic.getEmbedding("/"), dic.getEmbedding("<`>"), 10, 4);
 
 	std::vector<MatrixXld> input({
 		dic.getEmbedding("Ìä"), dic.getEmbedding("ÌÄ"), dic.getEmbedding("ìä"), dic.getEmbedding("ìÄ"),
 		dic.getEmbedding("Äì"), dic.getEmbedding("ÄÌ"), dic.getEmbedding("äì"), dic.getEmbedding("äÌ")
 		});
-	std::vector<MatrixXld> output(1, dic.getEmbedding("Ì<`>"));
+	std::vector<MatrixXld> output(1, dic.getEmbedding("Ì"));
 
     std::vector<std::vector<MatrixXld>> input_output({ {input[0], output[0]}, {input[1], output[0]}, 
         {input[2], output[0]}, {input[3], output[0]}, { input[4], output[0] }, 
         {input[5], output[0]}, { input[6], output[0] }, {input[7], output[0]} });
 
-	test.UpdateAdamOptWithLogging(input_output, 10, 100000, 8, 1e-2);
-
-    test.Save("Test2");
-
+    test.UpdateAdamOptWithLogging(input_output, 1, 1000, 8, "test3", 1e-2); */
+ 
+    //Seq2SeqWithAttention_ForTrain test;
+    //test.Load("test3");
+    //
+    //std::vector<MatrixXld> input({
+    //    dic.getEmbedding("ìä")/*, dic.getEmbedding("ÌÄ"), dic.getEmbedding("Ìä"), dic.getEmbedding("ìÄ"),
+    //    dic.getEmbedding("Äì"), dic.getEmbedding("ÄÌ"), dic.getEmbedding("äì"), dic.getEmbedding("äÌ")*/
+    //    });
+    //std::vector<MatrixXld> output(1, dic.getEmbedding("Ì"));
+    //
+    //std::vector<std::vector<MatrixXld>> input_output({ {input[0], output[0]}/*, {input[1], output[0]},
+    //    {input[2], output[0]}, {input[3], output[0]}, { input[4], output[0] },
+    //    {input[5], output[0]}, { input[6], output[0] }, {input[7], output[0]} */});
+    //
+    //test.UpdateAdamOptWithLogging(input_output, 1, 1000, 8, "test3", 1e-2);
+  
+    Seq2SeqWithAttention_ForTrain test1;
+    test1.Load("test3");
+    
+    std::string input;
+    
+    std::cin >> input;
+    
+    //std::cout << input;
+    
+    MatrixXld input_ = dic.getEmbedding(input);
+    
+    test1.Inference(std::vector<MatrixXld>(1, input_));
+    
+    MatrixXld output = test1.GetOutputs()[0].unaryExpr([](double x) { return std::round(x); });
+    
+    MatrixXld target = dic.getEmbedding("Ì");
+    
+    std::cout << dic.getWord(output) << std::endl << dic.getWord(target);
+    
 	return 0;
-}
+} 
