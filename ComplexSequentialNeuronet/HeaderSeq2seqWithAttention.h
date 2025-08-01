@@ -806,6 +806,14 @@ public:
 		double beta1 = 0.9L, double beta2 = 0.999L
 	);
 
+	void UpdateAdamOptWithLogging
+	(
+		const std::vector<std::vector<MatrixXld>>& Target_input_output, /*std::vector<MatrixXld> Target_output,*/
+		size_t epochs, size_t optima_steps, std::string packname_forsave,
+		double learning_rate = 0.001L, double epsilon = 1e-8L,
+		double beta1 = 0.9L, double beta2 = 0.999L
+	);
+
 	void Save(std::string packname) {
 		std::filesystem::create_directories(packname);
 		encoder_->Save(packname + "/" + "Encoder");

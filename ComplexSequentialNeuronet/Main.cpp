@@ -49,7 +49,7 @@ public:
     }
 
    
-    std::string getWord(const MatrixXld& mat) const {
+    std::string getWords(const MatrixXld& mat) const {
         std::string result;
         for (Eigen::Index i = 0; i < mat.rows(); ++i) {
             result += (*this)[mat.row(i)];  // áëèæàéøèé ñèìâîë
@@ -69,6 +69,14 @@ public:
             }
         }
         return index2ch[best_idx];
+    }
+
+    std::vector<MatrixXld> getEmbeddings(const std::vector<std::string>& words) {
+        std::vector<MatrixXld> emb_; 
+        for (const auto& w_ : words) {
+            emb_.push_back(getEmbedding(w_)); 
+        } 
+        return emb_;
     }
 
     size_t size() const {
@@ -111,39 +119,36 @@ int main() {
 
     test.UpdateAdamOptWithLogging(input_output, 1, 1000, 8, "test3", 1e-2); */
  
-    //Seq2SeqWithAttention_ForTrain test;
-    //test.Load("test3");
-    //
-    //std::vector<MatrixXld> input({
-    //    dic.getEmbedding("ìä")/*, dic.getEmbedding("ÌÄ"), dic.getEmbedding("Ìä"), dic.getEmbedding("ìÄ"),
-    //    dic.getEmbedding("Äì"), dic.getEmbedding("ÄÌ"), dic.getEmbedding("äì"), dic.getEmbedding("äÌ")*/
-    //    });
-    //std::vector<MatrixXld> output(1, dic.getEmbedding("Ì"));
-    //
-    //std::vector<std::vector<MatrixXld>> input_output({ {input[0], output[0]}/*, {input[1], output[0]},
-    //    {input[2], output[0]}, {input[3], output[0]}, { input[4], output[0] },
-    //    {input[5], output[0]}, { input[6], output[0] }, {input[7], output[0]} */});
-    //
-    //test.UpdateAdamOptWithLogging(input_output, 1, 1000, 8, "test3", 1e-2);
+    Seq2SeqWithAttention_ForTrain test;
+    test.Load("test3");
+    
+    std::vector<MatrixXld> input_t = dic.getEmbeddings({ "Ìä", "ÌÄ", "ìä", "ìÄ", "Äì", "ÄÌ", "äì", "äÌ", "ä?", "Ä?"});
+    std::vector<MatrixXld> output(1, dic.getEmbedding("Ì"));
+    
+    std::vector<std::vector<MatrixXld>> input_output({ {input_t[0], output[0]}, {input_t[1], output[0]},
+        {input_t[2], output[0]}, {input_t[3], output[0]}, { input_t[4], output[0] },
+        {input_t[5], output[0]}, { input_t[6], output[0] }, {input_t[7], output[0]}});
+    
+    test.UpdateAdamOptWithLogging(input_output, 1, 1000, "test3", 1e-2);
   
     Seq2SeqWithAttention_ForTrain test1;
     test1.Load("test3");
     
     std::string input;
     
-    std::cin >> input;
+    while(true){
+        std::cin >> input;
     
-    //std::cout << input;
+        //std::cout << input;
     
-    MatrixXld input_ = dic.getEmbedding(input);
+        MatrixXld input_ = dic.getEmbedding(input);
     
-    test1.Inference(std::vector<MatrixXld>(1, input_));
+        test1.Inference(std::vector<MatrixXld>(1, input_));
     
-    MatrixXld output = test1.GetOutputs()[0].unaryExpr([](double x) { return std::round(x); });
+        MatrixXld output = test1.GetOutputs()[0].unaryExpr([](double x) { return std::round(x); });
     
-    MatrixXld target = dic.getEmbedding("Ì");
-    
-    std::cout << dic.getWord(output) << std::endl << dic.getWord(target);
+        std::cout << dic.getWords(output) << std::endl;
+    }
     
 	return 0;
 } 
