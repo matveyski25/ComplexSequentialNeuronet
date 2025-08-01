@@ -1859,9 +1859,8 @@ void Seq2SeqWithAttention_ForTrain::UpdateAdamOptWithLogging
 		}
 		grads_start_avg_train_loss /= Target_input_output.size();
 
-		for (size_t batch_size = Target_input_output.size(); batch_size > 0; batch_size++) {
-			double notceil_batch_steps_ = (double)Target_input_output.size() / batch_size;
-			size_t batch_steps_ = (size_t)std::ceil(notceil_batch_steps_);
+		for (double batch_size = Target_input_output.size(); batch_size > 0.5; batch_size /= 2) {
+			size_t batch_steps_ = Target_input_output.size() / std::ceil(batch_size);
 			for (size_t batch_step = 0; batch_step < batch_steps_; batch_step++) {
 				grads_Seq2SeqWithAttention grads;
 
@@ -1988,10 +1987,16 @@ void Seq2SeqWithAttention_ForTrain::UpdateAdamOptWithLogging
 				for (size_t t_ = 0; t_ < optima_steps; t_++) {
 					Inference(shuffle_target[0]);
 					grads.SetZero(this);
-					for (size_t i = batch_step * batch_size; i < (batch_step + 1) * batch_size && i < shuffle_target[0].size(); i++) {
+					for (size_t i = batch_step * std::ceil(batch_size); i < (batch_step + 1) * std::ceil(batch_size) && i < shuffle_target[0].size(); i++) {
 						grads += BackwardWithLogging(i, shuffle_target[1][i]);
 					}
-					grads /= (batch_step == batch_steps_) ? batch_size * (notceil_batch_steps_ - (int)notceil_batch_steps_) : batch_size;
+					if (shuffle_target[0].size() % (size_t)std::ceil(batch_size) == 0 || batch_step != batch_steps_) {
+						grads /= std::ceil(batch_size);
+					}
+					else {
+						grads /= shuffle_target[0].size() % (size_t)std::ceil(batch_size);
+					}
+
 
 					double grad_norm = get_global_norm(grads);
 
