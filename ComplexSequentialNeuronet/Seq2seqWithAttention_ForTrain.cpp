@@ -986,7 +986,7 @@ void Seq2SeqWithAttention_ForTrain::UpdateAdamOptWithLogging
 
 
 		Inference(shuffle_target[0]);
-		for (size_t start_i = 0 start_i < Target_input_output.size(); start_i++) {
+		for (size_t start_i = 0; start_i < Target_input_output.size(); start_i++) {
 			grads_start_avg_train_loss += BackwardWithLogging(start_i, shuffle_target[1][start_i]);
 		}
 		grads_start_avg_train_loss /= Target_input_output.size();
@@ -1522,7 +1522,7 @@ void Seq2SeqWithAttention_ForTrain::UpdateAdamOptWithLogging
 		}
 
 		Inference(shuffle_target[0]);
-		for (size_t end_i = 0 end_i < Target_input_output.size(); end_i++) {
+		for (size_t end_i = 0; end_i; < Target_input_output.size(); end_i++) {
 			grads_end_avg_train_loss += BackwardWithLogging(end_i, shuffle_target[1][end_i]);
 		}
 		grads_end_avg_train_loss /= Target_input_output.size();
