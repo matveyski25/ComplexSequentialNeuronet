@@ -293,7 +293,9 @@ protected:
 		bool IsEndToken(const std::vector<RowVectorXld>& vec) const {
 			if(vec.size() >= this->end_token.rows()){
 				for (size_t i = vec.size() - this->end_token.rows(), j = 0; i < vec.size(); i++, j++) {
-					if ((vec[i] - this->end_token.row(j)).norm() > 1e-3) return false;
+					const RowVectorXld & vec_ = this->end_token.row(j);
+					double norm = (vec[i] - vec_).norm();
+					if (norm > 1e-1) return false;
 				}
 				return true;
 			}

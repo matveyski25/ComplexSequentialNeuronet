@@ -5,7 +5,62 @@
 #undef max
 #endif 
 
-class Dictionary {
+namespace Dic {
+    std::string Kirr = "ÀàÁáÂâÃãÄäÅå¨¸ÆæÇçÈèÉéÊêËëÌìÍíÎîÏïĞğÑñÒòÓóÔôÕõÖö×÷ØøÙùÚúÛûÜüİıŞşßÿ";
+    std::string Lat = "AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz";
+    std::string Spec = "!?.,;:@#%^~`*/-+=<>[](){}'" + '"';
+    MatrixXld getEmbedding(const std::string& word_) {
+        MatrixXld emb(word_.size(), 2);
+        for (size_t i = 0; i < word_.size(); i++) {
+            if (Kirr.find(word_[i]) != std::string::npos) {
+                emb(i, 0) = 1;
+                emb(i, 1) = Kirr[Kirr.find(word_[i])];
+            }
+            else if (Lat.find(word_[i]) != std::string::npos) {
+                emb(i, 0) = 2;
+                emb(i, 1) = Lat[Lat.find(word_[i])];
+            }
+            else if (Spec.find(word_[i]) != std::string::npos) {
+                emb(i, 0) = 3;
+                emb(i, 1) = Spec[Spec.find(word_[i])];
+            }
+            else {
+                emb(i, 0) = 4;
+                emb(i, 1) = 0;
+            }
+        }
+        return emb;
+    }
+    std::string getWords(const MatrixXld& mat) {
+        std::string result;
+        result.resize(mat.rows());
+        for (Eigen::Index i = 0; i < mat.rows(); ++i) {
+            size_t m0 = mat(i, 0);
+            size_t m1 = mat(i, 1);
+            if (m0 == 1) {
+                result[i] = Kirr[m1];
+            }
+            else if (m0 == 2) {
+                result[i] = Lat[m1];
+            }
+            else if (m0 == 3) {
+                result[i] = Spec[m1];
+            }
+            else {
+                result[i] = '$';
+            }
+        }
+        return result;
+    }
+    std::vector<MatrixXld> getEmbeddings(std::vector<std::string> words_) {
+        std::vector<MatrixXld> result;
+        for (const auto & w_ : words_ ) {
+            result.push_back(getEmbedding(w_));
+        }
+        return result;
+    }
+}
+/*class Dictionary {
 public:
     std::unordered_map<char, RowVectorXld> data_ch2vec;  // char -> vec
     std::vector<char> index2ch;                          // index -> char
@@ -89,21 +144,12 @@ private:
             if (index2ch[i] == ch) return static_cast<int>(i);
         return -1;
     }
-};
+};*/
 
 
 int main() {
     SetConsoleOutputCP(1251);
     SetConsoleCP(1251);
-	Dictionary dic;
-
-	dic.emb_size = 1;
-	int i = 0;
-	for(auto ch_ : "?<>/`ÀàÁáÂâÃãÄäÅå¨¸ÆæÇçÈèÉéÊêËëÌìÍíÎîÏïĞğÑñÒòÓóÔôÕõÖö×÷ØøÙùÚúÛûÜüİıŞşßÿ") {
-		RowVectorXld vec_({{(double)i}});
-		dic.push(ch_, vec_);
-		i++;
-	}
 
 	/*Seq2SeqWithAttention_ForTrain test(1, 16, 16, 8, 1, dic.getEmbedding("/"), dic.getEmbedding("<`>"), 10, 4);
 
@@ -119,17 +165,17 @@ int main() {
 
     test.UpdateAdamOptWithLogging(input_output, 1, 1000, 8, "test3", 1e-2); */
  
-    Seq2SeqWithAttention_ForTrain test;
-    test.Load("test3");
+    Seq2SeqWithAttention_ForTrain test(2, 16, 16, 8, 2, Dic::getEmbedding("/"), Dic::getEmbedding("<`>"), 10, 4);
+    //test.Load("test3");
     
-    std::vector<MatrixXld> input_t = dic.getEmbeddings({ "Ìä", "ÌÄ", "ìä", "ìÄ", "Äì", "ÄÌ", "äì", "äÌ", "ä?", "Ä?"});
-    std::vector<MatrixXld> output(1, dic.getEmbedding("Ì"));
+    std::vector<MatrixXld> input_t = Dic::getEmbeddings({ "Ìä", "ÌÄ", "ìä", "ìÄ", "Äì", "ÄÌ", "äì", "äÌ", "ä?", "Ä?"});
+    std::vector<MatrixXld> output(1, Dic::getEmbedding("Ì"));
     
     std::vector<std::vector<MatrixXld>> input_output({ {input_t[0], output[0]}, {input_t[1], output[0]},
         {input_t[2], output[0]}, {input_t[3], output[0]}, { input_t[4], output[0] },
-        {input_t[5], output[0]}, { input_t[6], output[0] }, {input_t[7], output[0]}});
+        {input_t[5], output[0]}, { input_t[6], output[0] }, {input_t[7], output[0]}, {input_t[8], output[0]}, {input_t[9], output[0]} });
     
-    test.UpdateAdamOptWithLogging(input_output, 1, 1000, "test3", 1e-2);
+    test.UpdateAdamOptWithLogging(input_output, 1, 2000, 4, "test3", 1e-3);
   
     Seq2SeqWithAttention_ForTrain test1;
     test1.Load("test3");
@@ -141,13 +187,13 @@ int main() {
     
         //std::cout << input;
     
-        MatrixXld input_ = dic.getEmbedding(input);
+        MatrixXld input_ = Dic::getEmbedding(input);
     
         test1.Inference(std::vector<MatrixXld>(1, input_));
     
         MatrixXld output = test1.GetOutputs()[0].unaryExpr([](double x) { return std::round(x); });
     
-        std::cout << dic.getWords(output) << std::endl;
+        std::cout << Dic::getWords(output) << std::endl;
     }
     
 	return 0;
