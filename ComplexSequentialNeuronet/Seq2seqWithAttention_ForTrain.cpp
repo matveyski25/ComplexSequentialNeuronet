@@ -334,7 +334,9 @@ Seq2SeqWithAttention_ForTrain::grads_Seq2SeqWithAttention Seq2SeqWithAttention_F
 
 	RowVectorXld dY_ = RowVectorXld::Zero(Y_True.cols());
 	for (int64_t t = static_cast<int64_t>(T) - 1; t >= 0; t--) {
-		RowVectorXld dY_t = this->GetOutputs()[Number_InputState].row(t) - Y_True.row(t); //Y_t - Y_true
+		RowVectorXld Y_t = this->GetOutputs()[Number_InputState].row(t);
+		RowVectorXld Y_true_t = Y_True.row(t);
+		RowVectorXld dY_t = Y_t - Y_true_t; //Y_t - Y_true
 		dY_ += dY_t.array().abs().matrix();
 		check_nan_inf(Y_True.row(t), "Y_True");
 		check_nan_inf(this->GetOutputs()[Number_InputState].row(t), "Y_t");
@@ -1147,7 +1149,7 @@ void Seq2SeqWithAttention_ForTrain::UpdateAdamOptWithLogging
 							std::cerr << "[ERROR] NaN or Inf detected in: " << name << "\tnan-inf: " << nan_count << "/" << inf_count << "\n";
 						}
 						};
-					std::cerr << "[WARNING] NaN/inf in gradients at batch " << batch_step << "\n";
+					std::cerr << "[WARNING] NaN/inf in gradients at batch " << (batch_step + 1) << "\n";
 					check_nan_inf(grads.dW_out, "grads.dW_out");
 					check_nan_inf(grads.dB_out, "grads.dB_out");
 
@@ -1207,11 +1209,11 @@ void Seq2SeqWithAttention_ForTrain::UpdateAdamOptWithLogging
 					check_nan_inf(grads.dB_o_back_enc, "grads.dB_o_back_enc");
 				}
 				else if (grad_norm > clip_threshold) {
-					std::cout << "[CLIP] Batch " << batch_step
+					std::cout << "[CLIP] Batch " << (batch_step + 1)
 						<< " gradient norm = " << grad_norm << " clipped\n";
 				}
 				else {
-					std::cout << "[INFO] Batch " << batch_step
+					std::cout << "[INFO] Batch " << (batch_step + 1)
 						<< " gradient norm = " << grad_norm << "\n";
 				}
 				std::cout << "Epoch : " << epoch_ << "  step_optimisation : " << t_ << std::endl;
@@ -1533,7 +1535,7 @@ void Seq2SeqWithAttention_ForTrain::UpdateAdamOptWithLogging
 
 		std::chrono::duration<double> elapsed = end_time - start_time;
 	
-		std::cout << "Epoch " << epoch_
+		std::cout << "Epoch " << (epoch_ + 1)
 			<< " finished. Avg train loss [start/end]: " 
 			<< get_mean_grads(grads_start_avg_train_loss) << "/" << get_mean_grads(grads_end_avg_train_loss)
 			//<< ", Val loss: " << val_loss
@@ -2564,7 +2566,7 @@ void Seq2SeqWithAttention_ForTrain::UpdateAdamOptWithLogging
 								std::cerr << "[ERROR] NaN or Inf detected in: " << name << "\tnan-inf: " << nan_count << "/" << inf_count << "\n";
 							}
 							};
-						std::cerr << "[WARNING] NaN/inf in gradients at batch " << batch_step << "\n";
+						std::cerr << "[WARNING] NaN/inf in gradients at batch " << (batch_step + 1) << "\n";
 						check_nan_inf(grads.dW_out, "grads.dW_out");
 						check_nan_inf(grads.dB_out, "grads.dB_out");
 
@@ -2624,11 +2626,11 @@ void Seq2SeqWithAttention_ForTrain::UpdateAdamOptWithLogging
 						check_nan_inf(grads.dB_o_back_enc, "grads.dB_o_back_enc");
 					}
 					else if (grad_norm > clip_threshold) {
-						std::cout << "[CLIP] Batch " << batch_step
+						std::cout << "[CLIP] Batch " << (batch_step + 1)
 							<< " gradient norm = " << grad_norm << " clipped\n";
 					}
 					else {
-						std::cout << "[INFO] Batch " << batch_step
+						std::cout << "[INFO] Batch " << (batch_step + 1)
 							<< " gradient norm = " << grad_norm << "\n";
 					}
 					std::cout << "Epoch : " << epoch_ << "  step_optimisation : " << t_ << std::endl;
@@ -2952,7 +2954,7 @@ void Seq2SeqWithAttention_ForTrain::UpdateAdamOptWithLogging
 
 		std::chrono::duration<double> elapsed = end_time - start_time;
 
-		std::cout << "Epoch " << epoch_
+		std::cout << "Epoch " << (epoch_ + 1)
 			<< " finished. Avg train loss [start/end]: "
 			<< get_mean_grads(grads_start_avg_train_loss) << "/" << get_mean_grads(grads_end_avg_train_loss)
 			//<< ", Val loss: " << val_loss

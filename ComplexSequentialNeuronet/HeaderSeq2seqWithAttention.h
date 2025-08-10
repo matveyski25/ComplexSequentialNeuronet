@@ -539,7 +539,9 @@ protected:
 				Output_state[n] = MatrixXld(T_out, D);
 				for (Eigen::Index t = 0; t < T_out; ++t) {
 					Output_state[n].row(t) = y_sequence[t];
+					//std::cout << y_sequence[t] << std::endl;
 				}
+				
 			}
 		}
 

@@ -8,21 +8,21 @@
 namespace Dic {
     std::string Kirr = "ÀàÁáÂâÃãÄäÅå¨¸ÆæÇçÈèÉéÊêËëÌìÍíÎîÏïĞğÑñÒòÓóÔôÕõÖö×÷ØøÙùÚúÛûÜüİıŞşßÿ";
     std::string Lat = "AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz";
-    std::string Spec = "!?.,;:@#%^~`*/-+=<>[](){}'" + '"';
+    std::string Spec = "!?.,;:@#%^~`*/-+=<>[](){}'"/* + '"'*/;
     MatrixXld getEmbedding(const std::string& word_) {
         MatrixXld emb(word_.size(), 2);
         for (size_t i = 0; i < word_.size(); i++) {
             if (Kirr.find(word_[i]) != std::string::npos) {
                 emb(i, 0) = 1;
-                emb(i, 1) = Kirr[Kirr.find(word_[i])];
+                emb(i, 1) = Kirr.find(word_[i]);
             }
             else if (Lat.find(word_[i]) != std::string::npos) {
                 emb(i, 0) = 2;
-                emb(i, 1) = Lat[Lat.find(word_[i])];
+                emb(i, 1) = Lat.find(word_[i]);
             }
             else if (Spec.find(word_[i]) != std::string::npos) {
                 emb(i, 0) = 3;
-                emb(i, 1) = Spec[Spec.find(word_[i])];
+                emb(i, 1) = Spec.find(word_[i]);
             }
             else {
                 emb(i, 0) = 4;
@@ -34,17 +34,25 @@ namespace Dic {
     std::string getWords(const MatrixXld& mat) {
         std::string result;
         result.resize(mat.rows());
+        //std::cout << mat << std::endl;
         for (Eigen::Index i = 0; i < mat.rows(); ++i) {
+            if (mat(i, 0) < 0 || mat(i, 1) < 0) {
+                std::abort();
+            }
             size_t m0 = mat(i, 0);
             size_t m1 = mat(i, 1);
-            if (m0 == 1) {
-                result[i] = Kirr[m1];
-            }
-            else if (m0 == 2) {
-                result[i] = Lat[m1];
-            }
-            else if (m0 == 3) {
-                result[i] = Spec[m1];
+            bool m0_p = m0 != 1 && m0 != 2 && m0 != 3;
+            bool m1_p = (m0 == 1 && m1 >= Kirr.size()) || (m0 == 2 && m1 >= Lat.size()) || (m0 == 3 && m1 >= Spec.size());
+            if(!m0_p && !m1_p){
+                if (m0 == 1) {
+                    result[i] = Kirr[m1];
+                }
+                else if (m0 == 2) {
+                    result[i] = Lat[m1];
+                }
+                else if (m0 == 3) {
+                    result[i] = Spec[m1];
+                }
             }
             else {
                 result[i] = '$';
@@ -60,7 +68,7 @@ namespace Dic {
         return result;
     }
 }
-/*class Dictionary {
+class Dictionary {
 public:
     std::unordered_map<char, RowVectorXld> data_ch2vec;  // char -> vec
     std::vector<char> index2ch;                          // index -> char
@@ -144,7 +152,7 @@ private:
             if (index2ch[i] == ch) return static_cast<int>(i);
         return -1;
     }
-};*/
+};
 
 
 int main() {
@@ -165,31 +173,33 @@ int main() {
 
     test.UpdateAdamOptWithLogging(input_output, 1, 1000, 8, "test3", 1e-2); */
  
-    Seq2SeqWithAttention_ForTrain test(2, 16, 16, 8, 2, Dic::getEmbedding("/"), Dic::getEmbedding("<`>"), 10, 4);
-    //test.Load("test3");
-    
-    std::vector<MatrixXld> input_t = Dic::getEmbeddings({ "Ìä", "ÌÄ", "ìä", "ìÄ", "Äì", "ÄÌ", "äì", "äÌ", "ä?", "Ä?"});
-    std::vector<MatrixXld> output(1, Dic::getEmbedding("Ì"));
-    
-    std::vector<std::vector<MatrixXld>> input_output({ {input_t[0], output[0]}, {input_t[1], output[0]},
-        {input_t[2], output[0]}, {input_t[3], output[0]}, { input_t[4], output[0] },
-        {input_t[5], output[0]}, { input_t[6], output[0] }, {input_t[7], output[0]}, {input_t[8], output[0]}, {input_t[9], output[0]} });
-    
-    test.UpdateAdamOptWithLogging(input_output, 1, 2000, 4, "test3", 1e-3);
-  
+    //Seq2SeqWithAttention_ForTrain test(2, 16, 16, 8, 2, Dic::getEmbedding("!"), Dic::getEmbedding("</>"), 10, 10);
+    ////test.Load("test6");
+    //
+    //std::vector<MatrixXld> input_t = Dic::getEmbeddings({ "Ìä", "ÌÄ", "ìä", "ìÄ", "Äì", "ÄÌ", "äì", "äÌ", "ä?", "Ä?"});
+    //std::vector<MatrixXld> output(1, Dic::getEmbedding("Ì"));
+    //
+    //std::vector<std::vector<MatrixXld>> input_output({ {input_t[0], output[0]}, {input_t[1], output[0]},
+    //    {input_t[2], output[0]}, {input_t[3], output[0]}, { input_t[4], output[0] },
+    //    {input_t[5], output[0]}, { input_t[6], output[0] }, {input_t[7], output[0]}, {input_t[8], output[0]}, {input_t[9], output[0]} });
+    //
+    //test.UpdateAdamOptWithLogging(input_output, 10, 500, "test7", 1e-2);
+
     Seq2SeqWithAttention_ForTrain test1;
-    test1.Load("test3");
+    test1.Load("test7");
     
     std::string input;
     
     while(true){
         std::cin >> input;
     
-        //std::cout << input;
+        //std::cout << Dic::getEmbedding("</>");
     
         MatrixXld input_ = Dic::getEmbedding(input);
     
         test1.Inference(std::vector<MatrixXld>(1, input_));
+    
+        //std::cout << test1.GetOutputs()[0];
     
         MatrixXld output = test1.GetOutputs()[0].unaryExpr([](double x) { return std::round(x); });
     
