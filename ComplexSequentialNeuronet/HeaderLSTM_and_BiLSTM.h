@@ -1,10 +1,11 @@
-﻿#pragma once
+#pragma once
 
 #include "ActivateFunctionsForNN/HeaderActivateFunctionsForNN.h"
 
 #include <fstream>
 #include <filesystem>
 #include <string>
+#include <math.h>
 
 using ActivationFunctions::MatrixXld;
 using ActivationFunctions::RowVectorXld; // Вектор-строка
@@ -31,7 +32,7 @@ public:
 
 	void SetRandomDisplacements(double a = -0.5L, double b = 0.5L);
 
-	virtual void All_state_Сalculation();
+	virtual void All_State_Сalculation();
 
 	std::vector<RowVectorXld> GetLastOutputs() const;
 
@@ -44,8 +45,6 @@ public:
 			this->U_O, this->W_O, this->B_O
 		};
 	}*/
-
-	static std::vector<std::vector<char>> denormalize(const MatrixXld& val);
 
 	void save(const std::string& filename) const;
 
@@ -157,7 +156,7 @@ public:
 
 	~BiLSTM();
 
-	void All_state_Сalculation();
+	virtual void All_State_Сalculation();
 
 	void SetInput_states(const std::vector<MatrixXld>& inputs);
 
@@ -192,10 +191,12 @@ public:
 
 	void load(const std::string& filename);
 
+	void All_State_Сalculation() override;
+
 protected:
 	size_t Batch_size;
 
-	void Batch_All_state_Сalculation();
+	/*void Batch_All_state_Сalculation();*/
 
 	struct states_forgrads { std::vector<MatrixXld> f, i, ccond, o, c, h; };
 
@@ -219,7 +220,9 @@ public:
 
 	~BiLSTM_ForTrain();
 
-	void Batch_All_state_Сalculation();
+	/*void Batch_All_state_Сalculation();*/
+
+	void All_State_Сalculation() override;
 protected:
 	SimpleLSTM_ForTrain Forward;
 	SimpleLSTM_ForTrain Backward;

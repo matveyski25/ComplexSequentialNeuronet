@@ -2,7 +2,7 @@
 
 #include <stdexcept>
 
-// Переопределяем eigen_assert, чтобы бросать исключения вместо assert()
+// РџРµСЂРµРѕРїСЂРµРґРµР»СЏРµРј eigen_assert, С‡С‚РѕР±С‹ Р±СЂРѕСЃР°С‚СЊ РёСЃРєР»СЋС‡РµРЅРёСЏ РІРјРµСЃС‚Рѕ assert()
 #undef eigen_assert
 #define eigen_assert(x) \
   do { if (!(x)) throw std::runtime_error("Eigen assertion failed: " #x); } while(false)
@@ -11,7 +11,7 @@
 #include <vector>
 #include <random>
 
-//#define EIGEN_NO_DEBUG  // оставляем отключённым, чтобы runtime-проверки были активны
+//#define EIGEN_NO_DEBUG  // РѕСЃС‚Р°РІР»СЏРµРј РѕС‚РєР»СЋС‡С‘РЅРЅС‹Рј, С‡С‚РѕР±С‹ runtime-РїСЂРѕРІРµСЂРєРё Р±С‹Р»Рё Р°РєС‚РёРІРЅС‹
 
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -25,11 +25,12 @@
 #pragma warning(pop)
 #endif
 
+//#define EIGEN_DONT_INLINE
 
 namespace ActivationFunctions {
 	using MatrixXld = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>;
-	using RowVectorXld = Eigen::Matrix<double, 1, Eigen::Dynamic>; // Вектор-строка
-	using VectorXld = Eigen::Matrix<double, Eigen::Dynamic, 1>;    // Вектор-столбец
+	using RowVectorXld = Eigen::Matrix<double, 1, Eigen::Dynamic>; // Р’РµРєС‚РѕСЂ-СЃС‚СЂРѕРєР°
+	using VectorXld = Eigen::Matrix<double, Eigen::Dynamic, 1>;    // Р’РµРєС‚РѕСЂ-СЃС‚РѕР»Р±РµС†
 
 	bool StepFunction(double value, double step = 0.0);
 	MatrixXld StepFunction(const MatrixXld& matx, double step = 0.0);

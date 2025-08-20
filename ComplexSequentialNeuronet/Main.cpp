@@ -6,32 +6,39 @@
 #endif 
 
 namespace Dic {
-    std::string Kirr = "¿‡¡·¬‚√„ƒ‰≈Â®∏∆Ê«Á»Ë…È ÍÀÎÃÏÕÌŒÓœÔ–—Ò“Ú”Û‘Ù’ı÷ˆ◊˜ÿ¯Ÿ˘⁄˙€˚‹¸›˝ﬁ˛ﬂˇ";
-    std::string Lat = "AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz";
-    std::string Spec = "!?.,;:@#%^~`*/-+=<>[](){}'"/* + '"'*/;
-    MatrixXld getEmbedding(const std::string& word_) {
-        MatrixXld emb(word_.size(), 2);
+    const std::string Kirr = "–ê–∞–ë–±–í–≤–ì–≥–î–¥–ï–µ–Å—ë–ñ–∂–ó–∑–ò–∏–ô–π–ö–∫–õ–ª–ú–º–ù–Ω–û–æ–ü–ø–†—Ä–°—Å–¢—Ç–£—É–§—Ñ–•—Ö–¶—Ü–ß—á–®—à–©—â–™—ä–´—ã–¨—å–≠—ç–Æ—é–Ø—è";
+    const std::string Lat = "AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz";
+    const std::string Spec = R"( !"#$%&'()*+,-./:;<=>?@[\]^_`{|}~)";
+    const std::string Num = "0123456789";
+    static MatrixXld getEmbedding(const std::string& word_) {
+        MatrixXld emb(word_.size(), 2); 
         for (size_t i = 0; i < word_.size(); i++) {
+            auto& vec_first_col = emb(i, 0);
+            auto& vec_second_col = emb(i, 1);
             if (Kirr.find(word_[i]) != std::string::npos) {
-                emb(i, 0) = 1;
-                emb(i, 1) = Kirr.find(word_[i]);
+                vec_first_col = 1;
+                vec_second_col = static_cast<double>(Kirr.find(word_[i]));
             }
             else if (Lat.find(word_[i]) != std::string::npos) {
-                emb(i, 0) = 2;
-                emb(i, 1) = Lat.find(word_[i]);
+                vec_first_col = 2;
+                vec_second_col = static_cast<double>(Lat.find(word_[i]));
             }
             else if (Spec.find(word_[i]) != std::string::npos) {
-                emb(i, 0) = 3;
-                emb(i, 1) = Spec.find(word_[i]);
+                vec_first_col = 3;
+                vec_second_col = static_cast<double>(Spec.find(word_[i]));
+            }
+            else if (Num.find(word_[i]) != std::string::npos) {
+                vec_first_col = 4;
+                vec_second_col = static_cast<double>(Num.find(word_[i]));
             }
             else {
-                emb(i, 0) = 4;
-                emb(i, 1) = 0;
+                vec_first_col = 5;
+                vec_second_col = 0;
             }
         }
         return emb;
     }
-    std::string getWords(const MatrixXld& mat) {
+    static std::string getWords(const MatrixXld& mat) {
         std::string result;
         result.resize(mat.rows());
         //std::cout << mat << std::endl;
@@ -39,10 +46,10 @@ namespace Dic {
             if (mat(i, 0) < 0 || mat(i, 1) < 0) {
                 std::abort();
             }
-            size_t m0 = mat(i, 0);
-            size_t m1 = mat(i, 1);
+            size_t m0 = static_cast<size_t>(mat(i, 0));
+            size_t m1 = static_cast<size_t>(mat(i, 1));
             bool m0_p = m0 != 1 && m0 != 2 && m0 != 3;
-            bool m1_p = (m0 == 1 && m1 >= Kirr.size()) || (m0 == 2 && m1 >= Lat.size()) || (m0 == 3 && m1 >= Spec.size());
+            bool m1_p = ((m0 == 1 && m1 >= Kirr.size()) || (m0 == 2 && m1 >= Lat.size()) || (m0 == 3 && m1 >= Spec.size()) || (m0 == 4 && m1 >= Num.size()));
             if(!m0_p && !m1_p){
                 if (m0 == 1) {
                     result[i] = Kirr[m1];
@@ -53,6 +60,9 @@ namespace Dic {
                 else if (m0 == 3) {
                     result[i] = Spec[m1];
                 }
+                else if (m0 == 4) {
+                    result[i] = Num[m1];
+                }
             }
             else {
                 result[i] = '$';
@@ -60,7 +70,7 @@ namespace Dic {
         }
         return result;
     }
-    std::vector<MatrixXld> getEmbeddings(std::vector<std::string> words_) {
+    static std::vector<MatrixXld> getEmbeddings(std::vector<std::string> words_) {
         std::vector<MatrixXld> result;
         for (const auto & w_ : words_ ) {
             result.push_back(getEmbedding(w_));
@@ -79,7 +89,7 @@ public:
     void push(char ch_, const RowVectorXld& vec_) {
         if (emb_size == 0) emb_size = vec_.cols();
         else if (vec_.cols() != emb_size)
-            throw std::invalid_argument("–‡ÁÏÂ ‚ÂÍÚÓ‡ ÌÂ ÒÓ‚Ô‡‰‡ÂÚ Ò emb_size");
+            throw std::invalid_argument("–†–∞–∑–º–µ—Ä –≤–µ–∫—Ç–æ—Ä–∞ –Ω–µ —Å–æ–≤–ø–∞–¥–∞–µ—Ç —Å emb_size");
 
         if (data_ch2vec.count(ch_) == 0) {
             index2ch.push_back(ch_);
@@ -94,19 +104,19 @@ public:
 
     RowVectorXld operator[](char ch_) const {
         if (!data_ch2vec.count(ch_))
-            throw std::out_of_range("—ËÏ‚ÓÎ ÌÂ Ì‡È‰ÂÌ ‚ ÒÎÓ‚‡Â");
+            throw std::out_of_range("–°–∏–º–≤–æ–ª –Ω–µ –Ω–∞–π–¥–µ–Ω –≤ —Å–ª–æ–≤–∞—Ä–µ");
         return data_ch2vec.at(ch_);
     }
 
     
     MatrixXld getEmbedding(const std::string& word_) const {
         MatrixXld emb(word_.size(), emb_size);
-        for (Eigen::Index i = 0; i < word_.size(); ++i) {
+        for (Eigen::Index i = 0; i < static_cast<Eigen::Index>(word_.size()); ++i) {
             auto it = data_ch2vec.find(word_[i]);
             if (it != data_ch2vec.end())
                 emb.row(i) = it->second;
             else
-                emb.row(i) = RowVectorXld::Zero(emb_size);  // Ô‡‰‰ËÌ„
+                emb.row(i) = RowVectorXld::Zero(emb_size);  // –ø–∞–¥–¥–∏–Ω–≥
         }
         return emb;
     }
@@ -115,12 +125,12 @@ public:
     std::string getWords(const MatrixXld& mat) const {
         std::string result;
         for (Eigen::Index i = 0; i < mat.rows(); ++i) {
-            result += (*this)[mat.row(i)];  // ·ÎËÊ‡È¯ËÈ ÒËÏ‚ÓÎ
+            result += (*this)[mat.row(i)];  // –±–ª–∏–∂–∞–π—à–∏–π —Å–∏–º–≤–æ–ª
         }
         return result;
     }
 
-    // Œ·‡ÚÌÓÂ ÓÚÓ·‡ÊÂÌËÂ: ‚ÂÍÚÓ -> ·ÎËÊ‡È¯ËÈ ÒËÏ‚ÓÎ
+    // –û–±—Ä–∞—Ç–Ω–æ–µ –æ—Ç–æ–±—Ä–∞–∂–µ–Ω–∏–µ: –≤–µ–∫—Ç–æ—Ä -> –±–ª–∏–∂–∞–π—à–∏–π —Å–∏–º–≤–æ–ª
     char operator[](const RowVectorXld& vec_) const {
         double min_dist = std::numeric_limits<double>::max();
         int best_idx = -1;
@@ -134,7 +144,7 @@ public:
         return index2ch[best_idx];
     }
 
-    std::vector<MatrixXld> getEmbeddings(const std::vector<std::string>& words) {
+    std::vector<MatrixXld> getEmbeddings(const std::vector<std::string>& words) const {
         std::vector<MatrixXld> emb_; 
         for (const auto& w_ : words) {
             emb_.push_back(getEmbedding(w_)); 
@@ -162,10 +172,10 @@ int main() {
 	/*Seq2SeqWithAttention_ForTrain test(1, 16, 16, 8, 1, dic.getEmbedding("/"), dic.getEmbedding("<`>"), 10, 4);
 
 	std::vector<MatrixXld> input({
-		dic.getEmbedding("Ã‰"), dic.getEmbedding("Ãƒ"), dic.getEmbedding("Ï‰"), dic.getEmbedding("Ïƒ"),
-		dic.getEmbedding("ƒÏ"), dic.getEmbedding("ƒÃ"), dic.getEmbedding("‰Ï"), dic.getEmbedding("‰Ã")
+		dic.getEmbedding("–ú–¥"), dic.getEmbedding("–ú–î"), dic.getEmbedding("–º–¥"), dic.getEmbedding("–º–î"),
+		dic.getEmbedding("–î–º"), dic.getEmbedding("–î–ú"), dic.getEmbedding("–¥–º"), dic.getEmbedding("–¥–ú")
 		});
-	std::vector<MatrixXld> output(1, dic.getEmbedding("Ã"));
+	std::vector<MatrixXld> output(1, dic.getEmbedding("–ú"));
 
     std::vector<std::vector<MatrixXld>> input_output({ {input[0], output[0]}, {input[1], output[0]}, 
         {input[2], output[0]}, {input[3], output[0]}, { input[4], output[0] }, 
@@ -173,38 +183,34 @@ int main() {
 
     test.UpdateAdamOptWithLogging(input_output, 1, 1000, 8, "test3", 1e-2); */
  
-    //Seq2SeqWithAttention_ForTrain test(2, 16, 16, 8, 2, Dic::getEmbedding("!"), Dic::getEmbedding("</>"), 10, 10);
-    ////test.Load("test6");
-    //
-    //std::vector<MatrixXld> input_t = Dic::getEmbeddings({ "Ã‰", "Ãƒ", "Ï‰", "Ïƒ", "ƒÏ", "ƒÃ", "‰Ï", "‰Ã", "‰?", "ƒ?"});
-    //std::vector<MatrixXld> output(1, Dic::getEmbedding("Ã"));
-    //
-    //std::vector<std::vector<MatrixXld>> input_output({ {input_t[0], output[0]}, {input_t[1], output[0]},
-    //    {input_t[2], output[0]}, {input_t[3], output[0]}, { input_t[4], output[0] },
-    //    {input_t[5], output[0]}, { input_t[6], output[0] }, {input_t[7], output[0]}, {input_t[8], output[0]}, {input_t[9], output[0]} });
-    //
-    //test.UpdateAdamOptWithLogging(input_output, 10, 500, "test7", 1e-2);
+    Seq2SeqWithAttention_ForTrain test;// (2, 16, 16, 8, 2, Dic::getEmbedding("!"), Dic::getEmbedding("</>"), 10, 50);
+    test.Load("test_command_1");
+    
+    std::vector<MatrixXld> input_1 = Dic::getEmbeddings({"–°–º–µ–Ω–∏—Ç—å", "—Å–º–µ–Ω–∏—Ç—å", "–°–ú–µ–Ω–∏—Ç—å", "—Å–ú–µ–Ω–∏—Ç—å", "–°–º–µ–Ω", "—Å–º–µ–Ω", "–°–ú–µ–Ω", "—Å–ú–µ–Ω",
+        "Change", "change", "CHange", "CHANGE", "–°–ú–ï–ù–ò–¢–¨"});
+    std::vector<MatrixXld> output_1(1, Dic::getEmbedding("<COMMAND>CHANGE<COMMAND>"));
+    
+    std::vector<MatrixXld> input_2 = Dic::getEmbeddings({ "–î–∞", "–¥–∞", "–î–ê", "–¥–ê", "Yes", "yes", "YES", "YEs"});
+    std::vector<MatrixXld> output_2(1, Dic::getEmbedding("<COMMAND>YES<COMMAND>"));
 
-    Seq2SeqWithAttention_ForTrain test1;
-    test1.Load("test7");
+    std::vector<MatrixXld> input_3 = Dic::getEmbeddings({ "–ù–µ—Ç", "–Ω–µ—Ç", "–ù–ï–¢", "–ù–ï—Ç", "No", "no", "NO", "nO" });
+    std::vector<MatrixXld> output_3(1, Dic::getEmbedding("<COMMAND>NO<COMMAND>"));
+
     
-    std::string input;
-    
-    while(true){
-        std::cin >> input;
-    
-        //std::cout << Dic::getEmbedding("</>");
-    
-        MatrixXld input_ = Dic::getEmbedding(input);
-    
-        test1.Inference(std::vector<MatrixXld>(1, input_));
-    
-        //std::cout << test1.GetOutputs()[0];
-    
-        MatrixXld output = test1.GetOutputs()[0].unaryExpr([](double x) { return std::round(x); });
-    
-        std::cout << Dic::getWords(output) << std::endl;
+    std::vector<std::vector<MatrixXld>> input_output(input_1.size() + input_2.size() + input_3.size());
+
+    for (size_t i = 0; i < input_1.size(); i++) {
+        input_output[i] = { input_1[i], output_1[0]};
     }
+    for (size_t i = 0; i < input_2.size(); i++) {
+        input_output[input_1.size() + i] = { input_2[i], output_2[0] };
+    }
+    for (size_t i = 0; i < input_3.size(); i++) {
+        input_output[input_1.size() + input_2.size() + i] = { input_3[i], output_3[0] };
+    }
+
+    
+    test.UpdateAdamOptWithLogging(input_output, 2, 100, 8, "test_command_2", 1);
     
 	return 0;
 } 

@@ -1,8 +1,7 @@
-﻿#pragma once
+#pragma once
 
 #include "HeaderLSTM_and_BiLSTM.h"
 
-#include <math.h>
 #include <algorithm>
 #include <random>
 #include <chrono>
@@ -80,7 +79,7 @@ protected:
 		Encoder() : BiLSTM() {};
 		void Encode(const std::vector<MatrixXld>& input_sequence_batch) {
 			this->SetInput_states(input_sequence_batch);
-			this->All_state_Сalculation();
+			this->All_State_Сalculation();
 		}
 
 		const std::vector<MatrixXld>& GetEncodedHiddenStates() const {
@@ -90,7 +89,7 @@ protected:
 	};
 	class Decoder : public SimpleLSTM {
 	public:
-		void All_state_Сalculation() override {
+		void All_State_Сalculation() override {
 			if (this->encoder_outputs.empty()) return;
 
 			auto apply_layernorm = [this](const RowVectorXld& x) -> RowVectorXld {
@@ -211,7 +210,7 @@ protected:
 
 		void Decode(const std::vector<MatrixXld>& encoder_outputs) {
 			this->SetEncoderOutputs(encoder_outputs);
-			this->All_state_Сalculation();
+			this->All_State_Сalculation();
 		}
 
 		const std::vector<MatrixXld> & GetOutputStates() const { return Output_state; }
@@ -291,7 +290,7 @@ protected:
 		}
 	protected:
 		bool IsEndToken(const std::vector<RowVectorXld>& vec) const {
-			if(vec.size() >= this->end_token.rows()){
+			if(vec.size() >= static_cast<size_t>(this->end_token.rows())){
 				for (size_t i = vec.size() - this->end_token.rows(), j = 0; i < vec.size(); i++, j++) {
 					const RowVectorXld & vec_ = this->end_token.row(j);
 					double norm = (vec[i] - vec_).norm();
@@ -374,7 +373,7 @@ protected:
 		Encoder() : BiLSTM_ForTrain() {};
 		void Encode(const std::vector<MatrixXld>& input_sequence_batch) {
 			this->SetInput_states(input_sequence_batch);
-			this->Batch_All_state_Сalculation();
+			this->All_State_Сalculation();
 		}
 
 		const std::vector<MatrixXld>& GetEncodedHiddenStates() const {
@@ -388,7 +387,7 @@ protected:
 		using Seq2SeqWithAttention::Decoder::Decoder;
 		Decoder() : Seq2SeqWithAttention::Decoder() {};
 
-		void All_state_Сalculation() override {
+		void All_State_Сalculation() override {
 			if (this->encoder_outputs.empty()) return;
 
 			auto apply_layernorm = [this](const RowVectorXld& x, size_t n, size_t t) -> RowVectorXld {
