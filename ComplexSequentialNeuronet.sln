@@ -10,6 +10,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ComplexSequentialNeuronet",
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ActivateFunctionsForNN", "ActivateFunctionsForNN\ActivateFunctionsForNN.vcxproj", "{4538C3F6-97F9-459A-BD62-9C0D4A4BE587}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DynamicRealisationNN", "DynamicRealisationNN\DynamicRealisationNN.vcxproj", "{F355BDAD-C8DF-41D9-8FAE-3D40F43EB035}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -44,6 +46,18 @@ Global
 		{4538C3F6-97F9-459A-BD62-9C0D4A4BE587}.Release|x64.Build.0 = Release|x64
 		{4538C3F6-97F9-459A-BD62-9C0D4A4BE587}.Release|x86.ActiveCfg = Release|Win32
 		{4538C3F6-97F9-459A-BD62-9C0D4A4BE587}.Release|x86.Build.0 = Release|Win32
+		{F355BDAD-C8DF-41D9-8FAE-3D40F43EB035}.Debug|x64.ActiveCfg = Debug|x64
+		{F355BDAD-C8DF-41D9-8FAE-3D40F43EB035}.Debug|x64.Build.0 = Debug|x64
+		{F355BDAD-C8DF-41D9-8FAE-3D40F43EB035}.Debug|x86.ActiveCfg = Debug|Win32
+		{F355BDAD-C8DF-41D9-8FAE-3D40F43EB035}.Debug|x86.Build.0 = Debug|Win32
+		{F355BDAD-C8DF-41D9-8FAE-3D40F43EB035}.Profile|x64.ActiveCfg = Release|x64
+		{F355BDAD-C8DF-41D9-8FAE-3D40F43EB035}.Profile|x64.Build.0 = Release|x64
+		{F355BDAD-C8DF-41D9-8FAE-3D40F43EB035}.Profile|x86.ActiveCfg = Release|Win32
+		{F355BDAD-C8DF-41D9-8FAE-3D40F43EB035}.Profile|x86.Build.0 = Release|Win32
+		{F355BDAD-C8DF-41D9-8FAE-3D40F43EB035}.Release|x64.ActiveCfg = Release|x64
+		{F355BDAD-C8DF-41D9-8FAE-3D40F43EB035}.Release|x64.Build.0 = Release|x64
+		{F355BDAD-C8DF-41D9-8FAE-3D40F43EB035}.Release|x86.ActiveCfg = Release|Win32
+		{F355BDAD-C8DF-41D9-8FAE-3D40F43EB035}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
