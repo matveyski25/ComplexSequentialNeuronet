@@ -18,8 +18,8 @@
 #pragma warning(disable : 26495 6255 6294)
 #endif
 
-#include <eigen-3.4.0/Eigen/Core>
-#include <eigen-3.4.0/Eigen/Dense>
+#include "Eigen/Core"
+#include "Eigen/Dense"
 
 #ifdef _MSC_VER
 #pragma warning(pop)
