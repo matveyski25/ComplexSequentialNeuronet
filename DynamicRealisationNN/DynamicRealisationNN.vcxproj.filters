@@ -13,6 +13,12 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Исходные файлы\RNN">
+      <UniqueIdentifier>{c6e7a4a1-82ab-4e8f-8b9f-d2a44a799f37}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Файлы заголовков\RNN">
+      <UniqueIdentifier>{db44337e-2e4f-4dfc-b556-f387d7df1fff}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BaseNN.h">
