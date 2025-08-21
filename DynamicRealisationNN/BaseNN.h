@@ -28,6 +28,14 @@ public:
 	virtual void random(IArgsRandomizer* args) = 0;
 };
 
+/**The base interface of all realisations compute block - Базовый интефейс для всех реализаций классов всех блоков вычислений*/
+class IComputeBlock {
+	/*The structure inherited from the base interface IBaseArgs - Структруа наследующаяся от общей IBaseArgs*/
+	struct IValuesForCompute : public IBaseArgs {};
+	virtual void setValuesForCompute(IValuesForCompute * values) = 0;
+	virtual void compute() = 0;
+};
+
 /*The base interface of all INN - Основа всех интерфейсов нейронных сетей*/
 class IBaseNN
 {
@@ -43,6 +51,7 @@ public:
 	virtual void setSaver(IBaseSaver* saver) = 0;
 	virtual void setLoader(IBaseLoader* loader) = 0;
 	virtual void setValuesRandomizer(IBaseRandomizer* randomaizer) = 0;
+	virtual void setComputeBlock(IComputeBlock* compute_block) = 0;
 };
 
 /*Feedforward - Полносвязные*/
