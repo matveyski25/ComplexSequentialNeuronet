@@ -19,8 +19,8 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="BaseINN.hpp" />
     <ClInclude Include="BaseNN.hpp" />
-    <ClInclude Include="BaseRNN.hpp" />
     <ClInclude Include="FunctionsActivate.hpp" />
   </ItemGroup>
   <ItemGroup>
