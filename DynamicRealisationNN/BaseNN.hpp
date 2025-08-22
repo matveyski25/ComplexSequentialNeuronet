@@ -10,7 +10,8 @@ BaseArgs::~BaseArgs() {}
 
 class BaseComponentsNN 
 { 
-public: virtual ~BaseComponentsNN() = 0; 
+public: 
+	virtual ~BaseComponentsNN() = 0; 
 };
 BaseComponentsNN::~BaseComponentsNN() {}
 
@@ -42,7 +43,11 @@ public:
 /**The base interface of all realisations compute block - Базовый интефейс для всех реализаций классов всех блоков вычислений*/
 class IComputeBlock : public BaseComponentsNN {
 	/*The structure inherited from the base interface IBaseArgs - Структура наследующаяся от общей IBaseArgs*/
-	struct ValuesForCompute : public BaseArgs {};
+	struct ValuesForCompute : public BaseArgs 
+	{ 
+	struct Weights{};
+	struct Bias{};
+	};
 	virtual void setValuesForCompute(ValuesForCompute * values) = 0;
 	virtual void compute() = 0;
 

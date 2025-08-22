@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BaseNN.hpp" />
+    <ClInclude Include="BaseRNN.hpp" />
     <ClInclude Include="FunctionsActivate.hpp" />
   </ItemGroup>
   <ItemGroup>
