@@ -19,11 +19,12 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="BaseNN.h" />
+    <ClInclude Include="BaseNN.hpp" />
+    <ClInclude Include="FunctionsActivate.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp" />
-    <ClCompile Include="RealizationMatrix.h" />
+    <ClCompile Include="RealizationMatrix.hpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>

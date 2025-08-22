@@ -23,7 +23,7 @@ namespace ActivationFunctions {
 	}
 	MatrixXld Sigmoid(const MatrixXld& matx, double norm) {
 		return matx.unaryExpr([&](double x) {
-			x = std::max(-norm, std::min(norm, x)); // Ограничение
+			x = std::max(-norm, std::min(norm, x)); // РћРіСЂР°РЅРёС‡РµРЅРёРµ
 			return 1.0 / (1.0 + std::exp(-x));
 			});
 	}
@@ -78,7 +78,7 @@ namespace ActivationFunctions {
 	}
 	double Swish(double value, double b) {
 		double x = value * b;
-		// Ограничение для предотвращения переполнения exp(x)
+		// РћРіСЂР°РЅРёС‡РµРЅРёРµ РґР»СЏ РїСЂРµРґРѕС‚РІСЂР°С‰РµРЅРёСЏ РїРµСЂРµРїРѕР»РЅРµРЅРёСЏ exp(x)
 		x = std::max(x, -700.0);
 		x = std::min(x, 700.0);
 		return value * (1.0L / (1.0L + std::exp(-x)));
@@ -125,32 +125,32 @@ namespace ActivationFunctions {
 			result.push_back(exp_val);
 		}
 		if (sum == 0) {
-			// Вернуть равномерное распределение или бросить исключение
-			throw std::runtime_error("Все значения в Softmax нулевые");
+			// Р’РµСЂРЅСѓС‚СЊ СЂР°РІРЅРѕРјРµСЂРЅРѕРµ СЂР°СЃРїСЂРµРґРµР»РµРЅРёРµ РёР»Рё Р±СЂРѕСЃРёС‚СЊ РёСЃРєР»СЋС‡РµРЅРёРµ
+			throw std::runtime_error("Р’СЃРµ Р·РЅР°С‡РµРЅРёСЏ РІ Softmax РЅСѓР»РµРІС‹Рµ");
 		}
 		for (auto& val : result) {
 			val /= sum;
 		}
 		return result;
 	}
-	VectorXld Softmax(const VectorXld& x, double clamp_val, double eps){
-		// 1) Клэмпим входы
+	VectorXld Softmax(const VectorXld& x, double clamp_val, double eps) {
+		// 1) РљР»СЌРјРїРёРј РІС…РѕРґС‹
 		VectorXld x_clamped = x.unaryExpr([&](double v) {
 			return std::max(-clamp_val, std::min(clamp_val, v));
 			});
 
-		// 2) Вычисляем максимум
+		// 2) Р’С‹С‡РёСЃР»СЏРµРј РјР°РєСЃРёРјСѓРј
 		double x_max = x_clamped.maxCoeff();
 
-		// 3) Вычисляем экспоненты от (x - max)
+		// 3) Р’С‹С‡РёСЃР»СЏРµРј СЌРєСЃРїРѕРЅРµРЅС‚С‹ РѕС‚ (x - max)
 		VectorXld exp_x = x_clamped.unaryExpr([&](double v) {
 			return std::exp(v - x_max);
 			});
 
-		// 4) Сумма с eps
+		// 4) РЎСѓРјРјР° СЃ eps
 		double sum_exp = exp_x.sum() + eps;
 
-		// 5) Нормировка
+		// 5) РќРѕСЂРјРёСЂРѕРІРєР°
 		return exp_x.array() / sum_exp;
 	}
 	double random(double a, double b) {
