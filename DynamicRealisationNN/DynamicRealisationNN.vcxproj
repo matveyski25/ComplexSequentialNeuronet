@@ -20,7 +20,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BaseNN.h" />
-    <ClInclude Include="Header.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Main.cpp" />
+    <ClCompile Include="RealizationMatrix.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>

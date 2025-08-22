@@ -1,7 +1,7 @@
 #pragma once
 #include<type_traits>
 
-/*The structure responsible for different arguments - Структура отвечающая за разные аргументы*/
+/*The structure responsible for different arguments - РЎС‚СЂСѓРєС‚СѓСЂР° РѕС‚РІРµС‡Р°СЋС‰Р°СЏ Р·Р° СЂР°Р·РЅС‹Рµ Р°СЂРіСѓРјРµРЅС‚С‹*/
 struct BaseArgs 
 { 
 	virtual ~BaseArgs() = 0; 
@@ -14,41 +14,41 @@ public: virtual ~BaseComponentsNN() = 0;
 };
 BaseComponentsNN::~BaseComponentsNN() {}
 
-/*The base interface of all realisations savers - Базовый интефейс для всех реализаций классов хранителей*/
+/*The base interface of all realisations savers - Р‘Р°Р·РѕРІС‹Р№ РёРЅС‚РµС„РµР№СЃ РґР»СЏ РІСЃРµС… СЂРµР°Р»РёР·Р°С†РёР№ РєР»Р°СЃСЃРѕРІ С…СЂР°РЅРёС‚РµР»РµР№*/
 class IBaseSaver : public BaseComponentsNN
 {
 public:
-	/*The structure inherited from the base interface IBaseArgs - Структура наследующаяся от общей IBaseArgs*/
+	/*The structure inherited from the base interface IBaseArgs - РЎС‚СЂСѓРєС‚СѓСЂР° РЅР°СЃР»РµРґСѓСЋС‰Р°СЏСЃСЏ РѕС‚ РѕР±С‰РµР№ IBaseArgs*/
 	struct ArgsSaver : public BaseArgs {};
 	virtual void save(ArgsSaver * args) = 0;
 };
-/*The base interface of all realisations loaders - Базовый интефейс для всех реализаций классов всех загрузчиков*/
+/*The base interface of all realisations loaders - Р‘Р°Р·РѕРІС‹Р№ РёРЅС‚РµС„РµР№СЃ РґР»СЏ РІСЃРµС… СЂРµР°Р»РёР·Р°С†РёР№ РєР»Р°СЃСЃРѕРІ РІСЃРµС… Р·Р°РіСЂСѓР·С‡РёРєРѕРІ*/
 class IBaseLoader : public BaseComponentsNN
 {
 public:
-	/*The structure inherited from the base interface IBaseArgs - Структура наследующаяся от общей IBaseArgs*/
+	/*The structure inherited from the base interface IBaseArgs - РЎС‚СЂСѓРєС‚СѓСЂР° РЅР°СЃР»РµРґСѓСЋС‰Р°СЏСЃСЏ РѕС‚ РѕР±С‰РµР№ IBaseArgs*/
 	struct ArgsLoader : public BaseArgs {};
 	virtual void load(ArgsLoader * args) = 0;
 };
-/*The base interface of all realisations randomizers - Базовый интефейс для всех реализаций классов всех рандомайзеров*/
+/*The base interface of all realisations randomizers - Р‘Р°Р·РѕРІС‹Р№ РёРЅС‚РµС„РµР№СЃ РґР»СЏ РІСЃРµС… СЂРµР°Р»РёР·Р°С†РёР№ РєР»Р°СЃСЃРѕРІ РІСЃРµС… СЂР°РЅРґРѕРјР°Р№Р·РµСЂРѕРІ*/
 class IBaseRandomizer : public BaseComponentsNN
 {
 public:
-	/*The structure inherited from the base interface IBaseArgs - Структура наследующаяся от общей IBaseArgs*/
+	/*The structure inherited from the base interface IBaseArgs - РЎС‚СЂСѓРєС‚СѓСЂР° РЅР°СЃР»РµРґСѓСЋС‰Р°СЏСЃСЏ РѕС‚ РѕР±С‰РµР№ IBaseArgs*/
 	struct ArgsRandomizer : public BaseArgs {};
 	virtual void random(ArgsRandomizer* args) = 0;
 };
 
-/**The base interface of all realisations compute block - Базовый интефейс для всех реализаций классов всех блоков вычислений*/
+/**The base interface of all realisations compute block - Р‘Р°Р·РѕРІС‹Р№ РёРЅС‚РµС„РµР№СЃ РґР»СЏ РІСЃРµС… СЂРµР°Р»РёР·Р°С†РёР№ РєР»Р°СЃСЃРѕРІ РІСЃРµС… Р±Р»РѕРєРѕРІ РІС‹С‡РёСЃР»РµРЅРёР№*/
 class IComputeBlock : public BaseComponentsNN {
-	/*The structure inherited from the base interface IBaseArgs - Структура наследующаяся от общей IBaseArgs*/
+	/*The structure inherited from the base interface IBaseArgs - РЎС‚СЂСѓРєС‚СѓСЂР° РЅР°СЃР»РµРґСѓСЋС‰Р°СЏСЃСЏ РѕС‚ РѕР±С‰РµР№ IBaseArgs*/
 	struct ValuesForCompute : public BaseArgs {};
 	virtual void setValuesForCompute(ValuesForCompute * values) = 0;
 	virtual void compute() = 0;
 
 };
 
-/*The base interface of all INN - Основа всех интерфейсов нейронных сетей*/
+/*The base interface of all INN - РћСЃРЅРѕРІР° РІСЃРµС… РёРЅС‚РµСЂС„РµР№СЃРѕРІ РЅРµР№СЂРѕРЅРЅС‹С… СЃРµС‚РµР№*/
 class IBaseNN
 {
 protected:
@@ -65,7 +65,7 @@ public:
 	virtual ~IBaseNN() = 0;
 };
 IBaseNN::~IBaseNN() {}
-/*The base interface of all INN with train - Основа всех интерфейсов нейронных сетей с обучением*/
+/*The base interface of all INN with train - РћСЃРЅРѕРІР° РІСЃРµС… РёРЅС‚РµСЂС„РµР№СЃРѕРІ РЅРµР№СЂРѕРЅРЅС‹С… СЃРµС‚РµР№ СЃ РѕР±СѓС‡РµРЅРёРµРј*/
 class IBaseTrainableNN : public IBaseNN {
 public:
 	virtual void save() = 0;
@@ -75,25 +75,25 @@ public:
 };
 
 
-/*Feedforward - Полносвязные*/
-template<typename BaseT>
-class IBaseFFNN : public BaseT { static_assert(std::is_base_of_v<IBaseNN, BaseT>, "BaseT must be the class NN - BaseT должен быть классом нейронной сети"); };
+/*Feedforward - РџРѕР»РЅРѕСЃРІСЏР·РЅС‹Рµ*/
+template<typename BaseT, typename = std::enable_if_t<std::is_base_of_v<IBaseNN, BaseT>>>
+class IBaseFFNN : public BaseT {};
 
-/*Colvolutional - Сверточные*/
-template<typename BaseT>
-class IBaseCNN : public BaseT { static_assert(std::is_base_of_v<IBaseNN, BaseT>, "BaseT must be the class NN - BaseT должен быть классом нейронной сети"); };
+/*Colvolutional - РЎРІРµСЂС‚РѕС‡РЅС‹Рµ*/
+template<typename BaseT, typename = std::enable_if_t<std::is_base_of_v<IBaseNN, BaseT>>>
+class IBaseCNN : public BaseT {};
 
-/*Transformer - На основе трансформера*/
-template<typename BaseT>
-class IBaseTNN : public BaseT { static_assert(std::is_base_of_v<IBaseNN, BaseT>, "BaseT must be the class NN - BaseT должен быть классом нейронной сети"); };
+/*Transformer - РќР° РѕСЃРЅРѕРІРµ С‚СЂР°РЅСЃС„РѕСЂРјРµСЂР°*/
+template<typename BaseT, typename = std::enable_if_t<std::is_base_of_v<IBaseNN, BaseT>>>
+class IBaseTNN : public BaseT {};
 
-/*Graph - Графы*/
-template<typename BaseT>
-class IBaseGNN : public BaseT { static_assert(std::is_base_of_v<IBaseNN, BaseT>, "BaseT must be the class NN - BaseT должен быть классом нейронной сети"); };
+/*Graph - Р“СЂР°С„С‹*/
+template<typename BaseT, typename = std::enable_if_t<std::is_base_of_v<IBaseNN, BaseT>>>
+class IBaseGNN : public BaseT {};
 
-/*Reccurent - Последовательные(реккурентные)*/
-template<typename BaseT>
-class IBaseRNN : public BaseT { static_assert(std::is_base_of_v<IBaseNN, BaseT>, "BaseT must be the class NN - BaseT должен быть классом нейронной сети"); };
+/*Reccurent - РџРѕСЃР»РµРґРѕРІР°С‚РµР»СЊРЅС‹Рµ(СЂРµРєРєСѓСЂРµРЅС‚РЅС‹Рµ)*/
+template<typename BaseT, typename = std::enable_if_t<std::is_base_of_v<IBaseNN, BaseT>>>
+class IBaseRNN : public BaseT {};
 
 using InterfaceFFNN = IBaseFFNN<IBaseNN>;
 using InterfaceCNN = IBaseCNN<IBaseNN>;
