@@ -76,33 +76,31 @@ public:
 
 
 /*Feedforward - Полносвязные*/
-template<typename BaseT, typename = std::enable_if_t<std::is_base_of_v<IBaseNN, BaseT>>>
-class IBaseFFNN : public BaseT {};
+class IBaseFFNN : public IBaseNN {};
 
 /*Colvolutional - Сверточные*/
-template<typename BaseT, typename = std::enable_if_t<std::is_base_of_v<IBaseNN, BaseT>>>
-class IBaseCNN : public BaseT {};
+class IBaseCNN : public IBaseNN {};
 
 /*Transformer - На основе трансформера*/
-template<typename BaseT, typename = std::enable_if_t<std::is_base_of_v<IBaseNN, BaseT>>>
-class IBaseTNN : public BaseT {};
+class IBaseTNN : public IBaseNN {};
 
 /*Graph - Графы*/
-template<typename BaseT, typename = std::enable_if_t<std::is_base_of_v<IBaseNN, BaseT>>>
-class IBaseGNN : public BaseT {};
+class IBaseGNN : public IBaseNN {};
 
 /*Reccurent - Последовательные(реккурентные)*/
-template<typename BaseT, typename = std::enable_if_t<std::is_base_of_v<IBaseNN, BaseT>>>
-class IBaseRNN : public BaseT {};
+class IBaseRNN : public IBaseNN {};
 
-using InterfaceFFNN = IBaseFFNN<IBaseNN>;
-using InterfaceCNN = IBaseCNN<IBaseNN>;
-using InterfaceTNN = IBaseTNN<IBaseNN>;
-using InterfaceGNN = IBaseGNN<IBaseNN>;
-using InterfaceRNN = IBaseRNN<IBaseNN>;
+template<typename Base, typename = std::enable_if_t<std::is_base_of_v<IBaseFFNN, Base>>>
+class IBaseTrainableFFNN : virtual public Base, virtual public IBaseTrainableNN {};
 
-using TrainableInterfaceFFNN = IBaseFFNN<IBaseTrainableNN>;
-using TrainableInterfaceCNN = IBaseCNN<IBaseTrainableNN>;
-using TrainableInterfaceTNN = IBaseTNN<IBaseTrainableNN>;
-using TrainableInterfaceGNN = IBaseGNN<IBaseTrainableNN>;
-using TrainableInterfaceRNN = IBaseRNN<IBaseTrainableNN>;
+template<typename Base, typename = std::enable_if_t<std::is_base_of_v<IBaseCNN, Base>>>
+class IBaseTrainableCNN : virtual public Base, virtual public IBaseTrainableNN {};
+
+template<typename Base, typename = std::enable_if_t<std::is_base_of_v<IBaseTNN, Base>>>
+class IBaseTrainableTNN : virtual public Base, virtual public IBaseTrainableNN {};
+
+template<typename Base, typename = std::enable_if_t<std::is_base_of_v<IBaseGNN, Base>>>
+class IBaseTrainableGNN : virtual public Base, virtual public IBaseTrainableNN {};
+
+template<typename Base, typename = std::enable_if_t<std::is_base_of_v<IBaseRNN, Base>>>
+class IBaseTrainableRNN : virtual public Base, virtual public IBaseTrainableNN {};
