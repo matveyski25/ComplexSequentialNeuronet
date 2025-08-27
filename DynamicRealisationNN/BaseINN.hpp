@@ -1,20 +1,19 @@
 #pragma once
 #include<type_traits>
+#include<string>
+
+class PolymorphicBase {
+public:
+	virtual ~PolymorphicBase() = 0;
+	virtual std::string getTypeRealization() = 0;
+};
+PolymorphicBase::~PolymorphicBase() {}
 
 /*The structure responsible for different arguments - Структура отвечающая за разные аргументы*/
-struct BaseArgs 
-{ 
-	virtual ~BaseArgs() = 0; 
-};
-BaseArgs::~BaseArgs() {}
+struct BaseArgs : public PolymorphicBase {};
 
 /*The base class for all interfaces NN`s components - Базовый класс отвечающий за все компоненты нейронной сети*/
-class BaseComponentsNN 
-{ 
-public: 
-	virtual ~BaseComponentsNN() = 0; 
-};
-BaseComponentsNN::~BaseComponentsNN() {}
+class BaseComponentsNN {};
 
 /*The base interface of all realisations savers - Базовый интефейс для всех реализаций классов хранителей*/
 class IBaseSaver : public BaseComponentsNN
@@ -22,7 +21,7 @@ class IBaseSaver : public BaseComponentsNN
 public:
 	/*The structure inherited from the base interface IBaseArgs - Структура наследующаяся от общей IBaseArgs*/
 	struct ArgsSaver : public BaseArgs {};
-	virtual void save(ArgsSaver * args) = 0;
+	virtual void save(IComputeBlock * compute_block, ArgsSaver * args) = 0;
 };
 /*The base interface of all realisations loaders - Базовый интефейс для всех реализаций классов всех загрузчиков*/
 class IBaseLoader : public BaseComponentsNN
@@ -30,7 +29,7 @@ class IBaseLoader : public BaseComponentsNN
 public:
 	/*The structure inherited from the base interface IBaseArgs - Структура наследующаяся от общей IBaseArgs*/
 	struct ArgsLoader : public BaseArgs {};
-	virtual void load(ArgsLoader * args) = 0;
+	virtual void load(IComputeBlock* compute_block, ArgsLoader * args) = 0;
 };
 
 
@@ -43,7 +42,13 @@ public:
 	struct Weights{};
 	struct Bias{};
 	};
+	struct IOValues 
+	{
+		struct IValues {};
+		struct OValues {};
+	};
 	virtual void setValuesForCompute(ValuesForCompute * values) = 0;
+	virtual void setIOValues(IOValues * io_values) = 0;
 	virtual void compute() = 0;
 
 };
@@ -56,7 +61,7 @@ public:
 	/*The struct for gradients learning for optimizing - Структура для градиентов обучения для оптимизации*/
 	struct Gradients : public ValuesForCompute {};
 	/*The class that updating values for compute - Класс, который улучшает значения для вычислений*/
-	class Optimizer : public BaseComponentsNN 
+	class IOptimizer : public BaseComponentsNN 
 	{
 	public:
 		struct ValuesForOptimizer : public BaseArgs {};
@@ -64,8 +69,8 @@ public:
 		virtual void optimize(ValuesForOptimizer * values) = 0;
 	};
 	virtual Gradients backward() = 0;
-	virtual void optimize(Gradients * gradients, Optimizer::ValuesForOptimizer * values) = 0;
-	virtual void setOptimizer(Optimizer * optimizer) = 0;
+	virtual void optimize(Gradients * gradients, IOptimizer::ValuesForOptimizer * values) = 0;
+	virtual void setOptimizer(IOptimizer * optimizer) = 0;
 };
 
 /*The base interface of all realisations randomizers - Базовый интефейс для всех реализаций классов всех рандомайзеров*/
@@ -81,11 +86,11 @@ class IBaseNN
 protected:
 	virtual void forward() = 0;
 public:
-	struct IOutputValue : public BaseArgs {};
-	struct IInputValue : public BaseArgs {};
+	struct OutputValue : public BaseArgs {};
+	struct InputValue : public BaseArgs {};
 	virtual void inference() = 0;
-	virtual void setInputStates(const IInputValue* input_state) = 0;
-	virtual IOutputValue getOutputStates() = 0;
+	virtual void setInputStates(const InputValue* input_state) = 0;
+	virtual OutputValue getOutputStates() = 0;
 	virtual void load() = 0;
 	virtual void setLoader(IBaseLoader* loader) = 0;
 	virtual void setComputeBlock(IComputeBlock* compute_block) = 0;
@@ -99,7 +104,7 @@ public:
 	virtual void setSaver(IBaseSaver* saver) = 0;
 	virtual void setRandomValues() = 0;
 	virtual void setValuesRandomizer(IBaseRandomizer* randomaizer) = 0;
-	virtual void optimize(ITrainableComputeBlock::Optimizer::ValuesForOptimizer * values) = 0;
+	virtual void optimize(ITrainableComputeBlock::IOptimizer::ValuesForOptimizer * values) = 0;
 };
 
 
