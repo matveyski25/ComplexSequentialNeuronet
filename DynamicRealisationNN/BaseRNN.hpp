@@ -11,3 +11,8 @@ public:
 		this->hidden_size = other.hidden_size;
 	}
 };
+
+class BaseTrainableRNN : virtual public BaseRNN, virtual public BaseTrainableNN
+{
+
+};
