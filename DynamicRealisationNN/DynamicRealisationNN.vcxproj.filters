@@ -19,27 +19,42 @@
     <Filter Include="Файлы заголовков\RNN">
       <UniqueIdentifier>{db44337e-2e4f-4dfc-b556-f387d7df1fff}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Исходные файлы\RNN\Realization1">
+      <UniqueIdentifier>{2f4ca09c-1f25-454d-8685-2c901bf1812f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Файлы заголовков\RNN\Realization1">
+      <UniqueIdentifier>{2059379c-b548-4861-8260-52fbbfbe36b4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Файлы заголовков\Base">
+      <UniqueIdentifier>{0eb16fe3-5a99-4c25-822e-807d188a6662}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BaseINN.hpp">
-      <Filter>Файлы заголовков</Filter>
+      <Filter>Файлы заголовков\Base</Filter>
     </ClInclude>
     <ClInclude Include="BaseNN.hpp">
-      <Filter>Файлы заголовков</Filter>
+      <Filter>Файлы заголовков\Base</Filter>
     </ClInclude>
     <ClInclude Include="FunctionsActivate.hpp">
-      <Filter>Файлы заголовков</Filter>
+      <Filter>Файлы заголовков\Base</Filter>
     </ClInclude>
     <ClInclude Include="BaseRNN.hpp">
       <Filter>Файлы заголовков\RNN</Filter>
+    </ClInclude>
+    <ClInclude Include="Realization_BaseLSTM_1.hpp">
+      <Filter>Файлы заголовков\RNN\Realization1</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
+    <ClCompile Include="Realization_BaseLSTM_1.cpp">
+      <Filter>Исходные файлы\RNN\Realization1</Filter>
+    </ClCompile>
     <ClCompile Include="RealizationMatrix.hpp">
-      <Filter>Файлы заголовков</Filter>
+      <Filter>Файлы заголовков\Base</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

@@ -8,12 +8,15 @@ public:
 	virtual std::string getTypeRealization() = 0;
 };
 PolymorphicBase::~PolymorphicBase() {}
-
+std::string PolymorphicBase::getTypeRealization() {
+	return "PolymorphicBase";
+}
+  
 /*The structure responsible for different arguments - Структура отвечающая за разные аргументы*/
 struct BaseArgs : public PolymorphicBase {};
 
 /*The base class for all interfaces NN`s components - Базовый класс отвечающий за все компоненты нейронной сети*/
-class BaseComponentsNN {};
+class BaseComponentsNN : public PolymorphicBase {};
 
 /*The base interface of all realisations savers - Базовый интефейс для всех реализаций классов хранителей*/
 class IBaseSaver : public BaseComponentsNN
@@ -81,7 +84,7 @@ public:
 };
 
 /*The base interface of all INN - Основа всех интерфейсов нейронных сетей*/
-class IBaseNN
+class IBaseNN : public PolymorphicBase
 {
 protected:
 	virtual void forward() = 0;
@@ -90,13 +93,12 @@ public:
 	struct InputValue : public BaseArgs {};
 	virtual void inference() = 0;
 	virtual void setInputStates(const InputValue* input_state) = 0;
-	virtual OutputValue getOutputStates() = 0;
+	virtual const OutputValue * getOutputStates() = 0;
 	virtual void load() = 0;
 	virtual void setLoader(IBaseLoader* loader) = 0;
 	virtual void setComputeBlock(IComputeBlock* compute_block) = 0;
-	virtual ~IBaseNN() = 0;
 };
-IBaseNN::~IBaseNN() {}
+
 /*The base interface of all INN with train - Основа всех интерфейсов нейронных сетей с обучением*/
 class IBaseTrainableNN : public IBaseNN {
 public:

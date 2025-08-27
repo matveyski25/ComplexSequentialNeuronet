@@ -10,9 +10,15 @@ public:
 		this->BaseNN::operator=(other);
 		this->hidden_size = other.hidden_size;
 	}
+	std::string getTypeRealization() override {
+		return "BaseRNN";
+	}
 };
 
 class BaseTrainableRNN : virtual public BaseRNN, virtual public BaseTrainableNN
 {
-
+public:
+	std::string getTypeRealization() override {
+		return "BaseTrainableRNN";
+	}
 };

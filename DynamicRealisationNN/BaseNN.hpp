@@ -6,14 +6,18 @@
 class BaseNN : public IBaseNN
 {
 protected:
-	std::uint64_t input_size;
-	std::uint64_t output_size;
 	std::unique_ptr<IBaseLoader> loader;
+	std::unique_ptr<InputValue> input_value;
+	std::unique_ptr<OutputValue> output_value;
 public:
 	BaseNN& operator=(const BaseNN& other) {
-		this->input_size = other.input_size;
-		this->output_size = other.output_size;
 		*(this->loader) = *(other.loader);
+
+		*(this->input_value) = *(other.input_value);
+		*(this->output_value) = *(other.output_value);
+	}
+	std::string getTypeRealization() override {
+		return "BaseNN";
 	}
 };
 
@@ -26,6 +30,9 @@ public:
 		this->BaseNN::operator=(other);
 		*(this->saver) = *(other.saver);
 	}
+	std::string getTypeRealization() override {
+		return "BaseTrainableNN";
+	}
 };
 
 class BaseLoader : public IBaseLoader
@@ -35,6 +42,9 @@ protected:
 public:
 	BaseLoader& operator=(const BaseLoader& other) {
 		*(this->args_loader) = *(other.args_loader);
+	}
+	std::string getTypeRealization() override {
+		return "BaseLoader";
 	}
 };
 
@@ -46,17 +56,27 @@ public:
 	BaseSaver& operator=(const BaseSaver& other) {
 		*(this->args_saver) = *(other.args_saver);
 	}
+	std::string getTypeRealization() override {
+		return "BaseSaver";
+	}
 };
 
 class BaseComputeBlock : public IComputeBlock 
 {
 protected:
+	std::uint64_t input_size;
+	std::uint64_t output_size;
 	std::unique_ptr<ValuesForCompute> values_for_compute;
 	std::unique_ptr<IOValues> io_values;
 public:
 	BaseComputeBlock& operator=(const BaseComputeBlock& other) {
+		this->input_size = other.input_size;
+		this->output_size = other.output_size;
 		*(this->values_for_compute) = *(other.values_for_compute);
 		*(this->io_values) = *(other.io_values);
+	}
+	std::string getTypeRealization() override {
+		return "BaseComputeBlock";
 	}
 };
 
@@ -74,6 +94,9 @@ public:
 		*(this->opimizer) = *(other.opimizer);
 		*(this->gradients) = *(other.gradients);
 		*(this->intermediate_values) = *(other.intermediate_values);
+	}
+	std::string getTypeRealization() override {
+		return "BaseTrainableComputeBlock";
 	}
 };
 

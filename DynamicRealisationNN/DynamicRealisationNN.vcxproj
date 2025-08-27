@@ -23,10 +23,12 @@
     <ClInclude Include="BaseNN.hpp" />
     <ClInclude Include="BaseRNN.hpp" />
     <ClInclude Include="FunctionsActivate.hpp" />
+    <ClInclude Include="Realization_BaseLSTM_1.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="RealizationMatrix.hpp" />
+    <ClCompile Include="Realization_BaseLSTM_1.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
