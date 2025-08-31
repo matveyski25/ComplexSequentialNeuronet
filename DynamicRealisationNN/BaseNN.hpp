@@ -1,7 +1,6 @@
 #pragma once
 
 #include "BaseINN.hpp"
-#include <memory>
 
 class BaseNN : public IBaseNN
 {
