@@ -1,0 +1,153 @@
+#pragma once
+#include<type_traits>
+#include<memory>
+#include "RealizationMatrix.hpp"
+
+
+namespace MyNN {
+	TEMPLATE_ARITH(T) 
+	class IComputeBlockNN {
+	public:
+		/*The structure inherited from the base interface IBaseArgs - Структура наследующаяся от общей IBaseArgs*/
+		struct ValuesForCompute
+		{
+			struct Weights {};
+			struct Bias {};
+		};
+		virtual void setValuesForCompute(ValuesForCompute* values) = 0;
+		virtual void setInput(LinearAlgebra::BaseMatrix<T>  input) = 0;
+		virtual LinearAlgebra::BaseMatrix<T> getOutput() = 0;
+		virtual void compute() = 0;
+
+	};
+	TEMPLATE_ARITH(T) 
+	class ITrainableComputeBlockNN : public IComputeBlockNN<T> {
+	protected:
+		/*The struct for intermediate values from computing for future trining - Структура для промежуточных значений для будущего обучения*/
+		struct IntermediateValues {};
+	public:
+		class ISaver {
+			struct ArgsSaver {};
+			virtual void save(IComputeBlockNN<T>* compute_block) = 0;
+			virtual void setArgsForSave(ArgsSaver* args) = 0;
+		};
+		
+		class ILoader {
+		public:
+			struct ArgsLoader {};
+			virtual void load(IComputeBlockNN<T>* compute_block) = 0;
+			virtual void setArgsForLoad(ArgsLoader* args) = 0;
+		};
+
+		class IOptimizer {
+		public:
+			struct ArgsOptimizer {};
+			struct Gradients : IComputeBlockNN<T>::ValuesForCompute {};
+			virtual void optimize(ArgsOptimizer* values) = 0;
+			virtual void setArgsForOptimize(const Gradients* gradients, IComputeBlockNN<T>::ValuesForCompute* values_for_compute) = 0;
+		};
+
+		class IRandomizer {
+		public:
+			struct ArgsRandomizer {};
+			virtual void randomize(IComputeBlockNN<T>::ValuesForCompute* values_for_compute) = 0;
+			virtual void setArgsForRandomize(ArgsRandomizer* args) = 0;
+		};
+
+		virtual void setSaver(ISaver* saver) = 0;
+		virtual const ISaver* getSaver() = 0;
+
+		virtual void setLoader(ILoader* loader) = 0;
+		virtual const ILoader* getLoader() = 0;
+
+		virtual void setOptimizer(IOptimizer* optimizer) = 0;
+		virtual const IOptimizer* getOptimizer() = 0;
+
+		virtual void setRandomizer(IRandomizer* randomizer) = 0;
+		virtual const IRandomizer* getRandomizer() = 0;
+	};
+
+	TEMPLATE_ARITH(T) 
+	class IBaseNN {
+	protected:
+		virtual void forward() = 0;
+	public:
+		struct OutputValue {};
+		struct InputValue {};
+
+		virtual void inference() = 0;
+		virtual void setInputState(InputValue input_state) = 0;
+		virtual InputValue getInputState() = 0;
+		virtual OutputValue getOutputState() = 0;
+		virtual void setComputeBlock(IComputeBlockNN<T>* compute_block) = 0;
+		virtual const IComputeBlockNN<T>* getComputeBlock() = 0;
+	};
+	TEMPLATE_ARITH(T) 
+	class IBaseTrainableNN : public IBaseNN<T> {};
+
+	TEMPLATE_ARITH(T) 
+	class ComputeBlockNN : public IComputeBlockNN<T> {
+	protected:
+		ValuesForCompute values_for_compute_;
+	public:
+		ComputeBlockNN& operator=(const ComputeBlockNN& other) {
+			this->values_for_compute_ = other.values_for_compute_;
+		}
+		ComputeBlockNN& operator=(ComputeBlockNN&& other) {
+			this->values_for_compute_ = other.values_for_compute_;
+		}
+	};
+	TEMPLATE_ARITH(T)
+	class ITrainableComputeBlockNN : public ComputeBlockNN<T>, public ITrainableComputeBlockNN<T> {
+	protected:
+		std::unique_ptr<ISaver> saver_;
+		std::unique_ptr<ILoader> loader_;
+		std::unique_ptr<IOptimizer> optimizer_;
+		std::unique_ptr<IRandomizer> randomizer_;
+		IntermediateValues intermediate_values_;
+	public:
+		ITrainableComputeBlockNN& operator=(const ITrainableComputeBlockNN& other) {
+			*(this->saver_) = *(other.saver);
+			*(this->loader_) = *(other.loader_);
+			*(this->optimizer_) = *(other.optimizer_);
+			*(this->randomizer_) = *(other.randomizer_);
+			this->intermediate_values_ = other.intermediate_values_;
+			ComputeBlockNN<T>::operator=(other);
+		}
+		ITrainableComputeBlockNN& operator=(ITrainableComputeBlockNN&& other) {
+			this->saver = std::move(other.saver);
+			this->loader_ = std::move(other.loader_);
+			this->optimizer_ = std::move(other.optimizer_);
+			this->randomizer_ = std::move(other.randomizer_);
+			this->intermediate_values_ = other.intermediate_values_;
+			ComputeBlockNN<T>::operator=(std::move(other));
+			other.saver_ = nullptr;
+			other.loader_ = nullptr;
+			other.optimizer_ = nullptr;
+			other.randomizer_ = nullptr;
+		}
+	};
+	
+	TEMPLATE_ARITH(T)
+	class BaseNN : public IBaseNN<T> {
+	protected:
+		InputValue input_state_;
+		OutputValue output_state_;
+		std::unique_ptr<ComputeBlockNN> compute_block_;
+		BaseNN& operator=(const BaseNN& other) {
+			*(this->compute_block_) = *(other.compute_block_);
+			this->input_state_ = other.input_state_;
+			this->ouput_state_ = other.ouput_state_;
+			ComputeBlockNN<T>::operator=(other);
+		}
+		BaseNN& operator=(BaseNN&& other) {
+			this->compute_block = std::move(other.compute_block_);
+			this->input_state_ = std::move(other.input_state_);
+			this->ouput_state_ = std::move(other.ouput_state_);
+			ComputeBlockNN<T>::operator=(std::move(other));
+			other.compute_block_ = nullptr;
+		}
+	};
+	TEMPLATE_ARITH(T)
+	class BaseTrainableNN : public IBaseTrainableNN<T>, public BaseNN<T> {};
+}
