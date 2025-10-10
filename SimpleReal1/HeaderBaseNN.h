@@ -5,7 +5,7 @@
 
 
 namespace MyNN {
-	TEMPLATE_ARITH(T) 
+	template<typename T = float, typename = std::enable_if_t<std::is_arithmetic_v<T>>> 
 	class IComputeBlockNN {
 	public:
 		/*The structure inherited from the base interface IBaseArgs - Структура наследующаяся от общей IBaseArgs*/
@@ -19,7 +19,7 @@ namespace MyNN {
 		virtual void compute() = 0;
 
 	};
-	TEMPLATE_ARITH(T) 
+	template<typename T = float, typename = std::enable_if_t<std::is_arithmetic_v<T>>> 
 	class ITrainableComputeBlockNN : public IComputeBlockNN<T> {
 	protected:
 		/*The struct for intermediate values from computing for future trining - Структура для промежуточных значений для будущего обучения*/
@@ -66,13 +66,13 @@ namespace MyNN {
 		virtual const IRandomizer* getRandomizer() = 0;
 	};
 
-	TEMPLATE_ARITH(T) 
+	template<typename T = float, typename = std::enable_if_t<std::is_arithmetic_v<T>>> 
 	class IBaseNN {
 	protected:
 		virtual void forward() = 0;
 	public:
-		struct OutputValue {};
 		struct InputValue {};
+		struct OutputValue {};
 
 		virtual void inference() = 0;
 		virtual void setInputState(InputValue input_state) = 0;
@@ -81,10 +81,10 @@ namespace MyNN {
 		virtual void setComputeBlock(IComputeBlockNN<T>* compute_block) = 0;
 		virtual const IComputeBlockNN<T>* getComputeBlock() = 0;
 	};
-	TEMPLATE_ARITH(T) 
+	template<typename T = float, typename = std::enable_if_t<std::is_arithmetic_v<T>>> 
 	class IBaseTrainableNN : public IBaseNN<T> {};
 
-	TEMPLATE_ARITH(T)
+	template<typename T = float, typename = std::enable_if_t<std::is_arithmetic_v<T>>>
 	class ComputeBlockNN : public IComputeBlockNN<T> {
 	protected:
 		std::uint64_t input_size;
@@ -102,7 +102,7 @@ namespace MyNN {
 			this->output_size = std::move(other.output_size);
 		}
 	};
-	TEMPLATE_ARITH(T)
+	template<typename T = float, typename = std::enable_if_t<std::is_arithmetic_v<T>>>
 	class TrainableComputeBlockNN : public ComputeBlockNN<T>, public ITrainableComputeBlockNN<T> {
 	protected:
 		std::unique_ptr<ISaver> saver_;
@@ -111,15 +111,15 @@ namespace MyNN {
 		std::unique_ptr<IRandomizer> randomizer_;
 		IntermediateValues intermediate_values_;
 	public:
-		ITrainableComputeBlockNN<T>& operator=(const ITrainableComputeBlockNN<T> & other) {
-			*(this->saver_) = *(other.saver);
+		TrainableComputeBlockNN<T>& operator=(const TrainableComputeBlockNN<T> & other) {
+			*(this->saver_) = *(other.saver_);
 			*(this->loader_) = *(other.loader_);
 			*(this->optimizer_) = *(other.optimizer_);
 			*(this->randomizer_) = *(other.randomizer_);
 			this->intermediate_values_ = other.intermediate_values_;
 			ComputeBlockNN<T>::operator=(other);
 		}
-		ITrainableComputeBlockNN<T>& operator=(ITrainableComputeBlockNN<T>&& other) {
+		TrainableComputeBlockNN<T>& operator=(TrainableComputeBlockNN<T>&& other) {
 			this->saver_ = std::move(other.saver_);
 			this->loader_ = std::move(other.loader_);
 			this->optimizer_ = std::move(other.optimizer_);
@@ -133,7 +133,7 @@ namespace MyNN {
 		}
 	};
 	
-	TEMPLATE_ARITH(T)
+	template<typename T = float, typename = std::enable_if_t<std::is_arithmetic_v<T>>>
 	class BaseNN : public IBaseNN<T> {
 	protected:
 		InputValue input_state_;
@@ -153,6 +153,6 @@ namespace MyNN {
 			other.compute_block_ = nullptr;
 		}
 	};
-	TEMPLATE_ARITH(T)
+	template<typename T = float, typename = std::enable_if_t<std::is_arithmetic_v<T>>>
 	class BaseTrainableNN : public IBaseTrainableNN<T>, public BaseNN<T> {};
 }

@@ -124,6 +124,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="FunctionsActivate.hpp" />
+    <ClInclude Include="LSTM.h" />
     <ClInclude Include="HeaderBaseNN.h" />
     <ClInclude Include="HeaderBaseRNN.h" />
     <ClInclude Include="RealizationMatrix.hpp" />

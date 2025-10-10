@@ -16,6 +16,9 @@
     <Filter Include="Файлы заголовков\Matrix">
       <UniqueIdentifier>{b04c3e76-9f08-46ea-99e1-53a3b13691cc}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Файлы заголовков\RNN">
+      <UniqueIdentifier>{9b52b4c1-33a3-49dd-b8d4-116ed704a277}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="FunctionsActivate.hpp">
@@ -29,6 +32,9 @@
     </ClInclude>
     <ClInclude Include="HeaderBaseRNN.h">
       <Filter>Файлы заголовков</Filter>
+    </ClInclude>
+    <ClInclude Include="LSTM.h">
+      <Filter>Файлы заголовков\RNN</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

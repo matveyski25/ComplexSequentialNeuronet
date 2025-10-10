@@ -17,14 +17,14 @@ namespace LinearAlgebra {}
 #pragma warning(pop)
 #endif // _MSC_VER
 
-#define TEMPLATE_ARITH(T) template<typename T = float, typename = std::enable_if_t<std::is_arithmetic_v<T>>>
+//#define template<typename T = float, typename = std::enable_if_t<std::is_arithmetic_v<T>>> template<typename T = float, typename = std::enable_if_t<std::is_arithmetic_v<T>>>
 
 namespace LinearAlgebra {
-	TEMPLATE_ARITH(T)
+	template<typename T = float, typename = std::enable_if_t<std::is_arithmetic_v<T>>>
 	using BaseMatrix = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>;
-	TEMPLATE_ARITH(T) 
+	template<typename T = float, typename = std::enable_if_t<std::is_arithmetic_v<T>>> 
 	using BaseRowVector = Eigen::Matrix<T, 1, Eigen::Dynamic>; // Вектор-строка
-	TEMPLATE_ARITH(T) 
+	template<typename T = float, typename = std::enable_if_t<std::is_arithmetic_v<T>>> 
 	using BaseVector = Eigen::Matrix<T, Eigen::Dynamic, 1>;    // Вектор-столбец
 }
 
