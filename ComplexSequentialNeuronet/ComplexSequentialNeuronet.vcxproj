@@ -156,8 +156,8 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>..\x64\$(Configuration)%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>ActivateFunctionsForNN.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -212,19 +212,16 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="ActivateFunctionsForNN.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="Seq2seqWithAttention.cpp" />
     <ClCompile Include="LSTM_and_BiLSTM.cpp" />
     <ClCompile Include="Seq2seqWithAttention_ForTrain.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="HeaderActivateFunctionsForNN.h" />
     <ClInclude Include="HeaderSeq2seqWithAttention.h" />
     <ClInclude Include="HeaderLSTM_and_BiLSTM.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\ActivateFunctionsForNN\ActivateFunctionsForNN.vcxproj">
-      <Project>{4538c3f6-97f9-459a-bd62-9c0d4a4be587}</Project>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
