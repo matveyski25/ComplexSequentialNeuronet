@@ -27,5 +27,8 @@
     <ClInclude Include="HeaderBaseNN.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
+    <ClInclude Include="HeaderBaseRNN.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

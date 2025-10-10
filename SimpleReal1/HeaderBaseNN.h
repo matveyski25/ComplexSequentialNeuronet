@@ -9,8 +9,7 @@ namespace MyNN {
 	class IComputeBlockNN {
 	public:
 		/*The structure inherited from the base interface IBaseArgs - Структура наследующаяся от общей IBaseArgs*/
-		struct ValuesForCompute
-		{
+		struct ValuesForCompute {
 			struct Weights {};
 			struct Bias {};
 		};
@@ -85,20 +84,26 @@ namespace MyNN {
 	TEMPLATE_ARITH(T) 
 	class IBaseTrainableNN : public IBaseNN<T> {};
 
-	TEMPLATE_ARITH(T) 
+	TEMPLATE_ARITH(T)
 	class ComputeBlockNN : public IComputeBlockNN<T> {
 	protected:
+		std::uint64_t input_size;
+		std::uint64_t output_size;
 		ValuesForCompute values_for_compute_;
 	public:
-		ComputeBlockNN& operator=(const ComputeBlockNN& other) {
+		ComputeBlockNN<T>& operator=(const ComputeBlockNN<T>& other) {
 			this->values_for_compute_ = other.values_for_compute_;
+			this->input_size = other.input_size;
+			this->output_size = other.output_size;
 		}
-		ComputeBlockNN& operator=(ComputeBlockNN&& other) {
-			this->values_for_compute_ = other.values_for_compute_;
+		ComputeBlockNN<T>& operator=(ComputeBlockNN<T>&& other) {
+			this->values_for_compute_ = std::move(other.values_for_compute_);
+			this->input_size = std::move(other.input_size);
+			this->output_size = std::move(other.output_size);
 		}
 	};
 	TEMPLATE_ARITH(T)
-	class ITrainableComputeBlockNN : public ComputeBlockNN<T>, public ITrainableComputeBlockNN<T> {
+	class TrainableComputeBlockNN : public ComputeBlockNN<T>, public ITrainableComputeBlockNN<T> {
 	protected:
 		std::unique_ptr<ISaver> saver_;
 		std::unique_ptr<ILoader> loader_;
@@ -106,7 +111,7 @@ namespace MyNN {
 		std::unique_ptr<IRandomizer> randomizer_;
 		IntermediateValues intermediate_values_;
 	public:
-		ITrainableComputeBlockNN& operator=(const ITrainableComputeBlockNN& other) {
+		ITrainableComputeBlockNN<T>& operator=(const ITrainableComputeBlockNN<T> & other) {
 			*(this->saver_) = *(other.saver);
 			*(this->loader_) = *(other.loader_);
 			*(this->optimizer_) = *(other.optimizer_);
@@ -114,8 +119,8 @@ namespace MyNN {
 			this->intermediate_values_ = other.intermediate_values_;
 			ComputeBlockNN<T>::operator=(other);
 		}
-		ITrainableComputeBlockNN& operator=(ITrainableComputeBlockNN&& other) {
-			this->saver = std::move(other.saver);
+		ITrainableComputeBlockNN<T>& operator=(ITrainableComputeBlockNN<T>&& other) {
+			this->saver_ = std::move(other.saver_);
 			this->loader_ = std::move(other.loader_);
 			this->optimizer_ = std::move(other.optimizer_);
 			this->randomizer_ = std::move(other.randomizer_);

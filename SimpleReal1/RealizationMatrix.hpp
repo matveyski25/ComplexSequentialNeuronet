@@ -17,7 +17,7 @@ namespace LinearAlgebra {}
 #pragma warning(pop)
 #endif // _MSC_VER
 
-#define TEMPLATE_ARITH(T) template<typename T, typename = std::enable_if_t<std::is_arithmetic_v<T>>>
+#define TEMPLATE_ARITH(T) template<typename T = float, typename = std::enable_if_t<std::is_arithmetic_v<T>>>
 
 namespace LinearAlgebra {
 	TEMPLATE_ARITH(T)
