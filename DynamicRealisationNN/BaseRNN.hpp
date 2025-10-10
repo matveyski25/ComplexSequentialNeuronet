@@ -1,6 +1,9 @@
 #pragma once
 #include "BaseNN.hpp"
+class IBaseRNN : IBaseNN 
+{
 
+};
 class BaseRNN : virtual public IBaseRNN,  virtual public BaseNN
 {
 protected:

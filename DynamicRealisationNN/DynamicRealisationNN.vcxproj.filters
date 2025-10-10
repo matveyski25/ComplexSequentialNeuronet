@@ -28,22 +28,40 @@
     <Filter Include="Файлы заголовков\Base">
       <UniqueIdentifier>{0eb16fe3-5a99-4c25-822e-807d188a6662}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Файлы заголовков\Base\AlgebraObjects">
+      <UniqueIdentifier>{97c89c28-3bdc-465e-a7f0-6fb8d62f1dd6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Файлы заголовков\Base\Templates">
+      <UniqueIdentifier>{ee98de83-e3d1-47d1-bafd-03b735f5e926}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Файлы заголовков\Base\Templates\NN">
+      <UniqueIdentifier>{9f4331fa-2a00-4a9c-9acd-bd979d48d644}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Файлы заголовков\Base\Templates\Components">
+      <UniqueIdentifier>{f948c499-8d6c-4fcb-8be2-48c6dbdfa162}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="BaseINN.hpp">
-      <Filter>Файлы заголовков\Base</Filter>
-    </ClInclude>
-    <ClInclude Include="BaseNN.hpp">
-      <Filter>Файлы заголовков\Base</Filter>
-    </ClInclude>
-    <ClInclude Include="FunctionsActivate.hpp">
-      <Filter>Файлы заголовков\Base</Filter>
-    </ClInclude>
     <ClInclude Include="BaseRNN.hpp">
       <Filter>Файлы заголовков\RNN</Filter>
     </ClInclude>
     <ClInclude Include="Realization_BaseLSTM_1.hpp">
       <Filter>Файлы заголовков\RNN\Realization1</Filter>
+    </ClInclude>
+    <ClInclude Include="FunctionsActivate.hpp">
+      <Filter>Файлы заголовков\Base\AlgebraObjects</Filter>
+    </ClInclude>
+    <ClInclude Include="BaseINN.hpp">
+      <Filter>Файлы заголовков\Base\Templates\NN</Filter>
+    </ClInclude>
+    <ClInclude Include="BaseNN.hpp">
+      <Filter>Файлы заголовков\Base\Templates\NN</Filter>
+    </ClInclude>
+    <ClInclude Include="BaseINNComponents.hpp">
+      <Filter>Файлы заголовков\Base\Templates\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="BaseNNComponents.hpp">
+      <Filter>Файлы заголовков\Base\Templates\Components</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -54,7 +72,7 @@
       <Filter>Исходные файлы\RNN\Realization1</Filter>
     </ClCompile>
     <ClCompile Include="RealizationMatrix.hpp">
-      <Filter>Файлы заголовков\Base</Filter>
+      <Filter>Файлы заголовков\Base\AlgebraObjects</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

@@ -20,7 +20,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BaseINN.hpp" />
+    <ClInclude Include="BaseINNComponents.hpp" />
     <ClInclude Include="BaseNN.hpp" />
+    <ClInclude Include="BaseNNComponents.hpp" />
     <ClInclude Include="BaseRNN.hpp" />
     <ClInclude Include="FunctionsActivate.hpp" />
     <ClInclude Include="Realization_BaseLSTM_1.hpp" />
