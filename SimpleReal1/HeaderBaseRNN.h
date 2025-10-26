@@ -18,7 +18,6 @@ namespace MyNN {
 		class ComputeBlockRNN : public ComputeBlockNN<T, Enable>, public IComputeBlockRNN<T, Enable> {
 		protected:
 			std::unique_ptr<typename IComputeBlockRNN<T, Enable>::NState> n_state_;
-			
 			std::uint64_t hidden_size_;
 			std::uint64_t max_steps_;
 		public:
