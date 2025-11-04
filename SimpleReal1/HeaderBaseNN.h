@@ -49,13 +49,13 @@ namespace MyNN {
         virtual void setArgsForRandomize(ArgsRandomizer*) = 0;
     };
 
-        virtual void setSaver(std::unique_ptr <ISaver>&& saver) = 0; 
+        virtual void setSaver(std::unique_ptr <ISaver>) = 0; 
         virtual const ISaver* getSaver() = 0;
-        virtual void setLoader(std::unique_ptr <ILoader>&& loader) = 0;
+        virtual void setLoader(std::unique_ptr <ILoader>) = 0;
         virtual const ILoader* getLoader() = 0;
-        virtual void setOptimizer(std::unique_ptr <IOptimizer>&& optimizer) = 0;
+        virtual void setOptimizer(std::unique_ptr <IOptimizer>) = 0;
         virtual const IOptimizer* getOptimizer() = 0;
-        virtual void setRandomizer(std::unique_ptr <IRandomizer>&& randomizer) = 0;
+        virtual void setRandomizer(std::unique_ptr <IRandomizer>) = 0;
         virtual const IRandomizer* getRandomizer() = 0;
     };
 
@@ -71,10 +71,10 @@ namespace MyNN {
         virtual void setInputState(InputValue) = 0;
         virtual InputValue getInputState() = 0;
         virtual OutputValue getOutputState() = 0;
-        virtual void setComputeBlock(std::unique_ptr<IComputeBlockNN<T, Enable>> &&) = 0;
+        virtual void setComputeBlock(std::unique_ptr<IComputeBlockNN<T, Enable>>) = 0;
         virtual const IComputeBlockNN<T, Enable>* getComputeBlock() = 0;
 
-        virtual void setTranslatorMatrix(std::unique_ptr<ITranslatorMatrix<T, Enable>>&&) = 0;
+        virtual void setTranslatorMatrix(std::unique_ptr<ITranslatorMatrix<T, Enable>>) = 0;
         virtual const ITranslatorMatrix<T, Enable>* getTranslatorMatrix() = 0;
         virtual ~IBaseNN() = default;
     };
@@ -118,7 +118,7 @@ namespace MyNN {
         std::unique_ptr<Loader> loader_;
         std::unique_ptr<Optim> optimizer_;
         std::unique_ptr<Random> randomizer_;
-        Intermediate intermediate_values_;
+        std::unique_ptr<Intermediate> intermediate_values;
 
     public:
         TrainableComputeBlockNN& operator=(const TrainableComputeBlockNN& other);
@@ -137,11 +137,13 @@ namespace MyNN {
 
         void forward() override;
     public:
+        BaseNN(std::unique_ptr<IComputeBlockNN<T, Enable>>, std::unique_ptr<ITranslatorMatrix<T, Enable>>);
+
         BaseNN& operator=(const BaseNN& other);
         BaseNN& operator=(BaseNN&& other) noexcept;
         void inference() override;
-        void setComputeBlock(std::unique_ptr<IComputeBlockNN<T, Enable>>&&) override;
-        void setTranslatorMatrix(std::unique_ptr<ITranslatorMatrix<T, Enable>>&& translator) override;
+        void setComputeBlock(std::unique_ptr<IComputeBlockNN<T, Enable>> compute_block) override;
+        void setTranslatorMatrix(std::unique_ptr<ITranslatorMatrix<T, Enable>> translator) override;
         const IComputeBlockNN<T, Enable>* getComputeBlock() override;
         const ITranslatorMatrix<T, Enable>* getTranslatorMatrix() override;
     };

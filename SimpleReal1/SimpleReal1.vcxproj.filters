@@ -19,6 +19,9 @@
     <Filter Include="Файлы заголовков\RNN">
       <UniqueIdentifier>{9b52b4c1-33a3-49dd-b8d4-116ed704a277}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Исходные файлы\RNN">
+      <UniqueIdentifier>{5a7652a8-ea5f-4dbb-985e-51fc2121333b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="FunctionsActivate.hpp">
@@ -45,7 +48,7 @@
       <Filter>Исходные файлы</Filter>
     </ClCompile>
     <ClCompile Include="LSTM.cpp">
-      <Filter>Исходные файлы</Filter>
+      <Filter>Исходные файлы\RNN</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

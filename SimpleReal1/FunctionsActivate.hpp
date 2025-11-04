@@ -24,19 +24,19 @@ namespace FunctionsActivate {
 	BaseMatrix<T, Enable> baseSigmoid(const BaseMatrix<T, Enable>& matx, double norm) {
 		return matx.unaryExpr([&](T x) {
 			x = std::max(-norm, std::min(norm, x)); // Ограничение
-			return static_cast<T, Enable>(1 / (1 + std::exp(-x)));
+			return static_cast<T>(1 / (1 + std::exp(-x)));
 			});
 	}
 	template<typename T = float, typename Enable = std::enable_if_t<std::is_arithmetic_v<T>>> 
 	BaseMatrix<T, Enable> baseTanh(const BaseMatrix<T, Enable>& matx, double norm) {
 		return matx.unaryExpr([&](T x) {
 			x = std::max(-norm, std::min(norm, x));
-			return static_cast<T, Enable>(std::tanh(x));
+			return static_cast<T>(std::tanh(x));
 			});
 	}
 	template<typename T = float, typename Enable = std::enable_if_t<std::is_arithmetic_v<T>>> 
 	BaseMatrix<T, Enable> baseReLU(const BaseMatrix<T, Enable>& matx) {
-		return matx.unaryExpr([](T x) { return static_cast<T, Enable>(std::max(T(0), x)); });
+		return matx.unaryExpr([](T x) { return static_cast<T>(std::max(T(0), x)); });
 	}
 	template<typename T = float, typename Enable = std::enable_if_t<std::is_arithmetic_v<T>>> 
 	BaseMatrix<T, Enable> baseLeakyReLU(const BaseMatrix<T, Enable>& matx, const BaseMatrix<T, Enable>& a) {
@@ -61,7 +61,7 @@ namespace FunctionsActivate {
 			for (Eigen::Index j = 0; j < matx.cols(); ++j) {
 				result(i, j) = (matx(i, j) >= T(0))
 					? matx(i, j)
-					: static_cast<T, Enable>(a * matx(i, j));
+					: static_cast<T>(a * matx(i, j));
 			}
 		}
 		return result;
@@ -75,7 +75,7 @@ namespace FunctionsActivate {
 		return matx.binaryExpr(b, [&](T m, T bb) {
 			double x = m * bb;
 			x = std::max(-norm, std::min(norm, x));
-			return static_cast<T, Enable>(m * (1.0 / (1.0 + std::exp(-x))));
+			return static_cast<T>(m * (1.0 / (1.0 + std::exp(-x))));
 			});
 	}
 	template<typename T = float, typename Enable = std::enable_if_t<std::is_arithmetic_v<T>>> 
@@ -83,7 +83,7 @@ namespace FunctionsActivate {
 		return matx.unaryExpr([&](T m) {
 			double x = m * b;
 			x = std::max(-norm, std::min(norm, x));
-			return static_cast<T, Enable>(m * (1.0 / (1.0 + std::exp(-x))));
+			return static_cast<T>(m * (1.0 / (1.0 + std::exp(-x))));
 			});
 	}
 	template<typename T = float, typename Enable = std::enable_if_t<std::is_arithmetic_v<T>>> 
@@ -97,7 +97,7 @@ namespace FunctionsActivate {
 		double x_max = x_clamped.maxCoeff();
 
 		// 3) Вычисляем экспоненты от (x - max)
-		BaseVector<T, Enable> exp_x = (x_clamped.array() - static_cast<T, Enable>(x_max)).exp();
+		BaseVector<T, Enable> exp_x = (x_clamped.array() - static_cast<T>(x_max)).exp();
 
 		// 4) Сумма с eps
 		double sum_exp = exp_x.sum() + eps;
@@ -116,7 +116,7 @@ namespace FunctionsActivate {
 		double x_max = x_clamped.maxCoeff();
 
 		// 3) Вычисляем экспоненты от (x - max)
-		BaseRowVector<T, Enable> exp_x = (x_clamped.array() - static_cast<T, Enable>(x_max)).exp();
+		BaseRowVector<T, Enable> exp_x = (x_clamped.array() - static_cast<T>(x_max)).exp();
 
 		// 4) Сумма с eps
 		double sum_exp = exp_x.sum() + eps;

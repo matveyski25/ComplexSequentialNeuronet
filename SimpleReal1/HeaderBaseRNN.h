@@ -35,6 +35,6 @@ namespace MyNN {
 		template<typename T = float, typename Enable = std::enable_if_t<std::is_arithmetic_v<T>>>
 		class BaseRNN : public BaseNN<T, Enable> {};
 		template<typename T = float, typename Enable = std::enable_if_t<std::is_arithmetic_v<T>>>
-		class TrainableBaseRNN : virtual public BaseTrainableNN<T, Enable>, virtual public BaseRNN<T, Enable> {};
+		class BaseTrainableRNN : virtual public BaseTrainableNN<T, Enable>, virtual public BaseRNN<T, Enable> {};
 	}
 }

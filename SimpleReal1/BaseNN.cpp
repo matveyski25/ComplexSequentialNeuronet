@@ -3,11 +3,7 @@ namespace MyNN{
     template<typename T, typename Enable>
     ComputeBlockNN<T, Enable>& ComputeBlockNN<T, Enable>::operator=(const ComputeBlockNN& other) {
         if (this != &other) {
-            if (other.values_for_compute_) {
-                if (!values_for_compute_) values_for_compute_ = std::make_unique<Values>();
-                *values_for_compute_ = *(other.values_for_compute_);
-            }
-            else values_for_compute_.reset();
+            *this->values_for_compute_ = *(other.values_for_compute_);
 
             input_state_ = other.input_state_;
             input_size_ = other.input_size_;
@@ -32,31 +28,37 @@ namespace MyNN{
     template<typename T, typename Enable>
     TrainableComputeBlockNN<T, Enable>& TrainableComputeBlockNN<T, Enable>::operator=(const TrainableComputeBlockNN& other) {
         if (this != &other) {
-            *saver_ = *(other.saver_);
-            *loader_ = *(other.loader_);
-            *optimizer_ = *(other.optimizer_);
-            *randomizer_ = *(other.randomizer_);
-            intermediate_values_ = other.intermediate_values_;
+            *this->saver_ = *(other.saver_);
+            *this->loader_ = *(other.loader_);
+            *this->optimizer_ = *(other.optimizer_);
+            *this->randomizer_ = *(other.randomizer_);
+            *this->intermediate_values_ = *(other.intermediate_values_);
             ComputeBlockNN<T, Enable>::operator=(other);
         }
         return *this;
     }
     template<typename T, typename Enable>
     TrainableComputeBlockNN<T, Enable>& TrainableComputeBlockNN<T, Enable>::operator=(TrainableComputeBlockNN && other) noexcept {
-        saver_ = std::move(other.saver_);
-        loader_ = std::move(other.loader_);
-        optimizer_ = std::move(other.optimizer_);
-        randomizer_ = std::move(other.randomizer_);
-        intermediate_values_ = other.intermediate_values_;
+        this->saver_ = std::move(other.saver_);
+        this->loader_ = std::move(other.loader_);
+        this->optimizer_ = std::move(other.optimizer_);
+        this->randomizer_ = std::move(other.randomizer_);
+        this->intermediate_values_ = std::move(other.intermediate_values_);
         ComputeBlockNN<T, Enable>::operator=(std::move(other));
         other.saver_ = nullptr;
         other.loader_ = nullptr;
         other.optimizer_ = nullptr;
         other.randomizer_ = nullptr;
+        other.intermediate_values_ = nullptr;
         return *this;
     }
 
-    
+    template<typename T, typename Enable>
+    BaseNN<T, Enable>::BaseNN(std::unique_ptr<IComputeBlockNN<T, Enable>> compute_block, std::unique_ptr<ITranslatorMatrix<T, Enable>> translator_matrix)
+    {
+        this->compute_block_ = std::move(compute_block);
+        this->translator_ = std::move(translator_matrix);
+    }
     template<typename T, typename Enable>
     BaseNN<T, Enable>& BaseNN<T, Enable>::operator=(const BaseNN& other) {
         if (this != &other) {
@@ -83,17 +85,17 @@ namespace MyNN{
     }
     template<typename T, typename Enable>
     void BaseNN<T, Enable>::forward() {
-        auto input = (*translator_)(input_state_);
+        auto input = (*this->translator_)(input_state_);
         compute_block_->setInput(input);
         compute_block_->compute();
     }
     template<typename T, typename Enable>
-    void BaseNN<T, Enable>::setComputeBlock(std::unique_ptr<IComputeBlockNN<T, Enable>> && compute_block) {
-        this->compute_block_ = compute_block;
+    void BaseNN<T, Enable>::setComputeBlock(std::unique_ptr<IComputeBlockNN<T, Enable>> compute_block) {
+        this->compute_block_ = std::move(compute_block);
     }
     template<typename T, typename Enable>
-    void BaseNN<T, Enable>::setTranslatorMatrix(std::unique_ptr<ITranslatorMatrix<T, Enable>>&& translator) {
-        this->translator_ = translator;
+    void BaseNN<T, Enable>::setTranslatorMatrix(std::unique_ptr<ITranslatorMatrix<T, Enable>> translator) {
+        this->translator_ = std::move(translator);
     }
     template<typename T, typename Enable>
     const IComputeBlockNN<T, Enable>* BaseNN<T, Enable>::getComputeBlock() {
@@ -101,6 +103,8 @@ namespace MyNN{
     }
     template<typename T, typename Enable>
     const ITranslatorMatrix<T, Enable>* BaseNN<T, Enable>::getTranslatorMatrix() {
-        return this->translator_;
+        return this->translator_.get();
     }
 }
+
+//TODO Сделать проверку на самоприсваивание в операторах присваивания
