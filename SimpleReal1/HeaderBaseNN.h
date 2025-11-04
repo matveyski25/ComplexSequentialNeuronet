@@ -134,30 +134,12 @@ namespace MyNN {
         void setInput(LinearAlgebra::BaseMatrix<T, Enable> input) override;
 
         class Loader : public IComputeBlockNN<T, Enable>::ILoader {
-        public:
-            struct Args : public IComputeBlockNN<T, Enable>::ILoader::ArgsLoader
-            {
-                std::string path_and_file;// /Абсолютный/относительный путь до файла включая его имя
-            };
         protected:
-            std::unique_ptr<Args> args;
-        public:
-            void setArgsForLoad(const typename IComputeBlockNN<T, Enable>::ILoader::ArgsLoader* args_) override {
-                this->args->path_and_file = static_cast<const Args*>(args_)->path_and_file;
-            }
+            std::unique_ptr<typename IComputeBlockNN<T, Enable>::ILoader::ArgsLoader> args_;
         };
         class Saver : public IComputeBlockNN<T, Enable>::ISaver {
-        public:
-            struct Args : public IComputeBlockNN<T, Enable>::ILoader::ArgsLoader
-            {
-                std::string path_and_file;// /Абсолютный/относительный путь до файла включая его имя
-            };
         protected:
-            std::unique_ptr<Args> args;
-        public:
-            void setArgsForLoad(const typename IComputeBlockNN<T, Enable>::ILoader::ArgsLoader* args_) override {
-                this->args->path_and_file = static_cast<const Args*>(args_)->path_and_file;
-            }
+            std::unique_ptr<typename IComputeBlockNN<T, Enable>::ISaver::ArgsSaver> args_;
         };
 
         std::uint64_t getInputSize() {
