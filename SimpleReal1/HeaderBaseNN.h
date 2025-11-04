@@ -2,61 +2,91 @@
 #include <type_traits>
 #include <memory>
 #include "RealizationMatrix.hpp"
-
+//ToDo - при копировании не разыменовывались nullptr указатели на компоненты, и если таковые имеются, то делать make_unique(other)
 namespace MyNN {
 
     template<typename T = float, typename Enable = std::enable_if_t<std::is_arithmetic_v<T>>>
     class ITranslatorMatrix;
+    template<typename T = float, typename Enable = std::enable_if_t<std::is_arithmetic_v<T>>>
+    class IComputeBlockNN;
 
     template<typename T = float, typename Enable = std::enable_if_t<std::is_arithmetic_v<T>>>
-    class IComputeBlockNN {
+    class ILoadable {
+    public:
+        class ILoader;
+        virtual void setLoader(std::unique_ptr <ILoader>) = 0;
+        virtual ILoader* getLoader() = 0;
+    };
+    template<typename T = float, typename Enable = std::enable_if_t<std::is_arithmetic_v<T>>>
+    class ISaveable {
+    public:
+        class ISaver;
+        virtual void setSaver(std::unique_ptr <ISaver>) = 0;
+        virtual ISaver* getSaver() = 0;
+    };
+    template<typename T = float, typename Enable = std::enable_if_t<std::is_arithmetic_v<T>>>
+    class IOptimizeable {
+    public:
+        class IOptimizer;
+        virtual void setOptimizer(std::unique_ptr <IOptimizer>) = 0;
+        virtual IOptimizer* getOptimizer() = 0;
+    };
+    template<typename T = float, typename Enable = std::enable_if_t<std::is_arithmetic_v<T>>>
+    class IRandomizeable {
+    public:
+        class IRandomizer;
+        virtual void setRandomizer(std::unique_ptr <IRandomizer>) = 0;
+        virtual IRandomizer* getRandomizer() = 0;
+    };
+
+    template<typename T, typename Enable>
+    class IComputeBlockNN : public ILoadable<T, Enable> {
+        friend class IOptimizeable<T, Enable>::IOptimizer;
+        friend class IRandomizeable<T, Enable>::IRandomizer;
     protected:
         struct ValuesForCompute {};
     public:
+        virtual const ValuesForCompute * getValuesForCompute() = 0;
+        virtual void setValuesForCompute(const ValuesForCompute*) = 0;
         virtual void setInput(LinearAlgebra::BaseMatrix<T, Enable> input) = 0;
         virtual LinearAlgebra::BaseMatrix<T, Enable> getOutput() = 0;
         virtual void compute() = 0;
         virtual ~IComputeBlockNN() = default;
     };
 
-    template<typename T = float, typename Enable = std::enable_if_t<std::is_arithmetic_v<T>>>
-    class ITrainableComputeBlockNN : public IComputeBlockNN<T, Enable> {
-    protected:
-        struct IntermediateValues {};
+    template<typename T, typename Enable>
+    class ILoadable<T, Enable>::ILoader {
     public:
-        class ISaver {
-        struct ArgsSaver {}; 
-        virtual void save(IComputeBlockNN<T, Enable>*) = 0; 
-        virtual void setArgsForSave(ArgsSaver*) = 0; 
+        struct ArgsLoader {};
+        virtual void load(IComputeBlockNN<T, Enable>*) = 0;
+        virtual void setArgsForLoad(const ArgsLoader*) = 0;
     };
-        class ILoader { 
-    public: 
-        struct ArgsLoader {}; 
-        virtual void load(IComputeBlockNN<T, Enable>*) = 0; 
-        virtual void setArgsForLoad(ArgsLoader*) = 0; 
+    template<typename T, typename Enable>
+    class ISaveable<T, Enable>::ISaver {
+        struct ArgsSaver {};
+        virtual void save(IComputeBlockNN<T, Enable>*) = 0;
+        virtual void setArgsForSave(const ArgsSaver*) = 0;
     };
-        class IOptimizer {
-    public: 
-        struct ArgsOptimizer {}; 
-        struct Gradients : IComputeBlockNN<T, Enable>::ValuesForCompute {}; 
-        virtual void optimize(ArgsOptimizer*) = 0; 
-        virtual void setArgsForOptimize(const Gradients*, IComputeBlockNN<T, Enable>::ValuesForCompute*) = 0; 
+    template<typename T, typename Enable>
+    class IOptimizeable<T, Enable>::IOptimizer {
+    public:
+        struct ArgsOptimizer {};
+        struct Gradients : IComputeBlockNN<T, Enable>::ValuesForCompute {};
+        virtual void optimize(const Gradients*, typename IComputeBlockNN<T, Enable>::ValuesForCompute*) = 0;
+        virtual void setArgsForOptimize(const ArgsOptimizer*) = 0;
     };
-        class IRandomizer { 
+    template<typename T, typename Enable>
+    class IRandomizeable<T, Enable>::IRandomizer {
     public:
         struct ArgsRandomizer {};
-        virtual void randomize(IComputeBlockNN<T, Enable>::ValuesForCompute*) = 0;
-        virtual void setArgsForRandomize(ArgsRandomizer*) = 0;
+        virtual void randomize(typename IComputeBlockNN<T, Enable>::ValuesForCompute*) = 0;
+        virtual void setArgsForRandomize(const ArgsRandomizer*) = 0;
     };
 
-        virtual void setSaver(std::unique_ptr <ISaver>) = 0; 
-        virtual const ISaver* getSaver() = 0;
-        virtual void setLoader(std::unique_ptr <ILoader>) = 0;
-        virtual const ILoader* getLoader() = 0;
-        virtual void setOptimizer(std::unique_ptr <IOptimizer>) = 0;
-        virtual const IOptimizer* getOptimizer() = 0;
-        virtual void setRandomizer(std::unique_ptr <IRandomizer>) = 0;
-        virtual const IRandomizer* getRandomizer() = 0;
+    template<typename T = float, typename Enable = std::enable_if_t<std::is_arithmetic_v<T>>>
+    class ITrainableComputeBlockNN : public IComputeBlockNN<T, Enable>, public ISaveable<T, Enable>, IOptimizeable<T, Enable>, IRandomizeable<T, Enable> {
+    protected:
+        struct IntermediateValues {};
     };
 
     template<typename T = float, typename Enable = std::enable_if_t<std::is_arithmetic_v<T>>>
@@ -102,6 +132,40 @@ namespace MyNN {
         ComputeBlockNN& operator=(const ComputeBlockNN& other);
         ComputeBlockNN& operator=(ComputeBlockNN&& other) noexcept;
         void setInput(LinearAlgebra::BaseMatrix<T, Enable> input) override;
+
+        class Loader : public IComputeBlockNN<T, Enable>::ILoader {
+        public:
+            struct Args : public IComputeBlockNN<T, Enable>::ILoader::ArgsLoader
+            {
+                std::string path_and_file;// /Абсолютный/относительный путь до файла включая его имя
+            };
+        protected:
+            std::unique_ptr<Args> args;
+        public:
+            void setArgsForLoad(const typename IComputeBlockNN<T, Enable>::ILoader::ArgsLoader* args_) override {
+                this->args->path_and_file = static_cast<const Args*>(args_)->path_and_file;
+            }
+        };
+        class Saver : public IComputeBlockNN<T, Enable>::ISaver {
+        public:
+            struct Args : public IComputeBlockNN<T, Enable>::ILoader::ArgsLoader
+            {
+                std::string path_and_file;// /Абсолютный/относительный путь до файла включая его имя
+            };
+        protected:
+            std::unique_ptr<Args> args;
+        public:
+            void setArgsForLoad(const typename IComputeBlockNN<T, Enable>::ILoader::ArgsLoader* args_) override {
+                this->args->path_and_file = static_cast<const Args*>(args_)->path_and_file;
+            }
+        };
+
+        std::uint64_t getInputSize() {
+            return this->input_size_;
+        }
+        std::uint64_t getOutputSize() {
+            return this->output_size_;
+        }
     };
 
     template<typename T = float, typename Enable = std::enable_if_t<std::is_arithmetic_v<T>>>

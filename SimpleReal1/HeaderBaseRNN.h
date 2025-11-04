@@ -23,6 +23,16 @@ namespace MyNN {
 		public:
 			ComputeBlockRNN& operator=(const ComputeBlockRNN&);
 			ComputeBlockRNN& operator=(ComputeBlockRNN&&) noexcept;
+
+			std::uint64_t getMaxSteps() {
+				return this->max_steps_;
+			}
+			void setMaxSteps(std::uint64_t max_steps_) {
+				this->max_steps_ = max_steps_;
+			}
+			std::uint64_t getHiddenSize() {
+				return this->hidden_size_;
+			}
 		};
 		template<typename T = float, typename Enable = std::enable_if_t<std::is_arithmetic_v<T>>>
 		class TrainableComputeBlockRNN :

@@ -68,6 +68,28 @@ namespace MyNN {
 		}
 
 		template<typename T, typename Enable>
+		const typename LSTM<T, Enable>::DefaultComputeBlockOneH::ValuesForCompute* LSTM<T, Enable>::DefaultComputeBlockOneH::getValuesForCompute()
+		{
+			return this->values_for_compute.get();
+		}
+
+		template<typename T, typename Enable>
+		void LSTM<T, Enable>::DefaultComputeBlockOneH::setValuesForCompute(const ValuesForCompute* values_for_compute_)
+		{
+			if (values_for_compute_) {
+				if(this->values_for_compute_){
+					*(this->values_for_compute_) = *(values_for_compute_);
+				}
+				else {
+					this->values_for_compute_ = std::make_unique<ValuesForCompute>(values_for_compute_);
+				}
+			}
+			else {
+				this->values_for_compute_ = nullptr;
+			}
+		}
+
+		template<typename T, typename Enable>
 		void LSTM<T, Enable>::DefaultComputeBlockAllH::allStepsCalculation()
 		{
 			const std::uint64_t& H = this->hidden_size_;

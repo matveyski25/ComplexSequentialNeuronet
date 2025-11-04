@@ -1,7 +1,7 @@
 #pragma once
 #include "HeaderBaseRNN.h"
 #include "FunctionsActivate.hpp"
-
+#include <fstream>
 #include <vector>
 
 namespace MyNN {
@@ -53,6 +53,80 @@ namespace MyNN {
 				LinearAlgebra::BaseMatrix<T, Enable> getOutput() override;
 
 				void compute() override;
+
+				const ValuesForCompute* getValuesForCompute() override;
+				void setValuesForCompute(const ValuesForCompute*) override;
+
+				class DefaultSaver : public ComputeBlockRNN<T, Enable>::Saver {
+					void saveMatrix(const LinearAlgebra::BaseMatrix<T, Enable>& m, std::ofstream& file) {
+						file << 'm' << m.rows() << ' ' << m.cols() << ' ';
+						for (std::uint64_t i = 0; i < m.rows(); ++i) {
+							for (std::uint64_t j = 0; j < m.cols(); ++j) {
+								file << m(i, j) << ' ';
+							}
+						}
+						file << "\n";
+					}
+					void saveVector(const LinearAlgebra::BaseVector<T, Enable>& v, std::ofstream& file) {
+						file << 'c' << v.rows() << ' ';
+						for (std::uint64_t i = 0; i < v.rows(); ++i) {
+							file << v(i) << ' ';
+						}
+						file << "\n";
+					}
+					void saveVector(const LinearAlgebra::BaseRowVector<T, Enable>& v, std::ofstream& file) {
+						file << 'r' << v.cols() << ' ';
+						for (std::uint64_t i = 0; i < v.cols(); ++i) {
+							file << v(i) << ' ';
+						}
+						file << "\n";
+					}
+				public:
+					void save(IComputeBlockNN<T, Enable> * compute_block_) override {
+						std::ofstream file(filename, std::ios::trunc); // Используйте trunc для перезаписи
+						if (!file) throw std::runtime_error("Cannot open file for writing");
+
+						DefaultComputeBlockOneH* compute_block = static_cast<DefaultComputeBlockOneH *>(compute_block_);
+						DefaultComputeBlockOneH::ValuesForCompute* values_for_compute = static_cast<DefaultComputeBlockOneH::ValuesForCompute*>(compute_block->getValuesForCompute());
+						this->saveMatrix(values_for_compute->W, file);
+						this->saveMatrix(values_for_compute->U, file);
+						this->saveVector(values_for_compute->B, file);
+
+						file << compute_block->getInputSize() << ' ' << compute_block->getHiddenSize() << ' ' << compute_block->getOutputSize() << ' ' << compute_block->getMaxSteps() << '\n';
+					}
+				};
+				class DefaultLoader : public ComputeBlockRNN<T, Enable>::Loader {
+					void loadMatrix(const LinearAlgebra::BaseMatrix<T, Enable>& m, std::ofstream& file) {
+						char temp;
+						file >> temp;
+						if (temp != 'm') throw std::runtime_error("Attemp load matrix in not matrix");
+						file << 'm' << m.rows() << ' ' << m.cols() << ' ';
+						for (std::uint64_t i = 0; i < m.rows(); ++i) {
+							for (std::uint64_t j = 0; j < m.cols(); ++j) {
+								file << m(i, j) << ' ';
+							}
+						}
+						file << "\n";
+					}
+					void loadVector(const LinearAlgebra::BaseVector<T, Enable>& v, std::ofstream& file) {
+						file << 'c' << v.rows() << ' ';
+						for (std::uint64_t i = 0; i < v.rows(); ++i) {
+							file << v(i) << ' ';
+						}
+						file << "\n";
+					}
+					void loadVector(const LinearAlgebra::BaseRowVector<T, Enable>& v, std::ofstream& file) {
+						file << 'r' << v.cols() << ' ';
+						for (std::uint64_t i = 0; i < v.cols(); ++i) {
+							file << v(i) << ' ';
+						}
+						file << "\n";
+					}
+				public:
+					void load() override {
+						std::string path_and_name;
+					}
+				};
 			};
 
 			class DefaultComputeBlockAllH : public DefaultComputeBlockOneH {
