@@ -10,9 +10,9 @@ namespace FunctionsActivate {
 	using LinearAlgebra::BaseRowVector;
 	using LinearAlgebra::BaseVector;
 
-	template<typename T = float, typename Enable = std::enable_if_t<std::is_arithmetic_v<T>>> 
-	BaseMatrix<T, Enable> baseStepFunction(const BaseMatrix<T, Enable>& matx, double step) {
-		BaseMatrix<T, Enable> result(matx.rows(), matx.cols());
+	template<typename T = float, typename = std::enable_if_t<std::is_arithmetic_v<T>>> 
+	BaseMatrix<T> baseStepFunction(const BaseMatrix<T>& matx, double step) {
+		BaseMatrix<T> result(matx.rows(), matx.cols());
 		for (Eigen::Index i = 0; i < matx.rows(); ++i) {
 			for (Eigen::Index j = 0; j < matx.cols(); ++j) {
 				result(i, j) = matx(i, j) >= step ? T(1) : T(0);
@@ -20,31 +20,31 @@ namespace FunctionsActivate {
 		}
 		return result;
 	}
-	template<typename T = float, typename Enable = std::enable_if_t<std::is_arithmetic_v<T>>> 
-	BaseMatrix<T, Enable> baseSigmoid(const BaseMatrix<T, Enable>& matx, double norm) {
+	template<typename T = float, typename = std::enable_if_t<std::is_arithmetic_v<T>>> 
+	BaseMatrix<T> baseSigmoid(const BaseMatrix<T>& matx, double norm) {
 		return matx.unaryExpr([&](T x) {
 			x = std::max(-norm, std::min(norm, x)); // Ограничение
 			return static_cast<T>(1 / (1 + std::exp(-x)));
 			});
 	}
-	template<typename T = float, typename Enable = std::enable_if_t<std::is_arithmetic_v<T>>> 
-	BaseMatrix<T, Enable> baseTanh(const BaseMatrix<T, Enable>& matx, double norm) {
+	template<typename T = float, typename = std::enable_if_t<std::is_arithmetic_v<T>>> 
+	BaseMatrix<T> baseTanh(const BaseMatrix<T>& matx, double norm) {
 		return matx.unaryExpr([&](T x) {
 			x = std::max(-norm, std::min(norm, x));
 			return static_cast<T>(std::tanh(x));
 			});
 	}
-	template<typename T = float, typename Enable = std::enable_if_t<std::is_arithmetic_v<T>>> 
-	BaseMatrix<T, Enable> baseReLU(const BaseMatrix<T, Enable>& matx) {
+	template<typename T = float, typename = std::enable_if_t<std::is_arithmetic_v<T>>> 
+	BaseMatrix<T> baseReLU(const BaseMatrix<T>& matx) {
 		return matx.unaryExpr([](T x) { return static_cast<T>(std::max(T(0), x)); });
 	}
-	template<typename T = float, typename Enable = std::enable_if_t<std::is_arithmetic_v<T>>> 
-	BaseMatrix<T, Enable> baseLeakyReLU(const BaseMatrix<T, Enable>& matx, const BaseMatrix<T, Enable>& a) {
+	template<typename T = float, typename = std::enable_if_t<std::is_arithmetic_v<T>>> 
+	BaseMatrix<T> baseLeakyReLU(const BaseMatrix<T>& matx, const BaseMatrix<T>& a) {
 		if (matx.rows() != a.rows() || matx.cols() != a.cols()) {
-			throw std::invalid_argument("BaseMatrix<T, Enable> dimensions must match");
+			throw std::invalid_argument("BaseMatrix<T> dimensions must match");
 		}
 
-		BaseMatrix<T, Enable> result(matx.rows(), matx.cols());
+		BaseMatrix<T> result(matx.rows(), matx.cols());
 		for (Eigen::Index i = 0; i < matx.rows(); ++i) {
 			for (Eigen::Index j = 0; j < matx.cols(); ++j) {
 				result(i, j) = (matx(i, j) >= T(0))
@@ -54,9 +54,9 @@ namespace FunctionsActivate {
 		}
 		return result;
 	}
-	template<typename T = float, typename Enable = std::enable_if_t<std::is_arithmetic_v<T>>> 
-	BaseMatrix<T, Enable> baseLeakyReLU(const BaseMatrix<T, Enable>& matx, double a) {
-		BaseMatrix<T, Enable> result(matx.rows(), matx.cols());
+	template<typename T = float, typename = std::enable_if_t<std::is_arithmetic_v<T>>> 
+	BaseMatrix<T> baseLeakyReLU(const BaseMatrix<T>& matx, double a) {
+		BaseMatrix<T> result(matx.rows(), matx.cols());
 		for (Eigen::Index i = 0; i < matx.rows(); ++i) {
 			for (Eigen::Index j = 0; j < matx.cols(); ++j) {
 				result(i, j) = (matx(i, j) >= T(0))
@@ -66,10 +66,10 @@ namespace FunctionsActivate {
 		}
 		return result;
 	}
-	template<typename T = float, typename Enable = std::enable_if_t<std::is_arithmetic_v<T>>> 
-	BaseMatrix<T, Enable> baseSwish(const BaseMatrix<T, Enable>& matx, const BaseMatrix<T, Enable>& b, double norm) {
+	template<typename T = float, typename = std::enable_if_t<std::is_arithmetic_v<T>>> 
+	BaseMatrix<T> baseSwish(const BaseMatrix<T>& matx, const BaseMatrix<T>& b, double norm) {
 		if (matx.rows() != b.rows() || matx.cols() != b.cols()) {
-			throw std::invalid_argument("BaseMatrix<T, Enable> dimensions must match");
+			throw std::invalid_argument("BaseMatrix<T> dimensions must match");
 		}
 
 		return matx.binaryExpr(b, [&](T m, T bb) {
@@ -78,18 +78,18 @@ namespace FunctionsActivate {
 			return static_cast<T>(m * (1.0 / (1.0 + std::exp(-x))));
 			});
 	}
-	template<typename T = float, typename Enable = std::enable_if_t<std::is_arithmetic_v<T>>> 
-	BaseMatrix<T, Enable> baseSwish(const BaseMatrix<T, Enable>& matx, double b, double norm) {
+	template<typename T = float, typename = std::enable_if_t<std::is_arithmetic_v<T>>> 
+	BaseMatrix<T> baseSwish(const BaseMatrix<T>& matx, double b, double norm) {
 		return matx.unaryExpr([&](T m) {
 			double x = m * b;
 			x = std::max(-norm, std::min(norm, x));
 			return static_cast<T>(m * (1.0 / (1.0 + std::exp(-x))));
 			});
 	}
-	template<typename T = float, typename Enable = std::enable_if_t<std::is_arithmetic_v<T>>> 
-	BaseVector<T, Enable> baseSoftmax(const BaseVector<T, Enable>& x, double clamp_val, double eps) {
+	template<typename T = float, typename = std::enable_if_t<std::is_arithmetic_v<T>>> 
+	BaseVector<T> baseSoftmax(const BaseVector<T>& x, double clamp_val, double eps) {
 		// 1) Клэмпим входы
-		BaseVector<T, Enable> x_clamped = x.unaryExpr([&](T v) {
+		BaseVector<T> x_clamped = x.unaryExpr([&](T v) {
 			return std::max(-clamp_val, std::min(clamp_val, v));
 			});
 
@@ -97,7 +97,7 @@ namespace FunctionsActivate {
 		double x_max = x_clamped.maxCoeff();
 
 		// 3) Вычисляем экспоненты от (x - max)
-		BaseVector<T, Enable> exp_x = (x_clamped.array() - static_cast<T>(x_max)).exp();
+		BaseVector<T> exp_x = (x_clamped.array() - static_cast<T>(x_max)).exp();
 
 		// 4) Сумма с eps
 		double sum_exp = exp_x.sum() + eps;
@@ -105,10 +105,10 @@ namespace FunctionsActivate {
 		// 5) Нормировка
 		return exp_x.array() / sum_exp;
 	}
-	template<typename T = float, typename Enable = std::enable_if_t<std::is_arithmetic_v<T>>> 
-	BaseRowVector<T, Enable> baseSoftmax(const BaseRowVector<T, Enable>& x, double clamp_val, double eps) {
+	template<typename T = float, typename = std::enable_if_t<std::is_arithmetic_v<T>>> 
+	BaseRowVector<T> baseSoftmax(const BaseRowVector<T>& x, double clamp_val, double eps) {
 		// 1) Клэмпим входы
-		BaseRowVector<T, Enable> x_clamped = x.unaryExpr([&](T v) {
+		BaseRowVector<T> x_clamped = x.unaryExpr([&](T v) {
 			return std::max(-clamp_val, std::min(clamp_val, v));
 			});
 
@@ -116,7 +116,7 @@ namespace FunctionsActivate {
 		double x_max = x_clamped.maxCoeff();
 
 		// 3) Вычисляем экспоненты от (x - max)
-		BaseRowVector<T, Enable> exp_x = (x_clamped.array() - static_cast<T>(x_max)).exp();
+		BaseRowVector<T> exp_x = (x_clamped.array() - static_cast<T>(x_max)).exp();
 
 		// 4) Сумма с eps
 		double sum_exp = exp_x.sum() + eps;

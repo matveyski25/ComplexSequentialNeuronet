@@ -20,11 +20,11 @@ namespace LinearAlgebra {}
 //#define template<typename T = float, typename Enable = std::enable_if_t<std::is_arithmetic_v<T>>> template<typename T = float, typename Enable = std::enable_if_t<std::is_arithmetic_v<T>>>
 
 namespace LinearAlgebra {
-	template<typename T = float, typename Enable = std::enable_if_t<std::is_arithmetic_v<T>>>
+	template<typename T = float, typename = std::enable_if_t<std::is_arithmetic_v<T>>>
 	using BaseMatrix = Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>;
-	template<typename T = float, typename Enable = std::enable_if_t<std::is_arithmetic_v<T>>> 
+	template<typename T = float, typename = std::enable_if_t<std::is_arithmetic_v<T>>> 
 	using BaseRowVector = Eigen::Matrix<T, 1, Eigen::Dynamic>; // Вектор-строка
-	template<typename T = float, typename Enable = std::enable_if_t<std::is_arithmetic_v<T>>> 
+	template<typename T = float, typename = std::enable_if_t<std::is_arithmetic_v<T>>> 
 	using BaseVector = Eigen::Matrix<T, Eigen::Dynamic, 1>;    // Вектор-столбец
 }
 

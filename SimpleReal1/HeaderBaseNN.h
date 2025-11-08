@@ -28,7 +28,7 @@ namespace MyNN {
         struct ArgsSaver {}; 
         virtual void save(IComputeBlockNN<T, Enable>*) = 0; 
         virtual void setArgsForSave(ArgsSaver*) = 0; 
-    };
+        };
         class ILoader { 
     public: 
         struct ArgsLoader {}; 
