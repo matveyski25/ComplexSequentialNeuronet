@@ -10,7 +10,7 @@ namespace FunctionsActivate {
 	using LinearAlgebra::BaseRowVector;
 	using LinearAlgebra::BaseVector;
 
-	template<typename T = float, typename = std::enable_if_t<std::is_arithmetic_v<T>>> 
+	template<typename T, typename = std::enable_if_t<std::is_arithmetic_v<T>>> 
 	BaseMatrix<T> baseStepFunction(const BaseMatrix<T>& matx, double step) {
 		BaseMatrix<T> result(matx.rows(), matx.cols());
 		for (Eigen::Index i = 0; i < matx.rows(); ++i) {
@@ -20,25 +20,25 @@ namespace FunctionsActivate {
 		}
 		return result;
 	}
-	template<typename T = float, typename = std::enable_if_t<std::is_arithmetic_v<T>>> 
+	template<typename T, typename = std::enable_if_t<std::is_arithmetic_v<T>>> 
 	BaseMatrix<T> baseSigmoid(const BaseMatrix<T>& matx, double norm) {
 		return matx.unaryExpr([&](T x) {
 			x = std::max(-norm, std::min(norm, x)); // Ограничение
 			return static_cast<T>(1 / (1 + std::exp(-x)));
 			});
 	}
-	template<typename T = float, typename = std::enable_if_t<std::is_arithmetic_v<T>>> 
+	template<typename T, typename = std::enable_if_t<std::is_arithmetic_v<T>>> 
 	BaseMatrix<T> baseTanh(const BaseMatrix<T>& matx, double norm) {
 		return matx.unaryExpr([&](T x) {
 			x = std::max(-norm, std::min(norm, x));
 			return static_cast<T>(std::tanh(x));
 			});
 	}
-	template<typename T = float, typename = std::enable_if_t<std::is_arithmetic_v<T>>> 
+	template<typename T, typename = std::enable_if_t<std::is_arithmetic_v<T>>> 
 	BaseMatrix<T> baseReLU(const BaseMatrix<T>& matx) {
 		return matx.unaryExpr([](T x) { return static_cast<T>(std::max(T(0), x)); });
 	}
-	template<typename T = float, typename = std::enable_if_t<std::is_arithmetic_v<T>>> 
+	template<typename T, typename = std::enable_if_t<std::is_arithmetic_v<T>>> 
 	BaseMatrix<T> baseLeakyReLU(const BaseMatrix<T>& matx, const BaseMatrix<T>& a) {
 		if (matx.rows() != a.rows() || matx.cols() != a.cols()) {
 			throw std::invalid_argument("BaseMatrix<T> dimensions must match");
@@ -54,7 +54,7 @@ namespace FunctionsActivate {
 		}
 		return result;
 	}
-	template<typename T = float, typename = std::enable_if_t<std::is_arithmetic_v<T>>> 
+	template<typename T, typename = std::enable_if_t<std::is_arithmetic_v<T>>> 
 	BaseMatrix<T> baseLeakyReLU(const BaseMatrix<T>& matx, double a) {
 		BaseMatrix<T> result(matx.rows(), matx.cols());
 		for (Eigen::Index i = 0; i < matx.rows(); ++i) {
@@ -66,7 +66,7 @@ namespace FunctionsActivate {
 		}
 		return result;
 	}
-	template<typename T = float, typename = std::enable_if_t<std::is_arithmetic_v<T>>> 
+	template<typename T, typename = std::enable_if_t<std::is_arithmetic_v<T>>> 
 	BaseMatrix<T> baseSwish(const BaseMatrix<T>& matx, const BaseMatrix<T>& b, double norm) {
 		if (matx.rows() != b.rows() || matx.cols() != b.cols()) {
 			throw std::invalid_argument("BaseMatrix<T> dimensions must match");
@@ -78,7 +78,7 @@ namespace FunctionsActivate {
 			return static_cast<T>(m * (1.0 / (1.0 + std::exp(-x))));
 			});
 	}
-	template<typename T = float, typename = std::enable_if_t<std::is_arithmetic_v<T>>> 
+	template<typename T, typename = std::enable_if_t<std::is_arithmetic_v<T>>> 
 	BaseMatrix<T> baseSwish(const BaseMatrix<T>& matx, double b, double norm) {
 		return matx.unaryExpr([&](T m) {
 			double x = m * b;
@@ -86,7 +86,7 @@ namespace FunctionsActivate {
 			return static_cast<T>(m * (1.0 / (1.0 + std::exp(-x))));
 			});
 	}
-	template<typename T = float, typename = std::enable_if_t<std::is_arithmetic_v<T>>> 
+	template<typename T, typename = std::enable_if_t<std::is_arithmetic_v<T>>> 
 	BaseVector<T> baseSoftmax(const BaseVector<T>& x, double clamp_val, double eps) {
 		// 1) Клэмпим входы
 		BaseVector<T> x_clamped = x.unaryExpr([&](T v) {
@@ -105,7 +105,7 @@ namespace FunctionsActivate {
 		// 5) Нормировка
 		return exp_x.array() / sum_exp;
 	}
-	template<typename T = float, typename = std::enable_if_t<std::is_arithmetic_v<T>>> 
+	template<typename T, typename = std::enable_if_t<std::is_arithmetic_v<T>>> 
 	BaseRowVector<T> baseSoftmax(const BaseRowVector<T>& x, double clamp_val, double eps) {
 		// 1) Клэмпим входы
 		BaseRowVector<T> x_clamped = x.unaryExpr([&](T v) {

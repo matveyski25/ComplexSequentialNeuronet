@@ -3,21 +3,21 @@
 
 namespace MyNN {
 	namespace RNN{
-		template<typename T = float, typename Enable = std::enable_if_t<std::is_arithmetic_v<T>>>
-		class IComputeBlockRNN : public IComputeBlockNN<T, Enable> {
+		template<typename T>
+		class IComputeBlockRNN : public IComputeBlockNN<T> {
 			protected:
 				struct NState {};
-				/*this function return cell_state, hidden_state saving in vector<LinearAlgebra::BaseRowVector<T, Enable>> in basecompblockrnn*/
-				//inline virtual void nStepCalculation(const typename IComputeBlockNN<T, Enable>::ValuesForCompute * values_for_compute, const NState * n_state, std::uint64_t number_n) = 0;
+				/*this function return cell_state, hidden_state saving in vector<LinearAlgebra::BaseRowVector<T>> in basecompblockrnn*/
+				//inline virtual void nStepCalculation(const typename IComputeBlockNN<T>::ValuesForCompute * values_for_compute, const NState * n_state, std::uint64_t number_n) = 0;
 				virtual void allStepsCalculation() = 0;
 		};
-		template<typename T = float, typename Enable = std::enable_if_t<std::is_arithmetic_v<T>>>
-		class ITrainableComputeBlockRNN : public ITrainableComputeBlockNN<T, Enable>, public IComputeBlockRNN<T, Enable> {};
+		template<typename T>
+		class ITrainableComputeBlockRNN : public ITrainableComputeBlockNN<T>, public IComputeBlockRNN<T> {};
 
-		template<typename T = float, typename Enable = std::enable_if_t<std::is_arithmetic_v<T>>>
-		class ComputeBlockRNN : public ComputeBlockNN<T, Enable>, public IComputeBlockRNN<T, Enable> {
+		template<typename T>
+		class ComputeBlockRNN : public ComputeBlockNN<T>, public IComputeBlockRNN<T> {
 		protected:
-			std::unique_ptr<typename IComputeBlockRNN<T, Enable>::NState> n_state_;
+			std::unique_ptr<typename IComputeBlockRNN<T>::NState> n_state_;
 			std::uint64_t hidden_size_;
 			std::uint64_t max_steps_;
 		public:
@@ -34,17 +34,17 @@ namespace MyNN {
 				return this->hidden_size_;
 			}
 		};
-		template<typename T = float, typename Enable = std::enable_if_t<std::is_arithmetic_v<T>>>
+		template<typename T>
 		class TrainableComputeBlockRNN :
-			virtual public ComputeBlockRNN<T, Enable>,
-			virtual public TrainableComputeBlockNN<T, Enable>,
-			public ITrainableComputeBlockRNN<T, Enable>
+			virtual public ComputeBlockRNN<T>,
+			virtual public TrainableComputeBlockNN<T>,
+			public ITrainableComputeBlockRNN<T>
 		{
 		};
 
-		template<typename T = float, typename Enable = std::enable_if_t<std::is_arithmetic_v<T>>>
-		class BaseRNN : public BaseNN<T, Enable> {};
-		template<typename T = float, typename Enable = std::enable_if_t<std::is_arithmetic_v<T>>>
-		class BaseTrainableRNN : virtual public BaseTrainableNN<T, Enable>, virtual public BaseRNN<T, Enable> {};
+		template<typename T>
+		class BaseRNN : public BaseNN<T> {};
+		template<typename T>
+		class BaseTrainableRNN : virtual public BaseTrainableNN<T>, virtual public BaseRNN<T> {};
 	}
 }

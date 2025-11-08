@@ -1,7 +1,7 @@
 #include "HeaderBaseNN.h"
 namespace MyNN{
-    template<typename T, typename Enable>
-    ComputeBlockNN<T, Enable>& ComputeBlockNN<T, Enable>::operator=(const ComputeBlockNN& other) {
+    template<typename T>
+    ComputeBlockNN<T>& ComputeBlockNN<T>::operator=(const ComputeBlockNN& other) {
         if (this != &other) {
             *this->values_for_compute_ = *(other.values_for_compute_);
 
@@ -11,8 +11,8 @@ namespace MyNN{
         }
         return *this;
     }
-    template<typename T, typename Enable>
-    ComputeBlockNN<T, Enable>& ComputeBlockNN<T, Enable>::operator=(ComputeBlockNN&& other) noexcept {
+    template<typename T>
+    ComputeBlockNN<T>& ComputeBlockNN<T>::operator=(ComputeBlockNN&& other) noexcept {
         values_for_compute_ = std::move(other.values_for_compute_);
         input_state_ = std::move(other.input_state_);
         input_size_ = other.input_size_;
@@ -20,31 +20,31 @@ namespace MyNN{
         other.values_for_compute_ = nullptr;
         return *this;
     }
-    template<typename T, typename Enable>
-    void ComputeBlockNN<T, Enable>::setInput(LinearAlgebra::BaseMatrix<T, Enable> input) {
+    template<typename T>
+    void ComputeBlockNN<T>::setInput(LinearAlgebra::BaseMatrix<T> input) {
         input_state_ = input; 
     }
 
-    template<typename T, typename Enable>
-    TrainableComputeBlockNN<T, Enable>& TrainableComputeBlockNN<T, Enable>::operator=(const TrainableComputeBlockNN& other) {
+    template<typename T>
+    TrainableComputeBlockNN<T>& TrainableComputeBlockNN<T>::operator=(const TrainableComputeBlockNN& other) {
         if (this != &other) {
             *this->saver_ = *(other.saver_);
             *this->loader_ = *(other.loader_);
             *this->optimizer_ = *(other.optimizer_);
             *this->randomizer_ = *(other.randomizer_);
             *this->intermediate_values_ = *(other.intermediate_values_);
-            ComputeBlockNN<T, Enable>::operator=(other);
+            ComputeBlockNN<T>::operator=(other);
         }
         return *this;
     }
-    template<typename T, typename Enable>
-    TrainableComputeBlockNN<T, Enable>& TrainableComputeBlockNN<T, Enable>::operator=(TrainableComputeBlockNN && other) noexcept {
+    template<typename T>
+    TrainableComputeBlockNN<T>& TrainableComputeBlockNN<T>::operator=(TrainableComputeBlockNN && other) noexcept {
         this->saver_ = std::move(other.saver_);
         this->loader_ = std::move(other.loader_);
         this->optimizer_ = std::move(other.optimizer_);
         this->randomizer_ = std::move(other.randomizer_);
         this->intermediate_values_ = std::move(other.intermediate_values_);
-        ComputeBlockNN<T, Enable>::operator=(std::move(other));
+        ComputeBlockNN<T>::operator=(std::move(other));
         other.saver_ = nullptr;
         other.loader_ = nullptr;
         other.optimizer_ = nullptr;
@@ -53,14 +53,14 @@ namespace MyNN{
         return *this;
     }
 
-    template<typename T, typename Enable>
-    BaseNN<T, Enable>::BaseNN(std::unique_ptr<IComputeBlockNN<T, Enable>> compute_block, std::unique_ptr<ITranslatorMatrix<T, Enable>> translator_matrix)
+    template<typename T>
+    BaseNN<T>::BaseNN(std::unique_ptr<IComputeBlockNN<T>> compute_block, std::unique_ptr<ITranslatorMatrix<T>> translator_matrix)
     {
         this->compute_block_ = std::move(compute_block);
         this->translator_ = std::move(translator_matrix);
     }
-    template<typename T, typename Enable>
-    BaseNN<T, Enable>& BaseNN<T, Enable>::operator=(const BaseNN& other) {
+    template<typename T>
+    BaseNN<T>& BaseNN<T>::operator=(const BaseNN& other) {
         if (this != &other) {
             *compute_block_ = *(other.compute_block_);
             *translator_ = *(other.translator_);
@@ -69,8 +69,8 @@ namespace MyNN{
         }
         return *this;
     }
-    template<typename T, typename Enable>
-    BaseNN<T, Enable>& BaseNN<T, Enable>::operator=(BaseNN&& other) noexcept {
+    template<typename T>
+    BaseNN<T>& BaseNN<T>::operator=(BaseNN&& other) noexcept {
         compute_block_ = std::move(other.compute_block_);
         translator_ = std::move(other.translator_);
         input_state_ = std::move(other.input_state_);
@@ -79,30 +79,30 @@ namespace MyNN{
         other.translator_ = nullptr;
         return *this;
     }
-    template<typename T, typename Enable>
-    void BaseNN<T, Enable>::inference() { 
+    template<typename T>
+    void BaseNN<T>::inference() { 
         this->forward(); 
     }
-    template<typename T, typename Enable>
-    void BaseNN<T, Enable>::forward() {
+    template<typename T>
+    void BaseNN<T>::forward() {
         auto input = (*this->translator_)(input_state_);
         compute_block_->setInput(input);
         compute_block_->compute();
     }
-    template<typename T, typename Enable>
-    void BaseNN<T, Enable>::setComputeBlock(std::unique_ptr<IComputeBlockNN<T, Enable>> compute_block) {
+    template<typename T>
+    void BaseNN<T>::setComputeBlock(std::unique_ptr<IComputeBlockNN<T>> compute_block) {
         this->compute_block_ = std::move(compute_block);
     }
-    template<typename T, typename Enable>
-    void BaseNN<T, Enable>::setTranslatorMatrix(std::unique_ptr<ITranslatorMatrix<T, Enable>> translator) {
+    template<typename T>
+    void BaseNN<T>::setTranslatorMatrix(std::unique_ptr<ITranslatorMatrix<T>> translator) {
         this->translator_ = std::move(translator);
     }
-    template<typename T, typename Enable>
-    const IComputeBlockNN<T, Enable>* BaseNN<T, Enable>::getComputeBlock() {
+    template<typename T>
+    const IComputeBlockNN<T>* BaseNN<T>::getComputeBlock() {
         return this->compute_block_;
     }
-    template<typename T, typename Enable>
-    const ITranslatorMatrix<T, Enable>* BaseNN<T, Enable>::getTranslatorMatrix() {
+    template<typename T>
+    const ITranslatorMatrix<T>* BaseNN<T>::getTranslatorMatrix() {
         return this->translator_.get();
     }
 }
