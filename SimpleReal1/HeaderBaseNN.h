@@ -2,45 +2,60 @@
 #include <type_traits>
 #include <memory>
 #include "RealizationMatrix.hpp"
+
+namespace MyNN {
+    template<typename FromBaseFriend, typename Friend, typename Enable = std::enable_if_t<std::is_base_of_v<FromBaseFriend, Friend>>>
+    class FriendIs
+    {
+    };
+    template<typename FromBaseFriends, typename ... Friends>
+    class FriendsIs : FriendIs<FromBaseFriends, Friends>
+    {
+    };
+    template<typename T, typename Enable = std::enable_if_t<std::is_arithmetic_v<T>>>
+    class IsArithmetic_ {};
+    template<typename ... Ts>
+    class IsArithmetic : IsArithmetic_<Ts> {};
+}
+
 //ToDo - при копировании не разыменовывались nullptr указатели на компоненты, и если таковые имеются, то делать make_unique(other)
 namespace MyNN {
-
-    template<typename T, typename Enable = std::enable_if_t<std::is_arithmetic_v<T>>>
+    template<typename T>
     class ITranslatorMatrix;
-    template<typename T, typename Enable = std::enable_if_t<std::is_arithmetic_v<T>>>
+    template<typename T>
     class IComputeBlockNN;
 
-    template<typename T, typename Enable = std::enable_if_t<std::is_arithmetic_v<T>>>
-    class ILoadable {
+    template<typename T>
+    class ILoadable : IsArithmetic<T> {
     public:
         class ILoader;
         virtual void setLoader(std::unique_ptr <ILoader>) = 0;
         virtual ILoader* getLoader() = 0;
     };
-    template<typename T, typename Enable = std::enable_if_t<std::is_arithmetic_v<T>>>
-    class ISaveable {
+    template<typename T>
+    class ISaveable : IsArithmetic<T> {
     public:
         class ISaver;
         virtual void setSaver(std::unique_ptr <ISaver>) = 0;
         virtual ISaver* getSaver() = 0;
     };
-    template<typename T, typename Enable = std::enable_if_t<std::is_arithmetic_v<T>>>
-    class IOptimizeable {
+    template<typename T>
+    class IOptimizeable : IsArithmetic<T> {
     public:
         class IOptimizer;
         virtual void setOptimizer(std::unique_ptr <IOptimizer>) = 0;
         virtual IOptimizer* getOptimizer() = 0;
     };
-    template<typename T, typename Enable = std::enable_if_t<std::is_arithmetic_v<T>>>
-    class IRandomizeable {
+    template<typename T>
+    class IRandomizeable : IsArithmetic<T> {
     public:
         class IRandomizer;
         virtual void setRandomizer(std::unique_ptr <IRandomizer>) = 0;
         virtual IRandomizer* getRandomizer() = 0;
     };
 
-    template<typename T, typename Enable>
-    class IComputeBlockNN : public ILoadable<T> {
+    template<typename T>
+    class IComputeBlockNN : public ILoadable<T>, public ISaveable<T>{
         friend class IOptimizeable<T>::IOptimizer;
         friend class IRandomizeable<T>::IRandomizer;
     protected:
@@ -54,43 +69,43 @@ namespace MyNN {
         virtual ~IComputeBlockNN() = default;
     };
 
-    template<typename T, typename Enable>
-    class ILoadable<T, Enable>::ILoader {
+    template<typename T>
+    class ILoadable<T>::ILoader {
     public:
         struct ArgsLoader {};
         virtual void load(IComputeBlockNN<T>*) = 0;
         virtual void setArgsForLoad(const ArgsLoader*) = 0;
     };
-    template<typename T, typename Enable>
-    class ISaveable<T, Enable>::ISaver {
+    template<typename T>
+    class ISaveable<T>::ISaver {
         struct ArgsSaver {};
         virtual void save(IComputeBlockNN<T>*) = 0;
         virtual void setArgsForSave(const ArgsSaver*) = 0;
     };
-    template<typename T, typename Enable>
-    class IOptimizeable<T, Enable>::IOptimizer {
+    template<typename T>
+    class IOptimizeable<T>::IOptimizer {
     public:
         struct ArgsOptimizer {};
         struct Gradients : IComputeBlockNN<T>::ValuesForCompute {};
         virtual void optimize(const Gradients*, typename IComputeBlockNN<T>::ValuesForCompute*) = 0;
         virtual void setArgsForOptimize(const ArgsOptimizer*) = 0;
     };
-    template<typename T, typename Enable>
-    class IRandomizeable<T, Enable>::IRandomizer {
+    template<typename T>
+    class IRandomizeable<T>::IRandomizer {
     public:
         struct ArgsRandomizer {};
         virtual void randomize(typename IComputeBlockNN<T>::ValuesForCompute*) = 0;
         virtual void setArgsForRandomize(const ArgsRandomizer*) = 0;
     };
 
-    template<typename T, typename = std::enable_if_t<std::is_arithmetic_v<T>>>
-    class ITrainableComputeBlockNN : public IComputeBlockNN<T>, public ISaveable<T>, IOptimizeable<T>, IRandomizeable<T> {
+    template<typename T>
+    class ITrainableComputeBlockNN : public IComputeBlockNN<T>, IOptimizeable<T>, IRandomizeable<T> {
     protected:
         struct IntermediateValues {};
     };
 
-    template<typename T, typename = std::enable_if_t<std::is_arithmetic_v<T>>>
-    class IBaseNN {
+    template<typename T>
+    class IBaseNN : IsArithmetic<T> {
     protected:
         virtual void forward() = 0;
     public:
@@ -109,14 +124,14 @@ namespace MyNN {
         virtual ~IBaseNN() = default;
     };
 
-    template<typename T, typename Enable>
-    class ITranslatorMatrix {
+    template<typename T>
+    class ITranslatorMatrix : IsArithmetic<T> {
     public:
         virtual LinearAlgebra::BaseMatrix<T> operator()(typename IBaseNN<T>::InputValue) = 0;
         virtual typename IBaseNN<T>::OutputValue operator()(LinearAlgebra::BaseMatrix<T>) = 0;
     };
 
-    template<typename T, typename = std::enable_if_t<std::is_arithmetic_v<T>>>
+    template<typename T>
     class IBaseTrainableNN : public IBaseNN<T> {};
 
     template<typename T>
