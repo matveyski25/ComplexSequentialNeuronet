@@ -1,5 +1,5 @@
 #pragma once
-#include "HeaderBaseNN.h"
+#include "BaseNN.h"
 
 namespace MyNN {
 	namespace RNN{

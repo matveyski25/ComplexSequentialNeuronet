@@ -1,4 +1,4 @@
-#include "HeaderBaseRNN.h"
+#include "BaseRNN.h"
 
 namespace MyNN {
 	namespace RNN {

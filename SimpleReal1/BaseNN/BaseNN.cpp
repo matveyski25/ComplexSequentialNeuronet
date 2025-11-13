@@ -1,4 +1,4 @@
-#include "HeaderBaseNN.h"
+#include "BaseNN.h"
 namespace MyNN{
     template<typename T>
     ComputeBlockNN<T>& ComputeBlockNN<T>::operator=(const ComputeBlockNN& other) {
