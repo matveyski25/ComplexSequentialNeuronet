@@ -1,13 +1,12 @@
 #pragma once
-#include "HeaderBaseRNN.h"
+#include "BaseRNN.h"
 #include "FunctionsActivate.hpp"
 #include <fstream>
 #include <vector>
 
-namespace MyNN {
-	namespace RNN {
-		template<typename T>
-		class LSTM : public BaseRNN<T> {
+namespace MyNN::RNN {
+	template<typename T>
+	class LSTM : public BaseRNN<T> {
 		public:
 			LSTM();
 			~LSTM() override = default;
@@ -63,7 +62,7 @@ namespace MyNN {
 				void compute() override;
 
 				const ValuesForCompute* getValuesForCompute() override;
-				void setValuesForCompute(const ValuesForCompute*) override;
+				void setValuesForCompute(const typename IComputeBlockRNN<T>::ValuesForCompute*) override;
 
 
 				class DefaultSaver : public ComputeBlockRNN<T>::Saver {
@@ -186,8 +185,8 @@ namespace MyNN {
 			};
 		};
 
-		template<typename T>
-		class TrainableLSTM : public virtual LSTM<T>, public virtual BaseTrainableRNN<T>{
+	template<typename T>
+	class TrainableLSTM : public virtual LSTM<T>, public virtual BaseTrainableRNN<T>{
 		public:
 			TrainableLSTM();
 			~TrainableLSTM() override = default;
@@ -203,5 +202,4 @@ namespace MyNN {
 				LinearAlgebra::BaseMatrix<T> getOutput() override;
 			};
 		};
-	}
 }

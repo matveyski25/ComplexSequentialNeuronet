@@ -3,8 +3,15 @@
   <component name="CMakePythonSetting">
     <option name="pythonIntegrationState" value="YES" />
   </component>
-  <component name="CMakeWorkspace" PROJECT_DIR="$PROJECT_DIR$/SimpleReal1">
-    <contentRoot DIR="$PROJECT_DIR$" />
+  <component name="CMakeWorkspace" PROJECT_DIR="$PROJECT_DIR$" />
+  <component name="CidrRootsConfiguration">
+    <sourceRoots>
+      <file path="$PROJECT_DIR$/SimpleReal1" />
+    </sourceRoots>
+    <excludeRoots>
+      <file path="$PROJECT_DIR$/Lib" />
+      <file path="$PROJECT_DIR$/Lib/Eigen" />
+    </excludeRoots>
   </component>
   <component name="ProjectInspectionProfilesVisibleTreeState">
     <entry key="Project Default">

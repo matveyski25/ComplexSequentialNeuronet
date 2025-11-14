@@ -10,8 +10,8 @@ namespace LinearAlgebra {}
 #pragma warning(disable : 26495 6255 6294)
 #endif
 
-#include "../Lib/Eigen/Core"
-#include "../Lib/Eigen/Dense"
+#include "Core"
+#include "Dense"
 
 #ifdef _MSC_VER
 #pragma warning(pop)
