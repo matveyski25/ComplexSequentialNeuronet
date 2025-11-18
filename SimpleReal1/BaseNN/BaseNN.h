@@ -9,14 +9,14 @@ namespace MyNN {
     {
     };
     template<typename FromBaseFriends, typename ... Friends>
-    class FriendsIs : FriendIs<FromBaseFriends, Friends>
+    class FriendsIs : FriendIs<FromBaseFriends, Friends> ...
     {
     };
     template<typename T, typename Enable = std::enable_if_t<std::is_arithmetic_v<T>>>
-    class IsArithmetic_ {};
+    class IsArithmeticO{};
     template<typename ... Ts>
-    class IsArithmetic : IsArithmetic_<Ts> {};
-}
+    class IsArithmetic : IsArithmeticO<Ts> ...{};
+}  // namespace MyNN
 
 //ToDo - при копировании не разыменовывались nullptr указатели на компоненты, и если таковые имеются, то делать make_unique(other)
 namespace MyNN {
@@ -66,7 +66,6 @@ namespace MyNN {
         virtual void setInput(LinearAlgebra::BaseMatrix<T> input) = 0;
         virtual LinearAlgebra::BaseMatrix<T> getOutput() = 0;
         virtual void compute() = 0;
-        virtual ~IComputeBlockNN() = default;
     };
 
     template<typename T>
@@ -121,7 +120,6 @@ namespace MyNN {
 
         virtual void setTranslatorMatrix(std::unique_ptr<ITranslatorMatrix<T>>) = 0;
         virtual const ITranslatorMatrix<T>* getTranslatorMatrix() = 0;
-        virtual ~IBaseNN() = default;
     };
 
     template<typename T>

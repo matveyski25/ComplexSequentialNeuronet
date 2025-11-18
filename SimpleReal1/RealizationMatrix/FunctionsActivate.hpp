@@ -124,5 +124,5 @@ namespace FunctionsActivate {
 		// 5) Нормировка
 		return exp_x.array() / sum_exp;
 	}
-}
+}  // namespace FunctionsActivate
 #endif //EIGEN_MATRIX

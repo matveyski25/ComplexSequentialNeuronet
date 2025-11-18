@@ -1,8 +1,8 @@
 #pragma once
 #include "BaseNN.h"
 
-namespace MyNN {
-	namespace RNN{
+
+	namespace MyNN::RNN{
 		template<typename T>
 		class IComputeBlockRNN : public IComputeBlockNN<T> {
 			protected:
@@ -46,5 +46,4 @@ namespace MyNN {
 		class BaseRNN : public BaseNN<T> {};
 		template<typename T>
 		class BaseTrainableRNN : virtual public BaseTrainableNN<T>, virtual public BaseRNN<T> {};
-	}
-}
+	}  // namespace MyNN::RNN

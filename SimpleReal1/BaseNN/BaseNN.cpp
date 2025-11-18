@@ -1,4 +1,5 @@
 #include "BaseNN.h"
+
 namespace MyNN{
     template<typename T>
     ComputeBlockNN<T>& ComputeBlockNN<T>::operator=(const ComputeBlockNN& other) {
@@ -54,11 +55,9 @@ namespace MyNN{
     }
 
     template<typename T>
-    BaseNN<T>::BaseNN(std::unique_ptr<IComputeBlockNN<T>> compute_block, std::unique_ptr<ITranslatorMatrix<T>> translator_matrix)
-    {
-        this->compute_block_ = std::move(compute_block);
-        this->translator_ = std::move(translator_matrix);
-    }
+    BaseNN<T>::BaseNN(std::unique_ptr<IComputeBlockNN<T>> compute_block, std::unique_ptr<ITranslatorMatrix<T>> translator_matrix) :
+    compute_block_(std::move(compute_block)), translator_(std::move(translator_matrix)){}
+
     template<typename T>
     BaseNN<T>& BaseNN<T>::operator=(const BaseNN& other) {
         if (this != &other) {
@@ -105,6 +104,6 @@ namespace MyNN{
     const ITranslatorMatrix<T>* BaseNN<T>::getTranslatorMatrix() {
         return this->translator_.get();
     }
-}
+}  // namespace MyNN
 
 //TODO Сделать проверку на самоприсваивание в операторах присваивания

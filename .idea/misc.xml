@@ -8,8 +8,10 @@
     <sourceRoots>
       <file path="$PROJECT_DIR$/SimpleReal1" />
     </sourceRoots>
-    <excludeRoots>
+    <libraryRoots>
       <file path="$PROJECT_DIR$/Lib" />
+    </libraryRoots>
+    <excludeRoots>
       <file path="$PROJECT_DIR$/Lib/Eigen" />
     </excludeRoots>
   </component>
@@ -24,4 +26,5 @@
       </profile-state>
     </entry>
   </component>
+  <component name="WestSettings">{}</component>
 </project>

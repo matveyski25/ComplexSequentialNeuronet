@@ -1,6 +1,5 @@
 #pragma once
 #include "BaseRNN.h"
-#include "FunctionsActivate.hpp"
 #include <fstream>
 #include <vector>
 
@@ -9,9 +8,10 @@ namespace MyNN::RNN {
 	class LSTM : public BaseRNN<T> {
 		public:
 			LSTM();
-			~LSTM() override = default;
-		public:
+			~LSTM() = default;
+
 			class DefaultComputeBlockOneH : public ComputeBlockRNN<T> {
+				public:
 				class DefaultSaver;
 				class DefaultLoader;
 				class DefaultOptimizer;
@@ -50,8 +50,8 @@ namespace MyNN::RNN {
 				};
 				/*this function return cell_state, hidden_state saving in vector<LinearAlgebra::BaseRowVector<T>> in basecompblockrnn*/
 				 void nStepCalculation(
-					const typename ValuesForCompute* __restrict values_for_compute,
-					typename NState* __restrict n_state,
+					const ValuesForCompute* __restrict values_for_compute,
+					NState* __restrict n_state,
 					const LinearAlgebra::BaseRowVector<T>& x_n
 				); //noexcept
 				
@@ -64,29 +64,28 @@ namespace MyNN::RNN {
 				const ValuesForCompute* getValuesForCompute() override;
 				void setValuesForCompute(const typename IComputeBlockRNN<T>::ValuesForCompute*) override;
 
-
 				class DefaultSaver : public ComputeBlockRNN<T>::Saver {
 				protected:
-					void saveMatrix(const LinearAlgebra::BaseMatrix<T>& m, std::ofstream& file) {
-						file << 'm' << m.rows() << ' ' << m.cols() << ' ';
-						for (std::uint64_t i = 0; i < m.rows(); ++i) {
-							for (std::uint64_t j = 0; j < m.cols(); ++j) {
-								file << m(i, j) << ' ';
+					void saveMatrix(const LinearAlgebra::BaseMatrix<T>& matx, std::ofstream& file) {
+						file << 'm' << matx.rows() << ' ' << matx.cols() << ' ';
+						for (std::uint64_t i = 0; i < matx.rows(); ++i) {
+							for (std::uint64_t j = 0; j < matx.cols(); ++j) {
+								file << matx(i, j) << ' ';
 							}
 						}
 						file << "\n";
 					}
-					void saveVector(const LinearAlgebra::BaseVector<T>& v, std::ofstream& file) {
-						file << 'c' << v.rows() << ' ';
-						for (std::uint64_t i = 0; i < v.rows(); ++i) {
-							file << v(i) << ' ';
+					void saveVector(const LinearAlgebra::BaseVector<T>& vec, std::ofstream& file) {
+						file << 'c' << vec.rows() << ' ';
+						for (std::uint64_t i = 0; i < vec.rows(); ++i) {
+							file << vec(i) << ' ';
 						}
 						file << "\n";
 					}
-					void saveVector(const LinearAlgebra::BaseRowVector<T>& v, std::ofstream& file) {
-						file << 'r' << v.cols() << ' ';
-						for (std::uint64_t i = 0; i < v.cols(); ++i) {
-							file << v(i) << ' ';
+					void saveVector(const LinearAlgebra::BaseRowVector<T>& vec, std::ofstream& file) {
+						file << 'r' << vec.cols() << ' ';
+						for (std::uint64_t i = 0; i < vec.cols(); ++i) {
+							file << vec(i) << ' ';
 						}
 						file << "\n";
 					}
@@ -113,39 +112,40 @@ namespace MyNN::RNN {
 				};
 				class DefaultLoader : public ComputeBlockRNN<T>::Loader {
 				protected:
-					void loadMatrix(LinearAlgebra::BaseMatrix<T>& m, std::ifstream& file) {
-						char temp;
+					void loadMatrix(LinearAlgebra::BaseMatrix<T>& matx, std::ifstream& file) {
+						char temp = ' ';
 						file >> temp;
 						if (temp != 'm') throw std::runtime_error("Attemp load matrix in not matrix");
-						std::uint64_t rows, cols;
+						std::uint64_t rows = 0;
+						std::uint64_t cols = 0;
 						file >> rows >> cols;
-						m = LinearAlgebra::BaseMatrix<T>(rows, cols);
+						matx = LinearAlgebra::BaseMatrix<T>(rows, cols);
 						for (std::uint64_t i = 0; i < rows; ++i) {
 							for (std::uint64_t j = 0; j < cols; ++j) {
-								file >> m(i, j);
+								file >> matx(i, j);
 							}
 						}
 					}
-					void loadVector(LinearAlgebra::BaseVector<T>& v, std::ifstream& file) {
-						char temp;
+					void loadVector(LinearAlgebra::BaseVector<T>& vec, std::ifstream& file) {
+						char temp = ' ';
 						file >> temp;
 						if (temp != 'c') throw std::runtime_error("Attemp load vector in not vector");
-						std::uint64_t rows;
+						std::uint64_t rows = 0;
 						file >> rows;
-						v = LinearAlgebra::BaseVector<T>(rows);
+						vec = LinearAlgebra::BaseVector<T>(rows);
 						for (std::uint64_t i = 0; i < rows; ++i) {
-							file >> v(i);
+							file >> vec(i);
 						}
 					}
-					void loadVector(LinearAlgebra::BaseRowVector<T>& v, std::ifstream& file) {
-						char temp;
+					void loadVector(LinearAlgebra::BaseRowVector<T>& vec, std::ifstream& file) {
+						char temp = ' ';
 						file >> temp;
 						if (temp != 'r') throw std::runtime_error("Attemp load row-vector in not row-vector");
-						std::uint64_t cols;
+						std::uint64_t cols = 0;
 						file >> cols;
-						v = LinearAlgebra::BaseRowVector<T>(cols);
+						vec = LinearAlgebra::BaseRowVector<T>(cols);
 						for (std::uint64_t i = 0; i < cols; ++i) {
-							file >> v(i);
+							file >> vec(i);
 						}
 					}
 				public:
@@ -172,7 +172,10 @@ namespace MyNN::RNN {
 				class DefaultOptimizer {
 
 				};
-				class DefaultRandomizer;
+				class DefaultRandomizer
+				{
+
+				};
 			};
 
 			class DefaultComputeBlockAllH : public DefaultComputeBlockOneH {
@@ -189,7 +192,7 @@ namespace MyNN::RNN {
 	class TrainableLSTM : public virtual LSTM<T>, public virtual BaseTrainableRNN<T>{
 		public:
 			TrainableLSTM();
-			~TrainableLSTM() override = default;
+			~TrainableLSTM() = default;
 			class DefaultComputeBlockOneH : public LSTM<T>::DefaultComputeBlockOneH, public ITrainableComputeBlockRNN<T> {
 			protected:
 				struct IntermediateValues : ITrainableComputeBlockRNN<T>::IntermediateValues{
@@ -202,4 +205,4 @@ namespace MyNN::RNN {
 				LinearAlgebra::BaseMatrix<T> getOutput() override;
 			};
 		};
-}
+}  // namespace MyNN::RNN
