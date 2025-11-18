@@ -22,8 +22,10 @@ Checks:
   -cppcoreguidelines-non-private-member-variables-in-classes,
   -bugprone-easily-swappable-parameters,
   -modernize-use-auto,
-  -bugpron-suspicious-include'
-#-readability-named-parameter,
+  -misc-include-cleaner,
+  -readability-named-parameter
+ '
+#-readability-named-parameter, -bugprone-suspicious-include
 
 #WarningsAsErrors: ""
 HeaderFilterRegex: ".*" #.*\.(cpp|h|hpp)

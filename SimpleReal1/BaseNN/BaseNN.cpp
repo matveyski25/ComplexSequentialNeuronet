@@ -1,4 +1,5 @@
 #include "BaseNN.h"
+#include "RealizationMatrix.hpp"
 
 namespace MyNN{
     template<typename T>
