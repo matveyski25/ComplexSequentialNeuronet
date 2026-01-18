@@ -1,60 +1,59 @@
 #pragma once
 #include <cstdint>
-#include <type_traits>
-#include <memory>
 #include "RealizationMatrix.hpp"
-#include "TemplateLimits.h"
-
+#include "TemplateLimits.hpp"
+#include "MyPtr.hpp"
 
 //ToDo - при копировании не разыменовывались nullptr указатели на компоненты, и если таковые имеются, то делать make_unique(other)
 namespace MyNN::Base {
     using std::uint64_t, Utils::MyPtr::copy_ptr,
-    Utils::TemplateLimits::IsArithmeticType, LinearAlgebra::BaseMatrix;
+    Utils::TemplateLimits::IsArithmeticType,
+    LinearAlgebra::BaseMatrix, Utils::TemplateLimits::IFeature;
 
-    template<typename T>
-    struct FeatureSaveLoadManager : IsArithmeticType<T>{
+    template<typename T, typename Context>
+    struct FeatureSaveLoadManager : IsArithmeticType<T>, IFeature<Context>{
         virtual void save() = 0;
         virtual void load() = 0;
         struct ISaveLoadable {
-            virtual void setSaveLoadManager(copy_ptr<FeatureSaveLoadManager<T>>) = 0;
-            virtual const FeatureSaveLoadManager<T>* getSaveLoadManager() = 0;
+            virtual void setSaveLoadManager(copy_ptr<FeatureSaveLoadManager<T, Context>>) = 0;
+            virtual const FeatureSaveLoadManager<T, Context>* getSaveLoadManager() = 0;
         };
     };
-    template<typename T>
-    struct FeatureComputeBlockNN : IsArithmeticType<T> {
+    template<typename T, typename Context>
+    struct FeatureComputeBlockNN : IsArithmeticType<T>, IFeature<Context> {
         virtual void setInput(BaseMatrix<T>) = 0;
         virtual BaseMatrix<T> getOutput() = 0;
         virtual void compute() = 0;
         struct IComputable {
-            virtual void setComputeBlock(copy_ptr<FeatureComputeBlockNN<T>>) = 0;
-            virtual const FeatureComputeBlockNN<T>* getComputeBlock() = 0;
+            virtual void setComputeBlock(copy_ptr<FeatureComputeBlockNN<T, Context>>) = 0;
+            virtual const FeatureComputeBlockNN<T, Context>* getComputeBlock() = 0;
         };
     };
-    template<typename T>
-    struct FeatureRandomizerMatrix : IsArithmeticType<T> {
+    template<typename T, typename Context>
+    struct FeatureRandomizerMatrix : IsArithmeticType<T>, IFeature<Context> {
         virtual void randomize() = 0;
         struct IRandomizable {
-            virtual void setRandomizerMatrix(copy_ptr<FeatureRandomizerMatrix<T>>) = 0;
-            virtual const FeatureRandomizerMatrix<T>* getRandomizerMatrix() = 0;
+            virtual void setRandomizerMatrix(copy_ptr<FeatureRandomizerMatrix<T, Context>>) = 0;
+            virtual const FeatureRandomizerMatrix<T, Context>* getRandomizerMatrix() = 0;
         };
     };
-    template<typename T>
-    struct FeatureOptimizerComputeBlock : IsArithmeticType<T> {
+    template<typename T, typename Context>
+    struct FeatureOptimizerComputeBlock : IsArithmeticType<T, Context> {
         virtual void optimize() = 0;
         struct IOptimizable {
-            virtual void setOptimizerComputeBlock(copy_ptr<FeatureOptimizerComputeBlock<T>>) = 0;
-            virtual const FeatureOptimizerComputeBlock<T>* getOptimizerComputeBlock() = 0;
+            virtual void setOptimizerComputeBlock(copy_ptr<FeatureOptimizerComputeBlock<T, Context>>) = 0;
+            virtual const FeatureOptimizerComputeBlock<T, Context>* getOptimizerComputeBlock() = 0;
         };
     };
-    template<typename T, typename FromType, typename ToType>
+    template<typename T, typename Context, typename FromType, typename ToType>
     struct FeatureTranslatorMatrix : IsArithmeticType<T> {
         using FromType_ = FromType;
         using ToType_ = ToType;
         virtual LinearAlgebra::BaseMatrix<T> operator()(const FromType &) = 0;
         virtual ToType& operator()(LinearAlgebra::BaseMatrix<T>) = 0;
         struct ITranslatable {
-            virtual void setTranslatorMatrix(copy_ptr<FeatureTranslatorMatrix<T, FromType, ToType>>) = 0;
-            virtual const FeatureTranslatorMatrix<T, FromType, ToType>* getTranslatorMatrix() = 0;
+            virtual void setTranslatorMatrix(copy_ptr<FeatureTranslatorMatrix<T, Context, FromType, ToType>>) = 0;
+            virtual const FeatureTranslatorMatrix<T, Context, FromType, ToType>* getTranslatorMatrix() = 0;
         };
     };
     template<typename T, typename FromType, typename ToType>

@@ -1,30 +1,9 @@
 //
-// Created by matve on 05.01.2026.
+// Created by matve on 18.01.2026.
 //
 
-#ifndef CSN_TEMPLATELIMITS_H
-#define CSN_TEMPLATELIMITS_H
-
-#pragma once
-#include <type_traits>
-
-namespace MyNN::Utils::TemplateLimits {
-    template<typename Derived, typename Base, typename Enable = std::enable_if_t<std::is_base_of_v<Derived, Base> > >
-    class ExtendIs {
-    };
-
-    template<typename Derived, typename... Bases>
-    class ExtendsIs : ExtendIs<Derived, Bases>... {
-    };
-
-    template<typename T, typename Enable = std::enable_if_t<std::is_arithmetic_v<T> > >
-    class IsArithmeticType {
-    };
-
-    template<typename... Ts>
-    class IsArithmeticTypes : IsArithmeticType<Ts>... {
-    };
-}
+#ifndef CSN_MYPTR_HPP
+#define CSN_MYPTR_HPP
 
 namespace MyNN::Utils::MyPtr {
     using std::unique_ptr;
@@ -59,4 +38,4 @@ namespace MyNN::Utils::MyPtr {
     };
 }
 
-#endif //CSN_TEMPLATELIMITS_H
+#endif //CSN_MYPTR_HPP
