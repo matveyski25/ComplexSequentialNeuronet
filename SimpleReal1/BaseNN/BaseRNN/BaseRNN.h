@@ -27,8 +27,8 @@
 			std::uint64_t getMaxSteps() {
 				return this->max_steps_;
 			}
-			void setMaxSteps(std::uint64_t max_steps_) {
-				this->max_steps_ = max_steps_;
+			void setMaxSteps(std::uint64_t max_steps) {
+				this->max_steps_ = max_steps;
 			}
 			std::uint64_t getHiddenSize() {
 				return this->hidden_size_;

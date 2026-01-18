@@ -1,16 +1,16 @@
-#pragma once
+//
+// Created by matve on 28.12.2025.
+//
+
+#ifndef CSN_BILSTM_H
+#define CSN_BILSTM_H
 #include "BaseRNN.h"
-#include <fstream>
-#include <vector>
 
 namespace MyNN::RNN {
-	template<typename T>
-	class LSTM : public BaseRNN<T> {
-		public:
-			LSTM();
-			~LSTM() = default;
-
-			class DefaultComputeBlockOneH : public ComputeBlockRNN<T> {
+    template<typename T>
+    class BiLSTM : MyNN::RNN::BaseRNN<T> {
+    protected:
+        class DefaultComputeBlockOneH : public ComputeBlockRNN<T> {
 				public:
 				class DefaultSaver;
 				class DefaultLoader;
@@ -54,7 +54,7 @@ namespace MyNN::RNN {
 					NState* __restrict n_state,
 					const LinearAlgebra::BaseRowVector<T>& x_n
 				); //noexcept
-				
+
 				void allStepsCalculation() override;
 			public:
 				LinearAlgebra::BaseMatrix<T> getOutput() override;
@@ -186,23 +186,10 @@ namespace MyNN::RNN {
 			public:
 				LinearAlgebra::BaseMatrix<T> getOutput() override;
 			};
-		};
+    public:
+        BiLSTM();
 
-	template<typename T>
-	class TrainableLSTM : public virtual LSTM<T>, public virtual BaseTrainableRNN<T>{
-		public:
-			TrainableLSTM();
-			~TrainableLSTM() = default;
-			class DefaultComputeBlockOneH : public LSTM<T>::DefaultComputeBlockOneH, public ITrainableComputeBlockRNN<T> {
-			protected:
-				struct IntermediateValues : ITrainableComputeBlockRNN<T>::IntermediateValues{
-					std::vector<typename LSTM<T>::DefaultComputeBlockAllH::DefaultComputeBlockOneH::NState> states_;
-				};
-				void allStepsCalculation() override;
-			};
-			class DefaultComputeBlockAllH : public DefaultComputeBlockOneH {
-			protected:
-				LinearAlgebra::BaseMatrix<T> getOutput() override;
-			};
-		};
-}  // namespace MyNN::RNN
+    };
+}
+
+#endif //CSN_BILSTM_H

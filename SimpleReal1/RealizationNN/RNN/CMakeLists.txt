@@ -2,4 +2,4 @@ add_library(RNN INTERFACE)
 
 add_subdirectory("./LSTM")
 
-target_link_libraries(RNN INTERFACE BaseRNN LSTM)
+target_link_libraries(RNN INTERFACE BaseRNN LSTM BiLSTM)

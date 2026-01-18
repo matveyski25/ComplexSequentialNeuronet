@@ -5,4 +5,4 @@ target_sources(BaseNN PUBLIC "BaseNN.cpp")
 
 add_subdirectory("./BaseRNN")
 
-target_link_libraries(BaseNN PUBLIC Lib)
+target_link_libraries(BaseNN PUBLIC Lib Utils)
