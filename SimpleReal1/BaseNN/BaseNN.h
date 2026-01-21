@@ -4,7 +4,6 @@
 #include "TemplateLimits.hpp"
 #include "MyPtr.hpp"
 
-//ToDo - при копировании не разыменовывались nullptr указатели на компоненты, и если таковые имеются, то делать make_unique(other)
 namespace MyNN::Base {
     using std::uint64_t, Utils::MyPtr::copy_ptr,
     Utils::TemplateLimits::IsArithmeticType,
@@ -21,7 +20,7 @@ namespace MyNN::Base {
     };
     template<typename T, typename Context>
     struct FeatureComputeBlockNN : IsArithmeticType<T>, IFeature<Context> {
-        virtual void setInput(BaseMatrix<T>) = 0;
+        virtual void setInput(const BaseMatrix<T> &) = 0;
         virtual BaseMatrix<T> getOutput() = 0;
         virtual void compute() = 0;
         struct IComputable {
@@ -38,7 +37,7 @@ namespace MyNN::Base {
         };
     };
     template<typename T, typename Context>
-    struct FeatureOptimizerComputeBlock : IsArithmeticType<T, Context> {
+    struct FeatureOptimizerComputeBlock : IsArithmeticType<T>, IFeature<Context> {
         virtual void optimize() = 0;
         struct IOptimizable {
             virtual void setOptimizerComputeBlock(copy_ptr<FeatureOptimizerComputeBlock<T, Context>>) = 0;
@@ -46,7 +45,7 @@ namespace MyNN::Base {
         };
     };
     template<typename T, typename Context, typename FromType, typename ToType>
-    struct FeatureTranslatorMatrix : IsArithmeticType<T> {
+    struct FeatureTranslatorMatrix : IsArithmeticType<T>, IFeature<Context> {
         using FromType_ = FromType;
         using ToType_ = ToType;
         virtual LinearAlgebra::BaseMatrix<T> operator()(const FromType &) = 0;
@@ -56,11 +55,11 @@ namespace MyNN::Base {
             virtual const FeatureTranslatorMatrix<T, Context, FromType, ToType>* getTranslatorMatrix() = 0;
         };
     };
-    template<typename T, typename FromType, typename ToType>
+    template<typename T, typename Context, typename FromType, typename ToType>
     struct FeatureBaseNN :
-    FeatureSaveLoadManager<T>::ISaveLoadable,
-    FeatureComputeBlockNN<T>::IComputable,
-    FeatureTranslatorMatrix<T, FromType, ToType>::ITranslatable,
+    FeatureSaveLoadManager<T, Context>::ISaveLoadable,
+    FeatureComputeBlockNN<T, Context>::IComputable,
+    FeatureTranslatorMatrix<T, Context, FromType, ToType>::ITranslatable,
     IsArithmeticType<T> {
         virtual void setInput(const FromType&) = 0;
         virtual ToType getOutput() = 0;
@@ -71,16 +70,16 @@ namespace MyNN::Base {
         }
     };
 
-    template<typename T>
+    template<typename T, typename Context>
     struct FeatureTrainableComputeBlockNN :
-    FeatureComputeBlockNN<T>,
-    FeatureRandomizerMatrix<T>::IRandomizable,
-    FeatureOptimizerComputeBlock<T>::IOptimizable {
+    FeatureComputeBlockNN<T, Context>::IComputable,
+    FeatureRandomizerMatrix<T, Context>::IRandomizable,
+    FeatureOptimizerComputeBlock<T, Context>::IOptimizable {
         virtual void backward() = 0;
         virtual void getDeltasWeights() = 0;
     };
-    template<typename T, typename FromType, typename ToType>
-    struct FeatureBaseTrainableNN : public FeatureBaseNN<T, FromType, ToType> {
+    template<typename T, typename Context, typename FromType, typename ToType>
+    struct FeatureBaseTrainableNN : public FeatureBaseNN<T, Context, FromType, ToType> {
         virtual void train() = 0;
     };
 
@@ -91,19 +90,19 @@ namespace MyNN::Base {
         uint64_t input_size_;
         uint64_t output_size_;
     };
-    template<typename T, typename FromType, typename ToType>
+    template<typename T, typename Derived, typename FromType, typename ToType>
     struct ContextBaseNN{
-        copy_ptr<FeatureSaveLoadManager<T>> save_load_manager_;
-        copy_ptr<FeatureOptimizerComputeBlock<T>> compute_block_;
-        copy_ptr<FeatureTranslatorMatrix<T, FromType, ToType>> translator_;
+        copy_ptr<FeatureSaveLoadManager<T, Derived>> save_load_manager_;
+        copy_ptr<FeatureOptimizerComputeBlock<T, Derived>> compute_block_;
+        copy_ptr<FeatureTranslatorMatrix<T, Derived, FromType, ToType>> translator_;
     };
 
-    template<typename T>
+    template<typename T, typename Derived>
     struct ContextTrainableComputeBlockNN : ContextComputeBlockNN<T> {
-        copy_ptr<FeatureRandomizerMatrix<T>> randomizer_;
-        copy_ptr<FeatureOptimizerComputeBlock<T>> optimizer_;
+        copy_ptr<FeatureRandomizerMatrix<T, Derived>> randomizer_;
+        copy_ptr<FeatureOptimizerComputeBlock<T, Derived>> optimizer_;
     };
-    template<typename T, typename FromType, typename ToType>
-    struct ContextBaseTrainableNN : public ContextBaseNN<T, FromType, ToType> {};
+    template<typename T, typename Derived, typename FromType, typename ToType>
+    struct ContextBaseTrainableNN : public ContextBaseNN<T, Derived, FromType, ToType> {};
 
 }

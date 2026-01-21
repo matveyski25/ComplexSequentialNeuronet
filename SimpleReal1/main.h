@@ -3,4 +3,4 @@
 //
 #pragma once
 
-#include "LSTM.h"
+#include "LSTM.hpp"

@@ -1,24 +1,30 @@
 #pragma once
 #include "BaseRNN.h"
-#include <fstream>
-#include <vector>
+#include <cassert>
+
+#include "FunctionsActivate.hpp"
 
 namespace MyNN::RNN::LSTM {
-	template<typename T, typename FromType, typename ToType>
-	struct DefaultContextLSTM : ContextBaseRNN<T, FromType, ToType> {};
+	using LinearAlgebra::BaseMatrix, std::uint32_t;
 
-
-	template<typename T, typename Context, typename  Derived>
-	struct DefaultFeatureComputeBlockOneH;
 	template<typename T>
 	struct DefaultContextComputeBlockOneH;
-	template<typename T, typename Context = DefaultContextComputeBlockOneH, typename Derived = DefaultFeatureComputeBlockOneH>
-	struct DefaultFeatureComputeBlockOneH : FeatureComputeBlockRNN<T, Derived> {
-		void nStepsCalculationImpl();
-		void allStepsCalculation() override;
+
+	template<typename T, typename Derived, typename FromType, typename ToType>
+	struct DefaultContextLSTM : ContextBaseRNN<T, Derived, FromType, ToType> {};
+
+	template<typename T>
+	struct DefaultFeatureComputeBlockOneH :
+	FeatureComputeBlockRNN<T, DefaultContextComputeBlockOneH<T>, DefaultFeatureComputeBlockOneH<T>>
+	{
+		void setInput(const BaseMatrix<T>&) override;
 		LinearAlgebra::BaseMatrix<T> getOutput() override;
 		void compute() override;
+
+		void nStepsCalculationImpl(uint64_t);
+		void allStepsCalculation() override;
 	};
+
 
 	template<typename T>
 	struct DefaultContextComputeBlockOneH : ContextComputeBlockRNN<T>{
@@ -47,7 +53,7 @@ namespace MyNN::RNN::LSTM {
 		}
 	};
 
-	class DefaultSaver : public ComputeBlockRNN<T>::Saver {
+	/*class DefaultSaver : public ComputeBlockRNN<T>::Saver {
 			protected:
 			void saveMatrix(const LinearAlgebra::BaseMatrix<T>& matx, std::ofstream& file) {file << 'm' << matx.rows() << ' ' << matx.cols() << ' ';for (std::uint64_t i = 0; i < matx.rows(); ++i) {for (std::uint64_t j = 0; j < matx.cols(); ++j) {file << matx(i, j) << ' ';
 			}
@@ -123,5 +129,5 @@ namespace MyNN::RNN::LSTM {
 			protected:
 				LinearAlgebra::BaseMatrix<T> getOutput() override;
 			};
-		};
-}  // namespace MyNN::RNN
+		};*/
+}

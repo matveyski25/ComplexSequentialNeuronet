@@ -1,106 +1,77 @@
-#include "LSTM.h"
+#include "LSTM.hpp"
 #include "FunctionsActivate.hpp"
 
-namespace MyNN::RNN
+namespace MyNN::RNN::LSTM
 {
-	template <typename T>
-	LSTM<T>::LSTM()
-	{
-		this->compute_block_ = std::make_unique<typename LSTM<T>::DefaultComputeBlockOneH>();
+	using std::uint64_t;
+	template<typename T>
+	void DefaultFeatureComputeBlockOneH<T>::setInput(const BaseMatrix<T>& input) {
+		auto & self = static_cast<DefaultFeatureComputeBlockOneH<T>::Context_*>(this);
+		self.input_size_ = input.cols();
+		self->input_state_ = input;
+		assert(self->input_size_ == input.cols());
 	}
 
-	template <typename T>
-	__forceinline void LSTM<T>::DefaultComputeBlockOneH::nStepCalculation(
-		const typename LSTM<T>::DefaultComputeBlockOneH::ValuesForCompute* __restrict values_for_compute,
-		typename LSTM<T>::DefaultComputeBlockOneH::NState* __restrict n_state,
-		const LinearAlgebra::BaseRowVector<T>& x_n)
-	{
-		const std::uint64_t& H = this->hidden_size_;
-
-		const LinearAlgebra::BaseRowVector<T>& c_n_l = n_state->n_cell_state;
-		const LinearAlgebra::BaseRowVector<T>& h_n_l = n_state->n_hidden_state;
-
-		const LinearAlgebra::BaseMatrix<T>& W = values_for_compute->W;
-		const LinearAlgebra::BaseMatrix<T>& U = values_for_compute->U;
-		const LinearAlgebra::BaseRowVector<T>& B = values_for_compute->B;
-
-		n_state->tmp_Z = ((x_n * W) + (h_n_l * U)).noalias();
-		n_state->tmp_Z += B;
-
-		n_state->tmp_f = FunctionsActivate::baseSigmoid(n_state->tmp_Z.leftCols(H));
-		n_state->tmp_i = FunctionsActivate::baseSigmoid(n_state->tmp_Z.middleCols(H, H));
-		n_state->tmp_c_bar = FunctionsActivate::baseTanh(n_state->tmp_Z.middleCols(2 * H, H));
-		n_state->tmp_o = FunctionsActivate::baseSigmoid(n_state->tmp_Z.rightCols(H));
-
-		LinearAlgebra::BaseRowVector<T> new_c_n = (n_state->tmp_f.array() * c_n_l.array()) + (n_state->tmp_i.array() *
-			n_state->tmp_c_bar.array());
-		LinearAlgebra::BaseRowVector<T> new_h_n = n_state->tmp_o.array() * FunctionsActivate::baseTanh(new_c_n).array();
-
-
-		n_state->n_cell_state = new_c_n;
-		n_state->n_hidden_state = new_h_n;
+	template<typename T>
+	BaseMatrix<T> DefaultFeatureComputeBlockOneH<T>::getOutput() {
+		auto & self = static_cast<DefaultFeatureComputeBlockOneH<T>::Context_*>(this);
+		return self->output_state_;
 	}
 
-	template <typename T>
-	__forceinline void LSTM<T>::DefaultComputeBlockOneH::allStepsCalculation()
-	{
-		const std::uint64_t& H = this->hidden_size_;
-		std::uint64_t number_steps = std::min(this->input_state_.rows(), this->max_steps_);
-
-		NState* n_state = static_cast<NState*>(this->n_state_.get());
-		const ValuesForCompute* values_for_compute = static_cast<const ValuesForCompute*>(this->values_for_compute.
-			get());
-
-		n_state->setZero(H);
-
-		for (std::uint64_t n = 0; n < number_steps; n++)
-		{
-			const LinearAlgebra::BaseRowVector<T>& x_n = this->input_state_.row(n);
-			this->nStepCalculation(values_for_compute, n_state, x_n);
-		}
-	}
-
-	template <typename T>
-	LinearAlgebra::BaseMatrix<T> LSTM<T>::DefaultComputeBlockOneH::getOutput()
-	{
-		return LinearAlgebra::BaseMatrix<T>(
-			static_cast<NState*>(this->n_state_.get())->n_hidden_state
-		);
-	}
-
-	template <typename T>
-	__forceinline void LSTM<T>::DefaultComputeBlockOneH::compute()
-	{
+	template<typename T>
+	void DefaultFeatureComputeBlockOneH<T>::compute() {
+		auto & self = static_cast<DefaultFeatureComputeBlockOneH<T>::Context_*>(this);
 		this->allStepsCalculation();
+		self->output_state_ = self->n_hidden_state;
 	}
 
-	template <typename T>
-	const typename LSTM<T>::DefaultComputeBlockOneH::ValuesForCompute* LSTM<
-		T>::DefaultComputeBlockOneH::getValuesForCompute()
-	{
-		return this->values_for_compute.get();
+	template<typename T>
+	void DefaultFeatureComputeBlockOneH<T>::nStepsCalculationImpl(uint64_t step) {
+		using FunctionsActivate::baseSigmoid, FunctionsActivate::baseTanh, LinearAlgebra::BaseRowVector;
+
+		auto & self = static_cast<DefaultFeatureComputeBlockOneH<T>::Context_*>(this);
+
+		const std::uint64_t& H = self->hidden_size_;
+
+		const BaseRowVector<T>& c_n_l = self->n_cell_state;
+		const BaseRowVector<T>& h_n_l = self->n_hidden_state;
+
+		const BaseMatrix<T>& W = self->W;
+		const BaseMatrix<T>& U = self->U;
+		const BaseRowVector<T>& B = self->B;
+
+		const BaseRowVector<T>& x_n = self.input_state_.row(step);
+
+		self->tmp_Z = ((x_n * W) + (h_n_l * U)).noalias();
+		self->tmp_Z += B;
+
+		self->tmp_f = baseSigmoid(self->tmp_Z.leftCols(H));
+		self->tmp_i = baseSigmoid(self->tmp_Z.middleCols(H, H));
+		self->tmp_c_bar = baseTanh(self->tmp_Z.middleCols(2 * H, H));
+		self->tmp_o = baseSigmoid(self->tmp_Z.rightCols(H));
+
+		BaseRowVector<T> new_c_n = (self->tmp_f.array() * c_n_l.array()) + (self->tmp_i.array() *
+			self->tmp_c_bar.array());
+		BaseRowVector<T> new_h_n = self->tmp_o.array() * baseTanh(new_c_n).array();
+
+
+		self->n_cell_state = new_c_n;
+		self->n_hidden_state = new_h_n;
 	}
 
-	template <typename T>
-	void LSTM<T>::DefaultComputeBlockOneH::setValuesForCompute(
-		const typename IComputeBlockRNN<T>::ValuesForCompute* values_for_compute_)
-	{
-		if (values_for_compute_)
+	template<typename T>
+	void DefaultFeatureComputeBlockOneH<T>::allStepsCalculation() {
+		auto & self = static_cast<DefaultFeatureComputeBlockOneH<T>::Context_*>(this);
+
+		const uint64_t& H = self->hidden_size_;
+		uint64_t number_steps = std::min(self->input_state_.rows(), self->max_steps_);
+
+		for (uint64_t n = 0; n < number_steps; n++)
 		{
-			if (this->values_for_compute_)
-			{
-				*(this->values_for_compute_) = *(values_for_compute_);
-			}
-			else
-			{
-				this->values_for_compute_ = std::make_unique<ValuesForCompute>(values_for_compute_);
-			}
-		}
-		else
-		{
-			this->values_for_compute_ = nullptr;
+			this->nStepsCalculation(n);
 		}
 	}
+
 
 	template <typename T>
 	void LSTM<T>::DefaultComputeBlockAllH::allStepsCalculation()
