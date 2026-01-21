@@ -27,12 +27,18 @@
     <ClCompile Include="Main.cpp">
       <Filter>Файлы ресурсов</Filter>
     </ClCompile>
+    <ClCompile Include="ActivateFunctionsForNN.cpp">
+      <Filter>Файлы ресурсов</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="HeaderSeq2seqWithAttention.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
     <ClInclude Include="HeaderLSTM_and_BiLSTM.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
+    <ClInclude Include="HeaderActivateFunctionsForNN.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
   </ItemGroup>

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ActivateFunctionsForNN/HeaderActivateFunctionsForNN.h"
+#include "HeaderActivateFunctionsForNN.h"
 
 #include <fstream>
 #include <filesystem>
